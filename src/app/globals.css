@@ -3,6 +3,15 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Runtime brand values — overridden per-request via inline style on <html>
+     in app/layout.tsx (see getSiteConfig()). These defaults match v2's
+     DEFAULT_COLORS and are what renders before/if the config fetch resolves. */
+  --brand-emphasis: #082348;
+  --brand-accent-base: #023E8A;
+  --brand-accent-light: #3B82F6;
+  --brand-neutral: #f4f4ff;
+  --brand-darker: #27272A;
 }
 
 @theme inline {
@@ -10,6 +19,14 @@
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Same class names as v2's tailwind.config.js (bg-emphasis, text-neutral, etc.)
+     so components ported from v2 don't need class renames. */
+  --color-emphasis: var(--brand-emphasis);
+  --color-accentBase: var(--brand-accent-base);
+  --color-accentLight: var(--brand-accent-light);
+  --color-neutral: var(--brand-neutral);
+  --color-darker: var(--brand-darker);
 }
 
 @media (prefers-color-scheme: dark) {
