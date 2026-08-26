@@ -1,0 +1,23 @@
+.sweet-loading{
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5); /* Fondo oscuro con opacidad */
+    z-index: 3000;
+}
+
+.loader {
+    & span:nth-child(3),
+    & span:nth-child(4),
+    & span:nth-child(5),
+    & span:nth-child(6) {
+        background-color: #46bfee !important;
+        box-shadow: 0 0 5px 1px #3699c1;
+        z-index: -1;
+    }
+}
