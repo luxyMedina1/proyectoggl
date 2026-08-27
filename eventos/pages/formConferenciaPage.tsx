@@ -397,9 +397,12 @@ export const FormConferenciaPage = () => {
     };
   }, []);
 
-  if (status === 'checking') {
-    checkAuthToken();
-  }
+  useEffect(() => {
+    if (status === 'checking') {
+      checkAuthToken();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [status]);
 
   const handleModalClose = (e: any) => {
     setIsModalOpen(false); // Cerrar el modal

@@ -1,11 +1,11 @@
 import type { BrandColors, ConfigResponse } from './types';
 
 const DEFAULT_COLORS: BrandColors = {
-    emphasis: '#082348',
-    accentBase: '#023E8A',
-    accentLight: '#3B82F6',
-    neutral: '#f4f4ff',
-    darker: '#27272A',
+    emphasis: '#0E1A3D',   // Azul marino oscuro — header, navbar
+    accentBase: '#1A56DB', // Azul brillante    — botones activos, tabs, CTAs
+    accentLight: '#38BDF8',// Azul cyan claro   — elementos secundarios, hover
+    neutral: '#F8FAFC',    // Blanco apagado    — fondos de sección
+    darker: '#1E293B',     // Slate oscuro      — texto principal sobre fondo claro
 };
 
 const isValidColor = (c?: string) => !!c && /^#([0-9A-F]{3}){1,2}$/i.test(c);

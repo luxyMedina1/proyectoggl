@@ -21,12 +21,9 @@ import type { Ciudad } from "../../types/Ciudad";
 
 const NOTIF_POLL_MS = 60_000;
 
-// NOTA: version simplificada de HeaderLayout. El selector de ciudad/CityPass y el
-// badge de notificaciones (amigos/transferencias) dependen de modulos que aun no
-// se migran (citypass, amigos, transferencias) — llegan en la Fase 4. El buscador
-// (HeaderBuscador) si esta portado desde la Fase 2, pero sin ciudades disponibles
-// (useCiudadesStore no portado) el select de ciudad queda vacio y el boton de
-// CityPass deshabilitado hasta esa fase.
+// Version del HeaderLayout para App Router. El selector de ciudad/CityPass y el badge de
+// notificaciones (amigos/transferencias) ya usan sus stores reales (useCiudadesStore,
+// useAmigosStore, useTransferenciasStore) con polling de notificaciones cada NOTIF_POLL_MS.
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { config } = useColorConfig();

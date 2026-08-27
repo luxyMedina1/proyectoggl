@@ -2,16 +2,16 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1E293B;
 
   /* Runtime brand values — overridden per-request via inline style on <html>
-     in app/layout.tsx (see getSiteConfig()). These defaults match v2's
-     DEFAULT_COLORS and are what renders before/if the config fetch resolves. */
-  --brand-emphasis: #082348;
-  --brand-accent-base: #023E8A;
-  --brand-accent-light: #3B82F6;
-  --brand-neutral: #f4f4ff;
-  --brand-darker: #27272A;
+     in app/layout.tsx (see getSiteConfig()). These defaults match the visual
+     palette shown in the app screenshot. */
+  --brand-emphasis: #0E1A3D;
+  --brand-accent-base: #1A56DB;
+  --brand-accent-light: #38BDF8;
+  --brand-neutral: #F8FAFC;
+  --brand-darker: #1E293B;
 }
 
 @theme inline {
@@ -20,21 +20,23 @@
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
-  /* Same class names as v2's tailwind.config.js (bg-emphasis, text-neutral, etc.)
+  /* Same class names as v2's tailwind.config.js (bg-emphasis, text-accentBase, etc.)
      so components ported from v2 don't need class renames. */
   --color-emphasis: var(--brand-emphasis);
   --color-accentBase: var(--brand-accent-base);
   --color-accentLight: var(--brand-accent-light);
   --color-neutral: var(--brand-neutral);
   --color-darker: var(--brand-darker);
+
+  /* Alias: some components use kebab-case variant */
+  --color-accent-base: var(--brand-accent-base);
+  --color-accent-light: var(--brand-accent-light);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Dark mode desactivado a nivel global — el esquema de colores de marca es
+   fijo (white-label). El dark mode rompía el contraste de texto en componentes
+   con fondo de color de marca. Si se necesita dark mode, implementarlo
+   explícitamente por componente con clases dark:. */
 
 body {
   background: var(--background);

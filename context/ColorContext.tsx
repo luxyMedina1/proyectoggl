@@ -3,6 +3,7 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import apiApplication from "../api/apiApplication";
 import { setMetaDeSitio } from "../utils/documentMeta";
+import { activarPixelsGlobales } from "../utils/metaPixel";
 
 interface Colors {
     emphasis: string;
@@ -23,6 +24,9 @@ export interface ConfigResponse {
     neutro?: string;
     fondo?: string;
     habilitarConferencias: boolean;
+    // Pixels de Meta de la marca. Son los que aplican en todo el sitio; cada evento puede
+    // ademas traer los suyos propios (evento.metaPixels) que se activan solo en su detalle.
+    metaPixels?: string[];
     [key: string]: any;
 }
 
@@ -36,11 +40,11 @@ interface ColorConfigContextType {
 
 // Colores por defecto
 const DEFAULT_COLORS: Colors = {
-    emphasis: "#082348",
-    accentBase: "#023E8A",
-    accentLight: "#3B82F6",
-    neutral: "#f4f4ff",
-    darker: "#27272A",
+    emphasis: "#0E1A3D",   // Azul marino oscuro — header/navbar
+    accentBase: "#1A56DB", // Azul brillante    — botones activos, tabs, CTAs
+    accentLight: "#38BDF8",// Azul cyan claro   — elementos secundarios, hover
+    neutral: "#F8FAFC",    // Blanco apagado    — fondos de sección y texto sobre oscuro
+    darker: "#1E293B",     // Slate oscuro      — texto principal sobre fondo claro
 };
 
 // Contexto
@@ -96,6 +100,7 @@ export const ColorConfigProvider: React.FC<{ children: ReactNode }> = ({ childre
             setColors(validatedColors);
             setConfig(data);
             applyColorsToDocument(validatedColors);
+            activarPixelsGlobales(data.metaPixels);
             // El <title> y los og:* base pasan por documentMeta para que no pisen los
             // metadatos de la pagina actual (el detalle de evento los sobreescribe).
             setMetaDeSitio({

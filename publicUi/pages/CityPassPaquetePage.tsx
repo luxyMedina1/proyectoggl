@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import dynamic from 'next/dynamic';
 import { Link, useLocation, useNavigate, useParams } from '@/utils/nextRouterCompat';
 import { IoArrowBack } from 'react-icons/io5';
 import { LuCalendarClock } from 'react-icons/lu';
@@ -8,7 +9,11 @@ import Swal from 'sweetalert2';
 import Loader from '../components/Loader';
 import { GaleriaModal } from '../components/GaleriaModal';
 import { PaqueteBoletos, type ResumenCompra } from '../components/citypass/PaqueteBoletos';
-import { MapaAtracciones } from '../components/citypass/MapaAtracciones';
+// leaflet toca `window` al importarse: sin ssr:false, el primer render en el servidor truena.
+const MapaAtracciones = dynamic(
+    () => import('../components/citypass/MapaAtracciones').then((m) => m.MapaAtracciones),
+    { ssr: false },
+);
 import { useCityPassStore } from '../../hooks/useCityPassStore';
 import { useCiudadesStore } from '../../hooks/useCiudadesStore';
 import { useAuthStore } from '../../hooks/useAuthStore';
@@ -18,7 +23,7 @@ import { sanitizeRichText } from '../../utils/sanitizeHtml';
 import type { CityPassPaqueteDetalle } from '../../types/CityPass';
 
 const CityPassPaquetePage = () => {
-    const { ciudadSlug, paqueteSlug } = useParams();
+    const { slug: ciudadSlug, paqueteSlug } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
     const { getPaquete, getLanding } = useCityPassStore();

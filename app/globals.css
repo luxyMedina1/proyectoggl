@@ -2,25 +2,44 @@
 
 :root {
   --background: #ffffff;
-  --foreground: #171717;
+  --foreground: #1E293B;
+
+  /* ── Paleta de marca ─────────────────────────────────────────────────────
+     Estos valores son los fallbacks que se ven en el primer frame antes de que
+     ColorContext cargue la config del backend y los pise vía JS.
+     Si el backend devuelve colores válidos, ColorContext los sobreescribirá
+     en runtime con document.documentElement.style.setProperty(). */
+  --color-emphasis:     #0E1A3D;  /* Azul marino oscuro — header, navbar */
+  --color-accent-base:  #1A56DB;  /* Azul brillante    — botones activos, CTAs */
+  --color-accentBase:   #1A56DB;  /* alias camelCase    — compat con componentes v2 */
+  --color-accent-light: #38BDF8;  /* Azul cyan claro   — hover, elementos secundarios */
+  --color-accentLight:  #38BDF8;  /* alias camelCase */
+  --color-neutral:      #F8FAFC;  /* Blanco apagado    — texto sobre fondo oscuro / fondos */
+  --color-darker:       #1E293B;  /* Slate oscuro      — texto sobre fondo claro */
+  --color-explore:      #e11d2a;  /* Rojo botón Explorar */
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-background:   var(--background);
+  --color-foreground:   var(--foreground);
+
+  /* Conecta las CSS vars de marca con las clases utilitarias de Tailwind:
+     bg-emphasis, text-neutral, bg-accentBase, text-accentLight, etc. */
+  --color-emphasis:     var(--color-emphasis);
+  --color-accentBase:   var(--color-accentBase);
+  --color-accentLight:  var(--color-accentLight);
+  --color-neutral:      var(--color-neutral);
+  --color-darker:       var(--color-darker);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* Dark mode DESACTIVADO — el esquema de colores es de marca fija (white-label).
+   El bloque @media (prefers-color-scheme: dark) rompía el contraste: convertía
+   el fondo a #0a0a0a y el texto a #ededed, haciendo invisibles los textos
+   blancos que van sobre fondos de color de marca.
+   Si en el futuro se quiere dark mode, hacerlo con clases dark: por componente. */
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: "Poppins", Arial, Helvetica, sans-serif;
 }

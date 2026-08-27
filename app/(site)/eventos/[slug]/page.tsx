@@ -5,6 +5,7 @@ import { useParams, usePathname, useSearchParams, useRouter } from 'next/navigat
 import Link from 'next/link';
 import { useEventosStore } from '../../../../hooks/useEventosStore';
 import { useAuthStore } from '../../../../hooks/useAuthStore';
+import { useMetaPixel, usePixelsDeEvento } from '../../../../hooks/useMetaPixel';
 import { useAuthModal } from '../../../../context/AuthModalContext';
 import { TbTicket } from "react-icons/tb";
 import { MdKeyboardBackspace } from "react-icons/md";
@@ -81,6 +82,8 @@ interface Evento {
   udsPorCategoria: boolean;
   esGratuito: boolean;
   usoDeServicio: string;
+  // Pixels de Meta del promotor de este evento (ademas de los de la marca).
+  metaPixels?: string[];
 }
 interface Ciudad {
   id: number;
@@ -162,6 +165,7 @@ function DetalleEventoContent() {
   const { getDetalleEventos, getDetalleEventoSecciones, reservarGeneral, cancelar, getDetalleAbono, getAbonoBuilderState, setAbonoBuilderState, clearAbonoBuilderState, resolverSlugEvento } = useEventosStore();
   // La funcion sale del slug. `?funcion=` se sigue leyendo por los enlaces internos viejos.
   const funcionId = resuelto?.funcionId ?? searchParams.get('funcion');
+  const { verContenido } = useMetaPixel();
   const [evento, setEvento] = useState<Evento | null>(null);
   const [funciones, setFunciones] = useState<any[]>([]);
   const [modoAbono, setModoAbono] = useState<'mismo_asiento' | 'por_funcion'>('mismo_asiento');
@@ -220,6 +224,20 @@ function DetalleEventoContent() {
   const [promocion, setPromocion] = useState<promocion>({ id: 0, nombre: '', tipo: 'PORCENTAJE', porcentaje: 0, cantidadCompra: 0, cantidadPaga: 0, aplicaTodoEvento: false, categorias: [], descuentoCalculado: 0 });
   const [descripcionAdicional, setDescripcionAdicional] = useState('');
 
+  // Pixels de Meta: los de la marca ya estan activos desde ColorContext; aqui se suma el del
+  // promotor de este evento, y solo mientras la pagina siga montada — al navegar al evento
+  // siguiente no queremos seguir reportandole al promotor anterior.
+  usePixelsDeEvento(evento?.metaPixels);
+
+  useEffect(() => {
+    if (!evento?.id) return;
+    verContenido({
+      eventoId: evento.id,
+      nombre: evento.nombre,
+      precioUnitario: Number(evento.precioBase) || undefined,
+    });
+    // Solo el id: al cambiar de funcion no es una vista de contenido nueva.
+  }, [evento?.id, evento?.nombre, evento?.precioBase, verContenido]);
 
   // Slug -> { eventoId, funcionId }. Si el slug no existe se avisa una sola vez; cuando ya
   // habia algo resuelto (p. ej. tras canonicalizar la URL) se conserva lo anterior.
