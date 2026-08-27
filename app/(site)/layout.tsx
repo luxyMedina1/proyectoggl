@@ -143,6 +143,13 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           {status === 'unauthenticated' ? (
             <>
               <div className='hidden md:flex items-center justify-end flex-1 flex-wrap text-neutral gap-x-4'>
+                <button
+                  type="button"
+                  onClick={irCityPass}
+                  className="text-lg border-b-2 border-transparent hover:border-white transition-all"
+                >
+                  CityPass
+                </button>
                 <Link href="/auth/login" className="text-lg border-b-2 border-transparent hover:border-white transition-all">Iniciar Sesión</Link>
               </div>
               <button
@@ -162,6 +169,13 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                     >
                       ✕
                     </button>
+                    <button
+                      type="button"
+                      className="text-base border-b-2 border-transparent hover:border-accentBase transition-all py-2 text-left"
+                      onClick={() => { setMobileMenuOpen(false); irCityPass(); }}
+                    >
+                      CityPass
+                    </button>
                     <Link
                       href="/auth/login"
                       className="text-base border-b-2 border-transparent hover:border-accentBase transition-all py-2"
@@ -180,6 +194,13 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 <Link href="/perfil/mis_compras" className='text-neutral px-4 py-2 rounded-t-md border-b-2 border-transparent hover:bg-accent-emphasis hover:border-b-2 hover:border-accentLight transition-colors mr-4' >
                   Mis eventos
                 </Link>
+                <button
+                  type="button"
+                  onClick={irCityPass}
+                  className='text-neutral px-4 py-2 rounded-t-md border-b-2 border-transparent hover:bg-accent-emphasis hover:border-b-2 hover:border-accentLight transition-colors mr-4'
+                >
+                  CityPass
+                </button>
                 <button
                   onClick={() => setMenuVisible(!menuVisible)}
                   className="relative bg-emphasis text-neutral px-4 inline-flex items-center gap-x-2 py-2 rounded-md transition-colors"
@@ -223,6 +244,13 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                       >
                         Mis eventos
                       </Link>
+                      <button
+                        type="button"
+                        className="text-base border-b-2 border-transparent hover:border-accentBase transition-all py-2 text-left"
+                        onClick={() => { setMobileMenuOpen(false); irCityPass(); }}
+                      >
+                        CityPass
+                      </button>
                       <Link
                         href="/perfil/mi_perfil"
                         className="text-base border-b-2 border-transparent hover:border-accentBase transition-all py-2 flex items-center gap-x-2"
