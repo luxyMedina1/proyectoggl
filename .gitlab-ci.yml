@@ -1,0 +1,57 @@
+# CI para el remoto principal (origin = git.redgl.com, GitLab).
+# Mismos pasos que .github/workflows/ci.yml — se mantienen los dos porque el
+# repo tiene espejo en GitHub (remote `proyectoggl`).
+#
+# Gatean:      typecheck · test · build
+# Informativos (allow_failure): lint · auditoría de imágenes
+#   `npm run lint` arrastra 301 errores del código legacy; se muestra sin
+#   bloquear hasta que llegue a 0.
+
+stages:
+  - verificar
+  - informativo
+
+default:
+  image: node:20
+  interruptible: true
+  cache:
+    key:
+      files:
+        - package-lock.json
+    paths:
+      - .npm/
+  before_script:
+    - npm ci --cache .npm --prefer-offline
+
+variables:
+  NEXT_PUBLIC_SITE_URL: "https://taquillavip.com"
+  NEXT_PUBLIC_API_KEY: "ci-placeholder"
+  URL_BACKEND: "https://example.invalid"
+  REVALIDATE_SECRET: "ci-placeholder"
+
+.reglas: &reglas
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    - if: $CI_COMMIT_BRANCH == "main"
+
+build-y-tests:
+  stage: verificar
+  <<: *reglas
+  script:
+    - npm run typecheck
+    - npm test
+    - npm run build
+
+lint:
+  stage: informativo
+  <<: *reglas
+  allow_failure: true
+  script:
+    - npm run lint
+
+auditoria-imagenes:
+  stage: informativo
+  <<: *reglas
+  allow_failure: true
+  script:
+    - npm run audit:images
