@@ -1,0 +1,19 @@
+#!/bin/sh
+# Hook opt-in. Activar una vez con:
+#   git config core.hooksPath .githooks
+#
+# Corre solo checks rápidos antes de un push (no el build, que tarda minutos).
+# El build completo lo valida CI.
+
+set -e
+
+echo "[pre-push] tsc --noEmit ..."
+npm run --silent typecheck
+
+echo "[pre-push] tests ..."
+npm test --silent
+
+echo "[pre-push] auditoría de imágenes (informativa) ..."
+node scripts/audit-images.mjs || true
+
+echo "[pre-push] OK"
