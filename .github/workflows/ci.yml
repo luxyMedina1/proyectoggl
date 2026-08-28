@@ -1,0 +1,63 @@
+name: CI
+
+# Puerta de calidad en cada push / PR. Antes de esto no había ninguna
+# automatización: los errores de tipos o de build se descubrían en local (o en
+# producción). Referencia: reporte 2026-08-28, §11 punto 2.
+#
+# Gatean (rojo si fallan):  typecheck · test · build
+# Informativos (no gatean): lint · auditoría de imágenes
+#   - `npm run lint` hoy sale con 301 errores heredados del código legacy.
+#     Se deja visible pero sin bloquear; cuando llegue a 0, quitar el
+#     `continue-on-error` para que empiece a gatear.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verificar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      # Marcadores para que el build no falle por env ausente. El build no
+      # contacta al backend real (getSiteConfig captura el 403 y usa el
+      # fallback); solo necesita que las claves existan.
+      NEXT_PUBLIC_SITE_URL: https://taquillavip.com
+      NEXT_PUBLIC_API_KEY: ci-placeholder
+      URL_BACKEND: https://example.invalid
+      REVALIDATE_SECRET: ci-placeholder
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Tipos (tsc --noEmit)
+        run: npm run typecheck
+
+      - name: Pruebas
+        run: npm test
+
+      - name: Build de producción
+        run: npm run build
+
+      - name: Lint (informativo)
+        run: npm run lint
+        continue-on-error: true
+
+      - name: Auditoría de imágenes — CLS / doc 06 (informativo)
+        run: npm run audit:images
+        continue-on-error: true
