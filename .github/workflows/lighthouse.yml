@@ -1,0 +1,44 @@
+name: Lighthouse
+
+# Corre Lighthouse sobre un build de producción real y publica el reporte.
+# Reemplaza el paso manual de la §9 del reporte. NO bloquea: las aserciones de
+# lighthouserc.json están en modo "warn" y el job puede fallar sin marcar rojo
+# el commit (continue-on-error). Ejecutar a mano desde la pestaña Actions o
+# esperar la corrida semanal.
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 6 * * 1" # lunes 06:00 UTC
+
+jobs:
+  lighthouse:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SITE_URL: https://taquillavip.com
+          NEXT_PUBLIC_API_KEY: ci-placeholder
+          URL_BACKEND: https://example.invalid
+          REVALIDATE_SECRET: ci-placeholder
+
+      - name: Lighthouse CI
+        run: npx --yes @lhci/cli@0.15.x autorun
+        env:
+          NEXT_PUBLIC_SITE_URL: https://taquillavip.com
+          NEXT_PUBLIC_API_KEY: ci-placeholder
+          URL_BACKEND: https://example.invalid
+          REVALIDATE_SECRET: ci-placeholder
