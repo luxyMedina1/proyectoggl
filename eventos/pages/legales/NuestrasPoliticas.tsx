@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { useLocation } from '@/utils/nextRouterCompat';
-import mammoth from "mammoth";
+import { usePathname } from "next/navigation";
 import { useColorConfig } from "../../../context/ColorContext";
 
 function NuestrasPoliticas() {
   const { config } = useColorConfig();
-  const { pathname } = useLocation();
+  const pathname = usePathname();
   const [htmlContent, setHtmlContent] = useState<string>("");
 
   useEffect(() => {
@@ -18,6 +17,9 @@ function NuestrasPoliticas() {
       try {
         const response = await fetch(config.politicasDeUso);
         const arrayBuffer = await response.arrayBuffer();
+        // Import dinamico: el parser de .docx (~1 MB) solo baja al abrir esta pagina.
+        const { default: mammoth } = await import("mammoth");
+
         const { value } = await mammoth.convertToHtml({ arrayBuffer });
         setHtmlContent(value);
       } catch (error) {
