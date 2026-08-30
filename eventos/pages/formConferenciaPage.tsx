@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
-import { useParams, Link, useNavigate } from '@/utils/nextRouterCompat';
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 
 import { TbTicket } from "react-icons/tb";
 import { useAuthStore } from '../../hooks/useAuthStore';
@@ -134,7 +135,7 @@ interface promocion {
 }
 
 export const FormConferenciaPage = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { checkAuthToken, user, status } = useAuthStore();
   const { requestLogin } = useAuthModal();
   const [reservaPendiente, setReservaPendiente] = useState<number | null>(null);
@@ -789,7 +790,7 @@ export const FormConferenciaPage = () => {
           Swal.fire({ title: '¡Atención!', text: 'El registro se ha cancelado.', icon: 'warning', timer: 2000, showConfirmButton: false }).then(() => {
             // window.location.reload();
             // reirect a conferencia/44 ej
-            navigate(`/cosmotech/${evento?.id}`);
+            router.push(`/cosmotech/${evento?.id}`);
           });
         } else {
           Swal.fire({ title: 'Error', text: 'No se pudo cancelar la reserva. Inténtalo de nuevo.', icon: 'error', confirmButtonText: 'OK' });
@@ -1113,11 +1114,11 @@ export const FormConferenciaPage = () => {
 
       // Redirigir si es gratis
       if (usuarioInvitado) {
-        navigate(
+        router.push(
           `/terminar_compra_invitado_conferencia_gratis/${reservaId}/${true}/${data.invitadoId}/${promocion_id}`
         );
       } else {
-        navigate(
+        router.push(
           `/terminar_compra_conferencia_gratis/${reservaId}/${true}/${data.invitadoId}/${promocion_id}`
         );
       }
@@ -1401,7 +1402,7 @@ export const FormConferenciaPage = () => {
           <div className="container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 relative mb-10 mt-36">
             <div className="grid lg:grid-cols-2 gap-4">
               <aside className="p-3 md:p-4 bg-white rounded-2xl shadow-sm border border-gray-200 space-y-4 hidden">
-                <Link to={`/cosmotech/${evento.id}`} className='bg-gray-900 text-white rounded-full px-4 py-2 inline-flex items-center gap-x-2'><FaArrowLeftLong className='flex-none' />Regresar al inicio</Link>
+                <Link href={`/cosmotech/${evento.id}`} className='bg-gray-900 text-white rounded-full px-4 py-2 inline-flex items-center gap-x-2'><FaArrowLeftLong className='flex-none' />Regresar al inicio</Link>
                 <figure>
                   <img className='rounded-2xl aspect-video object-cover max-h-[30rem]' src={evento.imagenPromocion || '/beneficio_4.webp'} alt="" />
                 </figure>
