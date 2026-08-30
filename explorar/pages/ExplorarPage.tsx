@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate, useSearchParams } from '@/utils/nextRouterCompat';
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import { useContenidoStore } from "../../hooks/useContenidoStore";
 import { useEventosStore } from "../../hooks/useEventosStore";
@@ -31,7 +31,7 @@ const prefiereMenosMovimiento = () =>
   typeof window !== "undefined" &&
   window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
-const filtrosDesdeParams = (params: URLSearchParams): ReelFiltros => ({
+const filtrosDesdeParams = (params: { get(key: string): string | null }): ReelFiltros => ({
   cuando: (params.get("cuando") as ReelCuando) || "",
   categoriaId: params.get("categoriaId") ? Number(params.get("categoriaId")) : null,
   precioMin: params.get("precioMin") ? Number(params.get("precioMin")) : null,
@@ -41,12 +41,13 @@ const filtrosDesdeParams = (params: URLSearchParams): ReelFiltros => ({
 });
 
 export const ExplorarPage = () => {
-  const navigate = useNavigate();
+  const router = useRouter();
+  const pathname = usePathname();
   const { getFeed, getContadores, getCategorias, getPrecios, getEstadoLikes, toggleLike, registrarVista } =
     useContenidoStore();
   const { getDetalleEventos } = useEventosStore();
   const { user } = useAuthStore();
-  const [searchParams, setSearchParams] = useSearchParams();
+  const searchParams = useSearchParams();
 
   const [reels, setReels] = useState<Reel[]>([]);
   const [totalPaginas, setTotalPaginas] = useState(1);
@@ -212,7 +213,8 @@ export const ExplorarPage = () => {
     if (filtros.precioMax != null) p.set("precioMax", String(filtros.precioMax));
     if (filtros.ciudadId != null) p.set("ciudadId", String(filtros.ciudadId));
     if (filtros.eventoId != null) p.set("eventoId", String(filtros.eventoId));
-    setSearchParams(p, { replace: true });
+    const qs = p.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filtros]);
 
@@ -280,7 +282,7 @@ export const ExplorarPage = () => {
   // ---- Likes ----
   const onLike = async (reel: Reel) => {
     if (!user) {
-      navigate("/auth/login");
+      router.push("/auth/login");
       return;
     }
     const { liked: prevLiked, likesCount: prevCount } = reel;
@@ -300,7 +302,7 @@ export const ExplorarPage = () => {
       setReels((prev) =>
         prev.map((r) => (r.id === reel.id ? { ...r, liked: prevLiked, likesCount: prevCount } : r)),
       );
-      if (e?.response?.status === 401) navigate("/auth/login");
+      if (e?.response?.status === 401) router.push("/auth/login");
     }
   };
 
@@ -320,7 +322,7 @@ export const ExplorarPage = () => {
       const funciones: any[] = detalle?.funciones ?? [];
       Swal.close();
       if (funciones.length === 0) {
-        navigate(RUTAS_REEL.detalle(evento));
+        router.push(RUTAS_REEL.detalle(evento));
         return;
       }
       const inputOptions = funciones.reduce((acc: Record<string, string>, f) => {
@@ -342,7 +344,7 @@ export const ExplorarPage = () => {
       if (res.isConfirmed && res.value) {
         // La funcion elegida viaja dentro del slug, no como query param.
         const elegida = funciones.find((f) => String(f.id) === String(res.value));
-        navigate(RUTAS_REEL.detalle(evento, elegida));
+        router.push(RUTAS_REEL.detalle(evento, elegida));
       }
     } catch {
       Swal.fire({ icon: "error", title: "No se pudieron cargar las fechas", confirmButtonColor: accentColor() });
@@ -353,7 +355,7 @@ export const ExplorarPage = () => {
     const destino = resolverDestino(reel);
     switch (destino.tipo) {
       case "interno-detalle":
-        navigate(RUTAS_REEL.detalle(destino.evento));
+        router.push(RUTAS_REEL.detalle(destino.evento));
         break;
       case "interno-fechas":
         elegirFuncion(destino.evento);
