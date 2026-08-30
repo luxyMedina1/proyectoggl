@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { useParams, useLocation, useNavigate, Link } from '@/utils/nextRouterCompat';
+import Link from "next/link";
+import { useParams, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import apiApplication from "../../../api/apiApplication"
 import Loader from '@/publicUi/components/Loader';
@@ -8,11 +9,9 @@ import ConfettiCanvas from "./ConfettiCanvas";
 
 const TerminarCompraConferencia = () => {
   const { reservaId, esGeneral, invitadoId, promocionId } = useParams();
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
+  const searchParams = useSearchParams();
   const transaccionId = searchParams.get("id");
 
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [compraExitosa, setCompraExitosa] = useState(false);
   const [isVerifyMessage, setIsVerifyMessage] = useState('');
@@ -81,7 +80,7 @@ const TerminarCompraConferencia = () => {
     };
 
     confirmarPago();
-  }, [transaccionId, reservaId, esGeneral, navigate]);
+  }, [transaccionId, reservaId, esGeneral]);
 
   return (
     <div className="relative">
@@ -106,7 +105,7 @@ const TerminarCompraConferencia = () => {
           )}
           <hr className='my-3'/>
 
-          <Link to="/perfil/mis_compras" className='w-full block px-4 py-2 bg-accentBase hover:bg-emphasis mb-2 transition-colors text-white rounded-lg z-10 relative'>Ir a mis compras</Link>
+          <Link href="/perfil/mis_compras" className='w-full block px-4 py-2 bg-accentBase hover:bg-emphasis mb-2 transition-colors text-white rounded-lg z-10 relative'>Ir a mis compras</Link>
         </div>
       </div>
   
