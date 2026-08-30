@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useNavigate, useParams } from '@/utils/nextRouterCompat';
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { MdLocationOn } from 'react-icons/md';
 import Loader from '../components/Loader';
 import { CityPassTabs } from '../components/citypass/CityPassTabs';
@@ -13,9 +14,8 @@ import { slugify, deslugify } from '../../utils/slugify';
 import type { CityPassLanding } from '../../types/CityPass';
 
 const CityPassPage = () => {
-    const { slug } = useParams();
-    const location = useLocation();
-    const navigate = useNavigate();
+    const { slug } = useParams<{ slug: string }>();
+    const router = useRouter();
     const { getLanding } = useCityPassStore();
     const { getAllCiudades } = useCiudadesStore();
 
@@ -28,13 +28,10 @@ const CityPassPage = () => {
             setLoading(true);
             setLanding(null);
             try {
-                // El API pide ciudadId; la ruta viene por slug. Usamos el id del state si
-                // llegó desde el header, o resolvemos el slug contra la lista de ciudades.
-                let ciudadId = (location.state as { ciudadId?: number } | null)?.ciudadId;
-                if (!ciudadId) {
-                    const ciudades = await getAllCiudades();
-                    ciudadId = ciudades.find((c) => slugify(c.nombre) === slug)?.id;
-                }
+                // El API pide ciudadId; la ruta viene por slug: lo resolvemos contra
+                // la lista de ciudades.
+                const ciudades = await getAllCiudades();
+                const ciudadId = ciudades.find((c) => slugify(c.nombre) === slug)?.id;
                 if (!ciudadId) return;
                 const data = await getLanding(ciudadId);
                 if (activo) setLanding(data);
@@ -67,7 +64,7 @@ const CityPassPage = () => {
                     <h1 className="mb-2 text-2xl font-bold text-gray-900">CityPass {nombreCiudad}</h1>
                     <p className="mb-6 text-gray-500">{mensaje}</p>
                     <Link
-                        to="/eventos"
+                        href="/eventos"
                         className="inline-block rounded-lg bg-accentBase px-4 py-2 text-neutral transition-colors hover:bg-accentLight"
                     >
                         Volver a eventos
@@ -85,9 +82,8 @@ const CityPassPage = () => {
                 <PaquetesCityPass
                     paquetes={landing.paquetes}
                     onComprar={(paquete) =>
-                        navigate(
+                        router.push(
                             `/citypass/${slugify(landing.ciudad.nombre)}/paquete/${slugify(paquete.nombre)}`,
-                            { state: { paqueteId: paquete.id } },
                         )
                     }
                 />
