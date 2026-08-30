@@ -1,4 +1,5 @@
-import { Link, useLocation, useNavigate } from '@/utils/nextRouterCompat';
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { RxHamburgerMenu } from "react-icons/rx";
 import { TfiClose } from "react-icons/tfi";
@@ -8,9 +9,9 @@ import ErrorPage from "../ErrorPage";
 import { RiArrowRightLine } from "react-icons/ri";
 
 function NavBar() {
-  const navigate = useNavigate();
+  const router = useRouter();
   const { conferencia, error, loading } = useConferencia();
-  const location = useLocation();
+  const pathname = usePathname();
 
   const [isFixed, setIsFixed] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -58,7 +59,7 @@ function NavBar() {
   const pathRegistro = `/cosmotech/boletos/${conferencia.id}`;
   const pathHoteles = `/cosmotech/hoteles/${conferencia.id}`;
 
-  const isHomePath = location.pathname === pathInicio; 
+  const isHomePath = pathname === pathInicio;
   // const isRegistroPath = location.pathname === pathRegistro;
 
   const getNavbarBgClass = () => {
@@ -73,7 +74,7 @@ function NavBar() {
   const navBarClass = getNavbarBgClass();
 
   const getNavLinkClass = (path: string) => {
-    const isActive = location.pathname === path;
+    const isActive = pathname === path;
 
     const defaultColor = "text-gray-50"; 
     const hoverColor = "hover:text-white hover:border-white"; 
@@ -85,7 +86,7 @@ function NavBar() {
   };
 
   const scrollToSection = (sectionId: string) => {
-    navigate(pathInicio, { state: { scrollTo: sectionId }});
+    router.push(`${pathInicio}?scrollTo=${sectionId}`);
     setDropdownOpen(false);
     setIsOpen(false);
   };
@@ -94,7 +95,7 @@ function NavBar() {
     <div className={`left-1/2 -translate-x-1/2 container mx-auto md:px-5 lg:px-8 2xl:px-20 w-full rounded-2xl shadow-sm- px-6 z-50 transition-all duration-200 ${navBarClass}`}>
       <div className="flex items-center justify-between">
         {/* Logo */}
-        <Link to={pathInicio} onClick={() => { setIsOpen(false); setDropdownOpen(false); }}>
+        <Link href={pathInicio} onClick={() => { setIsOpen(false); setDropdownOpen(false); }}>
           <img src={conferencia.imagenLogo || '/default_image.png'} alt="logo empresa" className="max-h-14" />
         </Link>
 
@@ -150,28 +151,28 @@ function NavBar() {
             )}
           </li>
           <li>
-            <Link to={pathPrograma} className={getNavLinkClass(pathPrograma)}>
+            <Link href={pathPrograma} className={getNavLinkClass(pathPrograma)}>
               Programa
             </Link>
           </li>
           <li>
-            <Link to={pathSpeakers} className={getNavLinkClass(pathSpeakers)}>
+            <Link href={pathSpeakers} className={getNavLinkClass(pathSpeakers)}>
               Speakers
             </Link>
           </li>
           <li>
-            <Link to={pathRecinto} className={getNavLinkClass(pathRecinto)}>
+            <Link href={pathRecinto} className={getNavLinkClass(pathRecinto)}>
               Recinto
             </Link>
           </li>
           <li>
-            <Link to={pathHoteles} className={getNavLinkClass(pathHoteles)}>
+            <Link href={pathHoteles} className={getNavLinkClass(pathHoteles)}>
               Hoteles
             </Link>
           </li>
           {!isHomePath && (
           <li>
-            <Link to={pathRegistro} className="text-base gap-x-2 flex items-center bg-white text-blue-600 px-2 py-1 rounded-full">
+            <Link href={pathRegistro} className="text-base gap-x-2 flex items-center bg-white text-blue-600 px-2 py-1 rounded-full">
               Registrate aquí
               <div className="grid place-items-center w-5 h-5 bg-blue-600 rounded-full flex-none">
                 <RiArrowRightLine className="flex-none text-white" />
@@ -207,28 +208,28 @@ function NavBar() {
               </button>
             </li>
             <li>
-              <Link to={pathPrograma} className="text-gray-800" onClick={() => setIsOpen(false)}>
+              <Link href={pathPrograma} className="text-gray-800" onClick={() => setIsOpen(false)}>
                 Programa
               </Link>
             </li>
             <li>
-              <Link to={pathSpeakers} className="text-gray-800" onClick={() => setIsOpen(false)}>
+              <Link href={pathSpeakers} className="text-gray-800" onClick={() => setIsOpen(false)}>
                 Speakers
               </Link>
             </li>
             <li>
-              <Link to={pathRecinto} className="text-gray-800" onClick={() => setIsOpen(false)}>
+              <Link href={pathRecinto} className="text-gray-800" onClick={() => setIsOpen(false)}>
                 Recinto
               </Link>
             </li>
             <li>
-              <Link to={pathHoteles} className="text-gray-800" onClick={() => setIsOpen(false)}>
+              <Link href={pathHoteles} className="text-gray-800" onClick={() => setIsOpen(false)}>
                 Hoteles
               </Link>
             </li>
             {!isHomePath && (
             <li>
-              <Link to={pathRegistro} className="text-base gap-x-2 flex items-center bg-white text-blue-600 px-2 py-1 rounded-full">
+              <Link href={pathRegistro} className="text-base gap-x-2 flex items-center bg-white text-blue-600 px-2 py-1 rounded-full">
                 Registrate aquí
                 <div className="grid place-items-center w-5 h-5 bg-blue-600 rounded-full flex-none">
                   <RiArrowRightLine className="flex-none text-white" />
