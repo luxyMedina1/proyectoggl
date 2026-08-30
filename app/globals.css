@@ -19,6 +19,13 @@
   --color-explore:      #e11d2a;  /* Rojo botón Explorar */
 }
 
+@theme {
+  /* Poppins autohospedada por next/font (ver app/layout.tsx). El nombre real
+     de la familia lleva hash (__Poppins_xxxx); nunca referenciarla como
+     "Poppins" o el navegador buscaria una fuente instalada localmente. */
+  --font-sans: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
+}
+
 @theme inline {
   --color-background:   var(--background);
   --color-foreground:   var(--foreground);
@@ -41,5 +48,5 @@
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: "Poppins", Arial, Helvetica, sans-serif;
+  font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
 }
