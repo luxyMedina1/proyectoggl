@@ -1,5 +1,8 @@
 body{
-    font-family: "Poppins", serif;
+    /* next/font sirve Poppins con un nombre de familia con hash; referenciar
+       "Poppins" a secas fallaba fuera de las maquinas que la tienen instalada,
+       y el fallback serif sacaba el sitio en Times New Roman. */
+    font-family: var(--font-poppins), ui-sans-serif, system-ui, sans-serif;
 }
 :root{
     /* Acento del botón "Explorar". Rojo por defecto (como el mockup y los
