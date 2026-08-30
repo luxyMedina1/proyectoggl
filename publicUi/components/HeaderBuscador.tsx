@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate } from '@/utils/nextRouterCompat';
+import { useRouter } from "next/navigation";
 import { IoSearch } from 'react-icons/io5';
 import { MdLocationOn } from 'react-icons/md';
 import type { Ciudad } from '../../types/Ciudad';
@@ -23,14 +23,14 @@ export const HeaderBuscador = ({
     onCityPass,
     cityPassDisponible,
 }: Props) => {
-    const navigate = useNavigate();
+    const router = useRouter();
     const [texto, setTexto] = useState('');
 
     // El input filtra eventos en el home vía ?buscar=.
     const buscarEventos = (e: React.FormEvent) => {
         e.preventDefault();
         const q = texto.trim();
-        navigate(q ? `/eventos?buscar=${encodeURIComponent(q)}` : '/eventos');
+        router.push(q ? `/eventos?buscar=${encodeURIComponent(q)}` : '/eventos');
     };
 
     return (
