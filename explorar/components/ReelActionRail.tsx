@@ -1,4 +1,4 @@
-import { useNavigate } from '@/utils/nextRouterCompat';
+import { useRouter } from "next/navigation";
 import { IoChevronUp, IoChevronDown } from "react-icons/io5";
 import { FaHeart, FaRegHeart } from "react-icons/fa";
 import { HiVolumeUp, HiVolumeOff } from "react-icons/hi";
@@ -102,7 +102,7 @@ export const ReelActionRail = ({
   onToggleFiltros,
 }: Props) => {
   const overlay = variant === "overlay";
-  const navigate = useNavigate();
+  const router = useRouter();
 
   return (
     <div className="flex flex-col items-center gap-4">
@@ -138,7 +138,7 @@ export const ReelActionRail = ({
         icon={<LuLayoutGrid />}
         label={overlay ? undefined : "Cambiar"}
         ariaLabel="Cambiar a la lista de eventos"
-        onClick={() => navigate("/eventos")}
+        onClick={() => router.push("/eventos")}
         overlay={overlay}
         transparent
       />
