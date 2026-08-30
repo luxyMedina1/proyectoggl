@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { Link, useLocation, useNavigate, useParams } from '@/utils/nextRouterCompat';
+import Link from "next/link";
+import { useParams, useRouter } from "next/navigation";
 import { IoArrowBack } from 'react-icons/io5';
 import { LuCalendarClock } from 'react-icons/lu';
 import { HiOutlineTicket } from 'react-icons/hi2';
@@ -23,9 +24,8 @@ import { sanitizeRichText } from '../../utils/sanitizeHtml';
 import type { CityPassPaqueteDetalle } from '../../types/CityPass';
 
 const CityPassPaquetePage = () => {
-    const { slug: ciudadSlug, paqueteSlug } = useParams();
-    const navigate = useNavigate();
-    const location = useLocation();
+    const { slug: ciudadSlug, paqueteSlug } = useParams<{ slug: string; paqueteSlug: string }>();
+    const router = useRouter();
     const { getPaquete, getLanding } = useCityPassStore();
     const { getAllCiudades } = useCiudadesStore();
     const { status, isVerified } = useAuthStore();
@@ -41,19 +41,17 @@ const CityPassPaquetePage = () => {
             setLoading(true);
             setPaquete(null);
             try {
-                // El API pide id numérico; la ruta viene por slug. Usamos el id del state
-                // (al venir del landing) o resolvemos slug de ciudad + paquete contra el landing.
-                let paqueteId = (location.state as { paqueteId?: number } | null)?.paqueteId;
-                if (!paqueteId) {
-                    const ciudades = await getAllCiudades();
-                    const ciudadId = ciudades.find((c) => slugify(c.nombre) === ciudadSlug)?.id;
-                    if (ciudadId) {
-                        const landing = await getLanding(ciudadId);
-                        if (landing && landing.configurada) {
-                            paqueteId = landing.paquetes.find(
-                                (p) => slugify(p.nombre) === paqueteSlug,
-                            )?.id;
-                        }
+                // El API pide id numérico; la ruta viene por slug: resolvemos slug de
+                // ciudad + paquete contra el landing.
+                let paqueteId: number | undefined;
+                const ciudades = await getAllCiudades();
+                const ciudadId = ciudades.find((c) => slugify(c.nombre) === ciudadSlug)?.id;
+                if (ciudadId) {
+                    const landing = await getLanding(ciudadId);
+                    if (landing && landing.configurada) {
+                        paqueteId = landing.paquetes.find(
+                            (p) => slugify(p.nombre) === paqueteSlug,
+                        )?.id;
                     }
                 }
                 if (!paqueteId) return;
@@ -86,7 +84,7 @@ const CityPassPaquetePage = () => {
                     <h1 className="mb-2 text-2xl font-bold text-gray-900">Paquete no encontrado</h1>
                     <p className="mb-6 text-gray-500">Este paquete no está disponible.</p>
                     <Link
-                        to="/eventos"
+                        href="/eventos"
                         className="inline-block rounded-lg bg-accentBase px-4 py-2 text-neutral transition-colors hover:bg-accentLight"
                     >
                         Volver a eventos
@@ -120,7 +118,10 @@ const CityPassPaquetePage = () => {
             });
             return;
         }
-        navigate(`/citypass/checkout/${paquete.id}`, { state: { items: resumen.items } });
+        try {
+            sessionStorage.setItem('citypass:checkout', JSON.stringify(resumen.items));
+        } catch { /* almacenamiento no disponible: el checkout redirige si no hay items */ }
+        router.push(`/citypass/checkout/${paquete.id}`);
     };
 
     return (
@@ -130,7 +131,7 @@ const CityPassPaquetePage = () => {
                 <div className="mb-6 flex items-center gap-4">
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={() => router.back()}
                         aria-label="Volver"
                         className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-gray-100 text-gray-700 transition hover:bg-gray-200"
                     >
