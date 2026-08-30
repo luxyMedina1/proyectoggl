@@ -31,8 +31,6 @@
     "**/*.mts"
   ],
   "exclude": [
-    "node_modules",
-    "src",
-    "GGL_taquilla_next"
+    "node_modules"
   ]
 }
