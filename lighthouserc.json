@@ -1,0 +1,29 @@
+{
+  "//": "Automatiza la sección §9 del reporte (Mediciones Lighthouse), que hoy se corre a mano. Presupuestos = objetivos del reporte. Todo en 'warn': nunca rompe CI, solo deja el número registrado en cada corrida.",
+  "ci": {
+    "collect": {
+      "startServerCommand": "npm run start",
+      "startServerReadyPattern": "Ready in|started server on|Local:",
+      "startServerReadyTimeout": 60000,
+      "numberOfRuns": 3,
+      "settings": { "preset": "desktop" },
+      "url": [
+        "http://localhost:3000/eventos",
+        "http://localhost:3000/eventos/general",
+        "http://localhost:3000/explorar"
+      ]
+    },
+    "assert": {
+      "assertions": {
+        "categories:performance": ["warn", { "minScore": 0.6 }],
+        "categories:seo": ["warn", { "minScore": 0.95 }],
+        "categories:accessibility": ["warn", { "minScore": 0.9 }],
+        "first-contentful-paint": ["warn", { "maxNumericValue": 1800 }],
+        "largest-contentful-paint": ["warn", { "maxNumericValue": 2500 }],
+        "cumulative-layout-shift": ["warn", { "maxNumericValue": 0.1 }],
+        "total-blocking-time": ["warn", { "maxNumericValue": 300 }]
+      }
+    },
+    "upload": { "target": "temporary-public-storage" }
+  }
+}
