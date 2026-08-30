@@ -1,21 +1,19 @@
 import { useEffect, useState } from "react";
-import { useParams, useLocation, useNavigate } from '@/utils/nextRouterCompat';
+import { useParams, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import apiApplication from "../../../api/apiApplication"
 import Loader from '@/publicUi/components/Loader';
 import { LuBadgeCheck } from "react-icons/lu";
 import ConfettiCanvas from "./ConfettiCanvas";
-import { Link } from '@/utils/nextRouterCompat';
+import Link from "next/link";
 import { FaArrowLeftLong } from "react-icons/fa6";
 
 const TerminarCompraInvitadoConferencia = () => {
 
   const { reservaId, esGeneral, invitadoId, promocionId } = useParams();
-  const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
+  const searchParams = useSearchParams();
   const transaccionId = searchParams.get("id");
 
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [compraExitosa, setCompraExitosa] = useState(false);
   const [isVerifyMessage, setIsVerifyMessage] = useState('');
@@ -85,7 +83,7 @@ const TerminarCompraInvitadoConferencia = () => {
     };
 
     confirmarPago();
-  }, [transaccionId, reservaId, esGeneral, navigate]);
+  }, [transaccionId, reservaId, esGeneral]);
 
   return (
     <div className="relative">
@@ -106,7 +104,7 @@ const TerminarCompraInvitadoConferencia = () => {
                 </div>
               )}
               <p className='text-gray-600 my-4'>Total pagado: <span className='block text-3xl font-bold text-gray-800'>${infoCompra?.total}</span></p>
-              <Link to={`/`} className='relative z-50 mt-4 hover:cursor-pointer bg-gray-900 text-white rounded-full px-4 py-2 inline-flex items-center gap-x-2'><FaArrowLeftLong className='flex-none' />Regresar al inicio</Link>
+              <Link href={`/`} className='relative z-50 mt-4 hover:cursor-pointer bg-gray-900 text-white rounded-full px-4 py-2 inline-flex items-center gap-x-2'><FaArrowLeftLong className='flex-none' />Regresar al inicio</Link>
             </>
           )}
           <hr className='my-3' />
