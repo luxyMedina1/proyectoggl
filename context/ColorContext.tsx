@@ -2,16 +2,11 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from "react";
 import apiApplication from "../api/apiApplication";
-import { setMetaDeSitio } from "../utils/documentMeta";
 import { activarPixelsGlobales } from "../utils/metaPixel";
+import type { BrandColors } from "@/lib/config/getSiteConfig";
+import { DEFAULT_COLORS } from "@/lib/config/getSiteConfig";
 
-interface Colors {
-    emphasis: string;
-    accentBase: string;
-    accentLight: string;
-    neutral: string;
-    darker: string;
-}
+type Colors = BrandColors;
 
 export interface ConfigResponse {
     id: number;
@@ -38,38 +33,31 @@ interface ColorConfigContextType {
     reloadConfig: () => Promise<void>;
 }
 
-// Colores por defecto
-const DEFAULT_COLORS: Colors = {
-    emphasis: "#0E1A3D",   // Azul marino oscuro — header/navbar
-    accentBase: "#1A56DB", // Azul brillante    — botones activos, tabs, CTAs
-    accentLight: "#38BDF8",// Azul cyan claro   — elementos secundarios, hover
-    neutral: "#F8FAFC",    // Blanco apagado    — fondos de sección y texto sobre oscuro
-    darker: "#1E293B",     // Slate oscuro      — texto principal sobre fondo claro
-};
-
 // Contexto
 const ColorConfigContext = createContext<ColorConfigContextType | undefined>(undefined);
 
 // Provider
-export const ColorConfigProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
-    const [colors, setColors] = useState<Colors>(DEFAULT_COLORS);
-    const [config, setConfig] = useState<ConfigResponse | null>(null);
-    const [loading, setLoading] = useState<boolean>(true);
+//
+// La config de marca la trae ahora el servidor (lib/config/getSiteConfig.ts) y
+// entra como props iniciales: el logo, los colores y el titulo estan en el HTML
+// inicial, sin salto ni fetch del navegador. El <title> y los og:* los pone
+// generateMetadata del layout raiz, asi que este provider ya NO toca <head>.
+export const ColorConfigProvider: React.FC<{
+    children: ReactNode;
+    configInicial?: ConfigResponse | null;
+    coloresIniciales?: Colors;
+}> = ({ children, configInicial = null, coloresIniciales }) => {
+    const [colors, setColors] = useState<Colors>(coloresIniciales ?? DEFAULT_COLORS);
+    const [config, setConfig] = useState<ConfigResponse | null>(configInicial);
+    const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
+    // Los pixels de Meta se activan en el navegador (inyectan el script). Se hace
+    // una vez al montar con la config que ya vino del servidor.
     useEffect(() => {
-        if (config?.imagenTabNavegador) {
-            let link: HTMLLinkElement | null = document.querySelector("link[rel~='icon']");
-
-            if (!link) {
-                link = document.createElement("link");
-                link.rel = "icon";
-                document.head.appendChild(link);
-            }
-            link.href = config.imagenTabNavegador;
-        }
-    }, [config?.imagenTabNavegador]);
-
+        activarPixelsGlobales(configInicial?.metaPixels);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const applyColorsToDocument = (colorsToApply: Colors) => {
         document.documentElement.style.setProperty("--color-emphasis", colorsToApply.emphasis);
@@ -80,7 +68,8 @@ export const ColorConfigProvider: React.FC<{ children: ReactNode }> = ({ childre
     };
 
     const validateColors = (data: ConfigResponse): Colors => {
-        const isValidColor = (color: string | undefined): boolean => !!color && /^#([0-9A-F]{3}){1,2}$/i.test(color);
+        const isValidColor = (color: string | undefined): boolean =>
+            !!color && /^#([0-9A-F]{3}){1,2}$/i.test(color);
 
         return {
             emphasis: isValidColor(data.enfasis) ? data.enfasis! : DEFAULT_COLORS.emphasis,
@@ -91,7 +80,9 @@ export const ColorConfigProvider: React.FC<{ children: ReactNode }> = ({ childre
         };
     };
 
-    const loadConfig = async () => {
+    // Recarga en runtime (p. ej. tras editar la marca en el dashboard sin recargar).
+    // El primer render ya viene servido; esto es el camino de refresco, no el inicial.
+    const reloadConfig = async () => {
         setLoading(true);
         setError(null);
         try {
@@ -101,32 +92,17 @@ export const ColorConfigProvider: React.FC<{ children: ReactNode }> = ({ childre
             setConfig(data);
             applyColorsToDocument(validatedColors);
             activarPixelsGlobales(data.metaPixels);
-            // El <title> y los og:* base pasan por documentMeta para que no pisen los
-            // metadatos de la pagina actual (el detalle de evento los sobreescribe).
-            setMetaDeSitio({
-                nombreMarca: data.nombreMarca,
-                descripcion: data.descripcion || data.descripcionMarca,
-                imagen: data.imagenCompartir || data.logo,
-            });
         } catch (err) {
-            console.error("Error cargando configuración:", err);
-            setError("No se pudo cargar la configuración");
-            applyColorsToDocument(DEFAULT_COLORS);
-            setColors(DEFAULT_COLORS);
-            setConfig(null);
+            console.error("Error recargando configuración:", err);
+            setError("No se pudo recargar la configuración");
         } finally {
             setLoading(false);
         }
     };
 
-    useEffect(() => {
-        applyColorsToDocument(DEFAULT_COLORS);
-        loadConfig();
-    }, []);
-
     return (
         <ColorConfigContext.Provider
-            value={{ colors, config, loading, error, reloadConfig: loadConfig }}
+            value={{ colors, config, loading, error, reloadConfig }}
         >
             {children}
         </ColorConfigContext.Provider>
