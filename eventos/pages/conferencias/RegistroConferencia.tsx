@@ -1,4 +1,5 @@
-import { useParams, Link } from '@/utils/nextRouterCompat'; 
+import Link from "next/link";
+import { useParams } from "next/navigation";
 import { useEffect, useState} from "react";
 import Swal from "sweetalert2";
 import apiApplication from "../../../api/apiApplication";
@@ -8,11 +9,6 @@ import { FaArrowLeftLong } from "react-icons/fa6";
 import { IoLocationOutline } from "react-icons/io5";
 import { HiOutlineCalendarDateRange } from "react-icons/hi2";
 import { formatDate } from '../../../utils/dateHelpers';
-
-interface RouteParams {
-    [key: string]: string | undefined;
-    eventoId: string;
-}
 
 interface Conferencia {
     id: Number;
@@ -27,7 +23,7 @@ interface Conferencia {
 }
 
 function RegistroConferencia() {
-    const { eventoId } = useParams<RouteParams>(); 
+    const { eventoId } = useParams<{ eventoId: string }>();
 
     const [conferencia, setConferencia] = useState<Conferencia | null>(null);
     const [error, setError] = useState<string | null>(null);
@@ -71,7 +67,7 @@ function RegistroConferencia() {
             <div className="container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 relative mb-10 mt-36">
                 <div className="grid lg:grid-cols-2 gap-4">
                     <aside className="p-3 md:p-4 bg-white rounded-2xl shadow-sm border border-gray-200 space-y-4">
-                        <Link to={`/cosmotech/${eventoId}`} className='bg-gray-900 text-white rounded-full px-4 py-2 inline-flex items-center gap-x-2'><FaArrowLeftLong className='flex-none' />Regresar al inicio</Link>
+                        <Link href={`/cosmotech/${eventoId}`} className='bg-gray-900 text-white rounded-full px-4 py-2 inline-flex items-center gap-x-2'><FaArrowLeftLong className='flex-none' />Regresar al inicio</Link>
                         <figure>
                             <img className='rounded-2xl aspect-video object-cover max-h-[30rem]' src={conferencia.imagenBanner || '/beneficio_4.webp'} alt="" />
                         </figure>
