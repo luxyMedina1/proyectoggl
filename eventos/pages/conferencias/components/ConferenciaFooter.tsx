@@ -2,7 +2,7 @@ import React from "react";
 import { RiArrowRightLine } from "react-icons/ri";
 import { FaFacebook, FaXTwitter } from "react-icons/fa6";
 import { FaInstagram } from "react-icons/fa";
-import { Link } from '@/utils/nextRouterCompat';
+import Link from "next/link";
 
 type SocialLink = {
   facebook?: string;
@@ -30,7 +30,7 @@ function ConferenciaFooter({conferencia}: Props) {
                         <p className="text-xl xl:text-2xl font-semibold">¿Quieres ser parte del evento?</p>
                         <p className="text-base xl:text-lg font-light">Llena este formulario y selecciona si asistes como invitado o expositor.</p>
                     </div>
-                    <Link to={`/cosmotech/boletos/${conferencia.id}`} className="bg-white rounded-full text-blue-600 text-sm pl-8 pr-2 py-2 flex items-center gap-x-2">
+                    <Link href={`/cosmotech/boletos/${conferencia.id}`} className="bg-white rounded-full text-blue-600 text-sm pl-8 pr-2 py-2 flex items-center gap-x-2">
                         Registrate aquí
                         <div className="grid place-items-center w-8 h-8 bg-blue-950 rounded-full">
                             <RiArrowRightLine className="flex-none text-white" size={22} />
