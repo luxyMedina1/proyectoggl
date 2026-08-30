@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { Link, useLocation, useParams } from '@/utils/nextRouterCompat';
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import Swal from 'sweetalert2';
 import { LuBadgeCheck } from 'react-icons/lu';
 import Loader from '../components/Loader';
@@ -8,9 +9,8 @@ import { useCityPassStore } from '../../hooks/useCityPassStore';
 
 // Página de retorno tras el 3D-Secure de Openpay: confirma el cargo y emite los boletos.
 const CityPassTerminarCompra = () => {
-    useParams(); // :compraId (parte de la URL de retorno de Openpay)
-    const location = useLocation();
-    const transaccionId = new URLSearchParams(location.search).get('id');
+    // :compraId es parte de la URL de retorno de Openpay; aquí solo se usa el query id.
+    const transaccionId = useSearchParams().get('id');
     const { checkCargo } = useCityPassStore();
 
     const [loading, setLoading] = useState(true);
@@ -66,7 +66,7 @@ const CityPassTerminarCompra = () => {
                         )
                     )}
                     <hr className="my-3" />
-                    <Link to="/eventos" className="relative z-10 mb-2 block w-full rounded-lg bg-accentBase px-4 py-2 text-neutral transition-colors hover:bg-emphasis">
+                    <Link href="/eventos" className="relative z-10 mb-2 block w-full rounded-lg bg-accentBase px-4 py-2 text-neutral transition-colors hover:bg-emphasis">
                         Volver a inicio
                     </Link>
                 </div>
