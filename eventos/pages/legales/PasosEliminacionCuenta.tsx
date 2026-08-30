@@ -1,10 +1,10 @@
 import { useColorConfig } from "../../../context/ColorContext";
 import { useEffect } from "react";
-import { useLocation } from '@/utils/nextRouterCompat';
+import { usePathname } from "next/navigation";
 
 function PasosEliminacionCuenta() {
     const { config } = useColorConfig();
-    const { pathname } = useLocation();
+    const pathname = usePathname();
     const nombreMarca = config?.nombreMarca;
     const logo = config?.logoSmall;
     const emailContacto = config?.emailContacto;
