@@ -3,7 +3,7 @@
 import { RiArrowRightLine, RiArrowDownLine   } from "react-icons/ri";
 // import { formatDate } from "../../../../utils/dateHelpers";
 import NavBar from "./NavBar";
-import { Link } from '@/utils/nextRouterCompat';
+import Link from "next/link";
 
 function ConferenciaHero({ conferencia }: any) {
     return (
@@ -17,8 +17,8 @@ function ConferenciaHero({ conferencia }: any) {
                     <p className="flex items-center gap-x-2 font-light"><BsCalendar4Week className="flex-none" size={28} />{formatDate(conferencia.fecha)}</p>
                     <p className="flex items-center gap-x-2 font-light"><SlLocationPin className="flex-none" size={28} />{conferencia.ubicacion}</p>
                 </div> */}
-                <Link 
-                    to={`/cosmotech/boletos/${conferencia.id}`} 
+                <Link
+                    href={`/cosmotech/boletos/${conferencia.id}`}
                     className="text-sm md:text-base lg:text-xl items-center absolute bottom-4 md:bottom-20 left-1/2 -translate-x-1/2 mx-auto gap-x-2 inline-flex bg-white text-blue-600 pl-4 md:pl-8 pr-2 py-2 md:py-1 rounded-full shadow-lg hover:shadow-xl transition-shadow duration-300"
                 >
                     Registrate aquí
