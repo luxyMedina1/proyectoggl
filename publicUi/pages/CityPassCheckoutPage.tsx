@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { useLocation, useNavigate, useParams } from '@/utils/nextRouterCompat';
+import { useParams, useRouter } from "next/navigation";
 import { IoArrowBack, IoTrashOutline } from 'react-icons/io5';
 import { HiOutlineTicket } from 'react-icons/hi2';
 import { LuBadgeCheck } from 'react-icons/lu';
@@ -29,14 +29,23 @@ const round2 = (n: number) => Math.round(n * 100) / 100;
 
 // Página de compra de CityPass (Openpay 3DS). Reemplaza la vista del paquete durante el pago.
 const CityPassCheckoutPage = () => {
-    const { paqueteId } = useParams();
-    const navigate = useNavigate();
-    const location = useLocation();
+    const { paqueteId } = useParams<{ paqueteId: string }>();
+    const router = useRouter();
     const { getPaquete, makeCargo } = useCityPassStore();
     const { status, isVerified } = useAuthStore();
     const { requestLogin } = useAuthModal();
 
-    const items = (location.state as { items?: CityPassItemCompra[] } | null)?.items ?? [];
+    // Los boletos elegidos llegan desde la vista del paquete vía sessionStorage
+    // (App Router no transporta estado de navegación entre rutas).
+    const [items, setItems] = useState<CityPassItemCompra[]>([]);
+    const [itemsHidratados, setItemsHidratados] = useState(false);
+    useEffect(() => {
+        try {
+            const raw = sessionStorage.getItem('citypass:checkout');
+            if (raw) setItems(JSON.parse(raw));
+        } catch { /* almacenamiento no disponible */ }
+        setItemsHidratados(true);
+    }, []);
 
     const [paquete, setPaquete] = useState<CityPassPaqueteDetalle | null>(null);
     const [cargandoPaquete, setCargandoPaquete] = useState(true);
@@ -54,17 +63,16 @@ const CityPassCheckoutPage = () => {
 
     // Sin boletos seleccionados (ej. entró directo/recargó): regresar al paquete.
     useEffect(() => {
-        if (!items.length) {
-            navigate('/eventos', { replace: true });
+        if (itemsHidratados && !items.length) {
+            router.replace('/eventos');
         }
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, []);
+    }, [itemsHidratados, items.length, router]);
 
     // Debe estar logueado. Si no, abre el modal de login sin salir de la página.
     useEffect(() => {
         if (status === 'unauthenticated') {
             requestLogin().then((ok) => {
-                if (!ok) navigate('/eventos', { replace: true });
+                if (!ok) router.replace('/eventos');
             });
         }
         // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -272,7 +280,7 @@ const CityPassCheckoutPage = () => {
                 return;
             }
 
-            navigate(`/citypass/terminar_compra/${data.compraId}?id=${transaccionId}`);
+            router.push(`/citypass/terminar_compra/${data.compraId}?id=${transaccionId}`);
         } catch (error: any) {
             setProcesando(false);
             Swal.fire({ icon: 'error', title: 'Error', text: error?.message || 'Ocurrió un error al procesar el pago.' });
@@ -288,7 +296,7 @@ const CityPassCheckoutPage = () => {
                     <h1 className="mb-2 text-2xl font-bold text-gray-900">Paquete no disponible</h1>
                     <button
                         type="button"
-                        onClick={() => navigate('/eventos')}
+                        onClick={() => router.push('/eventos')}
                         className="mt-2 rounded-lg bg-accentBase px-4 py-2 text-neutral transition-colors hover:bg-accentLight"
                     >
                         Volver a inicio
@@ -306,7 +314,7 @@ const CityPassCheckoutPage = () => {
                 <div className="mb-6 flex items-center gap-4">
                     <button
                         type="button"
-                        onClick={() => navigate(-1)}
+                        onClick={() => router.back()}
                         aria-label="Volver"
                         className="grid h-11 w-11 flex-none place-items-center rounded-xl bg-gray-100 text-gray-700 transition hover:bg-gray-200"
                     >
