@@ -1,7 +1,7 @@
-import { useNavigate } from '@/utils/nextRouterCompat';
+import { useRouter } from "next/navigation";
 
 function ErrorPage() {
-  const navigate = useNavigate();
+  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-gray-50 flex items-center justify-center p-6">
@@ -44,7 +44,7 @@ function ErrorPage() {
             </p>
           </div>
           <div className="flex flex-col sm:flex-row gap-3">
-            <button onClick={() => navigate(-1)} className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition">
+            <button onClick={() => router.back()} className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-gray-200 text-gray-700 bg-white hover:bg-gray-50 transition">
               Regresar
             </button>
           </div>
