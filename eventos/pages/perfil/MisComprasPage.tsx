@@ -12,7 +12,7 @@ import { IoIosArrowRoundBack } from 'react-icons/io';
 import Sidebar from './components/Sidebar';
 const defaultEventImage = '/event_default.webp';
 import { differenceInDays, parseISO, isAfter } from 'date-fns';
-import { Link } from '@/utils/nextRouterCompat';
+import Link from "next/link";
 import Loader from '@/publicUi/components/Loader';
 import apiApplication from '../../../api/apiApplication';
 import TransferirBoletoModal from '../../components/TransferirBoletoModal';
@@ -225,7 +225,7 @@ function MisComprasPage() {
                             <h3 className={`text-gray-800 text-lg font-semibold flex flex-wrap items-center justify-between ${vista === 'grid' ? 'flex-col' : 'flex-row mb-2'}`}>
                                 {e.funcionNombre ? `${e.nombre} - ${e.funcionNombre}` : e.nombre}
                                 {mensajeDias !== 'El evento ya pasó' && (
-                                    <Link to={rutaEvento(e, e.funcionId ? { id: e.funcionId, nombre: e.funcionNombre, fecha: e.fecha } : null)} className="text-accentLight font-normal flex items-center gap-2 mt-2 text-base">
+                                    <Link href={rutaEvento(e, e.funcionId ? { id: e.funcionId, nombre: e.funcionNombre, fecha: e.fecha } : null)} className="text-accentLight font-normal flex items-center gap-2 mt-2 text-base">
                                         Ver evento <GoChevronRight className="text-xl" />
                                     </Link>
                                 )}
