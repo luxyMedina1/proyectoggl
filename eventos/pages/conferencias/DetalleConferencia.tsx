@@ -1,3 +1,5 @@
+"use client";
+
 // import { RiArrowRightUpLine } from "react-icons/ri";
 import Loader from '@/publicUi/components/Loader';
 import ConferenciaHero from "./components/ConferenciaHero";
@@ -12,7 +14,7 @@ import ErrorPage from "./ErrorPage";
 import { FaGear, FaCloud, FaLaptopCode, FaShieldHalved, FaDatabase, FaChartSimple, FaServer } from 'react-icons/fa6';
 import { FaCogs } from 'react-icons/fa';
 import { HiOutlineSquaresPlus } from "react-icons/hi2";
-import { useLocation } from '@/utils/nextRouterCompat';
+import { useSearchParams } from "next/navigation";
 import { useEffect } from "react";
 
 interface Solucion {
@@ -24,17 +26,18 @@ interface Solucion {
 
 function DetalleConferencia() {
 
-  const location = useLocation();
+  const searchParams = useSearchParams();
+  const scrollTo = searchParams.get("scrollTo");
   const { conferencia, error, loading } = useConferencia();
 
   useEffect(() => {
-    if (location.state?.scrollTo) {
-      const section = document.getElementById(location.state.scrollTo);
+    if (scrollTo) {
+      const section = document.getElementById(scrollTo);
       if (section) {
         section.scrollIntoView({ behavior: "smooth" });
       }
     }
-  }, [location.state]);
+  }, [scrollTo]);
 
   const solucionesData: Solucion[] = [
     { id: 1, nombre: 'Inteligencia Artificial Aplicada', Icono: FaGear, iconoSrc: '/soluciones/solucion1.svg' },
