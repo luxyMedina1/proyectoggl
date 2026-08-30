@@ -1,12 +1,7 @@
 import { useEffect, useState } from "react";
-import { useParams } from '@/utils/nextRouterCompat';
+import { useParams } from "next/navigation";
 import Swal from "sweetalert2";
 import apiApplication from "../../../../api/apiApplication";
-
-interface RouteParams {
-  [key: string]: string | undefined;
-  eventoId: string;
-}
 
 interface Conferencia {
   id: Number;
@@ -36,7 +31,7 @@ interface Sesion {
 }
 
 export const useConferencia = () => {
-  const { eventoId } = useParams<RouteParams>();
+  const { eventoId } = useParams<{ eventoId: string }>();
   const [conferencia, setConferencia] = useState<Conferencia | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
