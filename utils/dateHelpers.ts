@@ -1,4 +1,12 @@
-import { parseISO } from "date-fns";
+import {
+  parseISO,
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  addDays,
+  isWithinInterval,
+  isAfter,
+} from "date-fns";
 import { es } from "date-fns/locale";
 import { Locale } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
@@ -59,6 +67,52 @@ export const formatFechaConRango = (
   if (fechaFin === FECHA_INVALIDA) return base;
 
   return `${base} al ${fechaFin}, ${formatDate(fin, horaFormato)}`;
+};
+
+// Filtro de fecha del listado de eventos y del home. Antes vivía duplicado en
+// `app/(site)/eventos/page.tsx` y `publicUi/pages/HomePage.tsx` con dayjs +
+// el plugin isBetween; se movió aquí al migrar a date-fns (doc 08).
+// Semana de domingo a sábado (weekStartsOn: 0) para igualar a dayjs sin locale.
+export type FiltroFechaEvento =
+  | "finDeSemana"
+  | "estaSemana"
+  | "proximaSemana"
+  | "proximamente"
+  | (string & {});
+
+export const eventoPasaFiltroFecha = (
+  fechaEvento: string | Date,
+  filtro: FiltroFechaEvento,
+): boolean => {
+  const fecha =
+    typeof fechaEvento === "string" ? parseISO(fechaEvento) : fechaEvento;
+  if (Number.isNaN(fecha.getTime())) return true;
+
+  const hoy = new Date();
+  const opts = { weekStartsOn: 0 as const };
+  const inicioSemana = startOfWeek(hoy, opts);
+  const finSemana = endOfWeek(hoy, opts);
+
+  switch (filtro) {
+    case "finDeSemana": // viernes hasta el fin de semana
+      return isWithinInterval(fecha, {
+        start: addDays(inicioSemana, 5),
+        end: finSemana,
+      });
+    case "estaSemana":
+      return isWithinInterval(fecha, { start: inicioSemana, end: finSemana });
+    case "proximaSemana": {
+      const prox = addWeeks(hoy, 1);
+      return isWithinInterval(fecha, {
+        start: startOfWeek(prox, opts),
+        end: endOfWeek(prox, opts),
+      });
+    }
+    case "proximamente":
+      return isAfter(fecha, addDays(hoy, 15));
+    default:
+      return true;
+  }
 };
 
 // Solo la hora cuando cae el mismo dia que la referencia; fecha completa cuando no.
