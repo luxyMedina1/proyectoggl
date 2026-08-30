@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from '@/utils/nextRouterCompat';
+import Link from "next/link";
 import Swal from 'sweetalert2';
 import { IoMdClose } from 'react-icons/io';
 import { LuSearch, LuChevronDown, LuChevronUp, LuTicket, LuUsers } from 'react-icons/lu';
@@ -274,7 +274,7 @@ const TransferirModal = ({
                                     <LuUsers className="mx-auto text-4xl text-gray-300 mb-3" />
                                     <p className="text-gray-600 mb-3">Aún no tienes amigos para transferir.</p>
                                     <Link
-                                        to="/perfil/mis_amigos"
+                                        href="/perfil/mis_amigos"
                                         onClick={onClose}
                                         className="inline-block bg-accentBase hover:bg-emphasis text-white px-4 py-2 rounded-lg text-sm font-medium"
                                     >
