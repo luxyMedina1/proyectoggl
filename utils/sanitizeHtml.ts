@@ -85,6 +85,8 @@ export const sanitizeRichText = (html?: string | null): string => {
 
 // Texto plano recortado a partir del mismo HTML, para meta description / og:description.
 // Se sanitiza primero y luego se lee el textContent de un nodo suelto (no se inserta en el DOM).
+// OJO: usa document, así que SOLO corre en el navegador. En el servidor
+// (generateMetadata, sitemap) usa textoPlano().
 export const richTextToPlainText = (html?: string | null, maxLargo = 200): string => {
     if (!html) return "";
 
@@ -94,5 +96,38 @@ export const richTextToPlainText = (html?: string | null, maxLargo = 200): strin
     const texto = (contenedor.textContent ?? "").replace(/\s+/g, " ").trim();
     if (texto.length <= maxLargo) return texto;
 
+    return `${texto.slice(0, maxLargo - 1).trimEnd()}…`;
+};
+
+const ENTIDADES: Record<string, string> = {
+    "&amp;": "&", "&lt;": "<", "&gt;": ">",
+    "&quot;": '"', "&#39;": "'", "&apos;": "'", "&nbsp;": " ",
+};
+
+/**
+ * Texto plano a partir de HTML, sin depender del DOM.
+ *
+ * Sirve en servidor y en cliente, y es la que usa generateMetadata para derivar
+ * la og:description de la descripción rich text del evento.
+ *
+ * OJO: esto NO es un sanitizador. Sólo quita etiquetas para producir texto.
+ * Para pintar HTML sigue usando sanitizeRichText() con DOMPurify.
+ */
+export const textoPlano = (html?: string | null, maxLargo = 200): string => {
+    if (!html) return "";
+
+    const texto = html
+        // Los bloques se convierten en espacio para que no se peguen palabras
+        // entre párrafos: "<p>uno</p><p>dos</p>" → "uno dos", no "unodos".
+        .replace(/<\/(p|div|li|h[1-6]|blockquote)>/gi, " ")
+        .replace(/<br\s*\/?>/gi, " ")
+        // script y style con su contenido, antes de quitar etiquetas sueltas.
+        .replace(/<(script|style)\b[^>]*>[\s\S]*?<\/\1>/gi, "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/&[a-z]+;|&#\d+;/gi, (m) => ENTIDADES[m.toLowerCase()] ?? " ")
+        .replace(/\s+/g, " ")
+        .trim();
+
+    if (texto.length <= maxLargo) return texto;
     return `${texto.slice(0, maxLargo - 1).trimEnd()}…`;
 };
