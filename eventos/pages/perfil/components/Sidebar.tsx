@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { LuUserRound, LuLogOut, LuUsers, LuSend } from "react-icons/lu";
 import { BsCreditCard } from "react-icons/bs";
 import { TbTicket } from "react-icons/tb";
-import { NavLink } from '@/utils/nextRouterCompat';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useAuthStore } from "../../../../hooks/useAuthStore";
 import { useTransferenciasStore } from "../../../../hooks/useTransferenciasStore";
 import { useAmigosStore } from "../../../../hooks/useAmigosStore";
@@ -11,6 +12,7 @@ import { onNotifRefresh } from "../../../../utils/notifEvents";
 const POLL_MS = 30_000;
 
 const Sidebar = () => {
+    const pathname = usePathname();
     const { startLogout, user } = useAuthStore();
     const { getPendientesRecibidas } = useTransferenciasStore();
     const { getSolicitudesRecibidas } = useAmigosStore();
@@ -65,11 +67,11 @@ const Sidebar = () => {
                             {icon} {label}
                         </button>
                     ) : (
-                        <NavLink
+                        <Link
                             key={path}
-                            to={path}
-                            className={({ isActive }) => `flex items-center gap-x-4 font-semibold cursor-pointer p-2 rounded-full transition-colors
-                            ${isActive ? "bg-accentLight text-neutral" : "text-gray-600 hover:bg-accentLight hover:text-neutral"}`}
+                            href={path}
+                            className={`flex items-center gap-x-4 font-semibold cursor-pointer p-2 rounded-full transition-colors
+                            ${pathname === path ? "bg-accentLight text-neutral" : "text-gray-600 hover:bg-accentLight hover:text-neutral"}`}
                         >
                             {icon}
                             <span className="flex-1">{label}</span>
@@ -78,7 +80,7 @@ const Sidebar = () => {
                                     {badge}
                                 </span>
                             )}
-                        </NavLink>
+                        </Link>
                     )
                 ))}
             </ul>
