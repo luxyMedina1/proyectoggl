@@ -16,17 +16,12 @@ import { GiSydneyOperaHouse } from "react-icons/gi";
 import { FaRegEye } from "react-icons/fa";
 import { BsFillClockFill } from "react-icons/bs";
 import { FaLocationArrow } from "react-icons/fa";
-import moment from "moment";
-import "moment/locale/es";
-moment.locale("es");
 import apiApplication from "../../../api/apiApplication";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { Navigation, Pagination, Autoplay } from "swiper/modules";
 import "swiper/css";
 import "swiper/css/navigation";
 import "swiper/css/pagination";
-import dayjs from "dayjs";
-import isBetween from "dayjs/plugin/isBetween";
 import Swal from "sweetalert2";
 import LocalLoader from "../../../components/LocalLoader";
 import {
@@ -34,13 +29,12 @@ import {
   formatFechaConRango,
   formatHoraRelativa,
   formatRangoHora,
+  eventoPasaFiltroFecha,
 } from "../../../utils/dateHelpers";
 import { consultaMaps } from "../../../utils/mapsHelpers";
 import { DireccionMapsLink } from "../../../components/DireccionMapsLink";
 import { rutaEvento, rutaEventoInformacion, rutaEventoPorBase } from "../../../utils/eventoSlug";
 import { LuCalendarClock, LuDoorOpen } from "react-icons/lu";
-
-dayjs.extend(isBetween);
 
 // Normaliza texto para comparar sin acentos ni mayúsculas (búsqueda del header).
 const normalizarTexto = (texto: string): string =>
@@ -232,38 +226,8 @@ function EventosContent() {
 
   const fechaFormateada = (date: string) => formatDate(date, "MMM - dd").toUpperCase();
 
-  const filtrarPorFecha = (evento: any) => {
-    const hoy = dayjs();
-    const inicioSemana = hoy.startOf("week");
-    const finSemana = hoy.endOf("week");
-    const inicioProxSemana = hoy.add(1, "week").startOf("week");
-    const finProxSemana = hoy.add(1, "week").endOf("week");
-    const dentroDe15Dias = hoy.add(15, "day");
-    const fechaEvento = dayjs(evento.fecha);
-
-    switch (filtroFecha) {
-      case "finDeSemana":
-        return fechaEvento.isBetween(
-          hoy.startOf("week").add(5, "day"),
-          finSemana,
-          null,
-          "[]",
-        );
-      case "estaSemana":
-        return fechaEvento.isBetween(inicioSemana, finSemana, null, "[]");
-      case "proximaSemana":
-        return fechaEvento.isBetween(
-          inicioProxSemana,
-          finProxSemana,
-          null,
-          "[]",
-        );
-      case "proximamente":
-        return fechaEvento.isAfter(dentroDe15Dias);
-      default:
-        return true;
-    }
-  };
+  const filtrarPorFecha = (evento: any) =>
+    eventoPasaFiltroFecha(evento.fecha, filtroFecha);
 
   const eventosFiltrados = eventos.filter((evento) => {
     const cumpleCategoria = categoriaSeleccionada
