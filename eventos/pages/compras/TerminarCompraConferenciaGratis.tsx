@@ -1,20 +1,18 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, useNavigate } from '@/utils/nextRouterCompat';
+import { useParams } from "next/navigation";
 import Swal from "sweetalert2";
 import apiApplication from "../../../api/apiApplication"
 import Loader from '@/publicUi/components/Loader';
 import { LuDownload } from "react-icons/lu";
 import ConfettiCanvas from "./ConfettiCanvas";
 import { FaArrowLeftLong } from "react-icons/fa6";
-import { Link } from '@/utils/nextRouterCompat';
+import Link from "next/link";
 import { QRCodeCanvas } from 'qrcode.react';
-import html2canvas from 'html2canvas';
 
 const TerminarCompraConferenciaGratis = () => {
 
   const { reservaId, esGeneral, promocionId, invitadoId } = useParams();
 
-  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [compraExitosa, setCompraExitosa] = useState(false);
   const [isVerifyMessage, setIsVerifyMessage] = useState('');
@@ -80,12 +78,15 @@ const TerminarCompraConferenciaGratis = () => {
     };
 
     confirmarPago();
-  }, [reservaId, esGeneral, navigate]);
+  }, [reservaId, esGeneral]);
 
   const downloadQR = async () => {
     // console.log('click aqui alv...)
     if (qrRef.current) {
       try {
+        // Import dinámico: html2canvas (~200 KB) sólo se descarga al pulsar
+        // "Descargar QR", no en la carga inicial de la página.
+        const { default: html2canvas } = await import('html2canvas');
         const canvas = await html2canvas(qrRef.current, {
           scale: 4,
           useCORS: true,
@@ -135,7 +136,7 @@ const TerminarCompraConferenciaGratis = () => {
                       </div>
                     </div>
                     <div className="flex flex-wrap justify-between gap-3 items-center">
-                      <Link data-html2canvas-ignore to={`/`} className='relative z-50 hover:cursor-pointer bg-gray-900 text-white rounded-full px-4 py-2 inline-flex items-center gap-x-2'><FaArrowLeftLong className='flex-none' />Regresar</Link>
+                      <Link data-html2canvas-ignore href={`/`} className='relative z-50 hover:cursor-pointer bg-gray-900 text-white rounded-full px-4 py-2 inline-flex items-center gap-x-2'><FaArrowLeftLong className='flex-none' />Regresar</Link>
                       <button data-html2canvas-ignore onClick={downloadQR} className='relative z-50 bg-blue-600 px-5 py-2 rounded-full mx-auto text-white inline-flex items-center gap-x-2 hover:bg-blue-700 transition-colors'><LuDownload className='flex-none' size={22} />Descargar QR</button>
                     </div>
                   </div>
