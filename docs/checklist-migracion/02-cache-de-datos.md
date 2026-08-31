@@ -142,14 +142,76 @@ Dos detalles que no son obvios:
 | Configuración de marca | `/configuraciones/detail/1` | `3600` (1 h) | `config:sitio` |
 | Ciudades | `/ciudades` | `86400` (24 h) | `ciudades` |
 | Listado público de eventos | `/eventos/get_all_select` | `300` (5 min) | `eventos:lista` |
-| Detalle de un evento | `/eventos/:id/detalle` | `300` (5 min) | `evento:<slug>` |
-| Secciones y precios | `/eventos/:id/detalle_seccion/...` | `300` (5 min) | `evento:<slug>` |
-| Paquetes de CityPass | `/citypass/...` | `3600` (1 h) | `citypass:<ciudad>` |
+| Landing de CityPass | `/citypass/publico/landing?ciudadId=` | `3600` (1 h) | `citypass:<ciudad>` |
 | Documentos de legales (`.docx`) | `config.terminosYCondiciones` | `86400` (24 h) | `legales` |
+| **Detalle de un evento** | `/eventos/:id/detalle` | **ver abajo** | `evento:<slug>` |
+| **Secciones y filas** | `/eventos/:id/detalle_seccion/...` | **`no-store`** | — |
 | **Disponibilidad de asientos** | `/eventos/:id/:sec/filas_por_seccion` | **`no-store`** | — |
 | **Cualquier cosa del usuario** | `/eventos/mis_eventos`, perfil, amigos | **`no-store`** | — |
 
-Las dos últimas filas son las importantes. Siguen.
+Las cuatro últimas filas son las importantes. Siguen.
+
+### El caso especial: `/eventos/:id/detalle`
+
+Ese endpoint **mezcla dos cosas con vidas útiles opuestas** en un solo payload:
+
+```ts
+interface Evento {
+  nombre: string;            // cambia cuando alguien edita en el dashboard
+  fecha: string;
+  imagenPromocion: string;
+  recinto: Recinto;
+  secciones: Seccion[];      // ← y aquí dentro:
+}                            //   asientosDisponibles: number
+                             //   ← cambia con CADA compra
+```
+
+Así que no tiene un TTL correcto: cachearlo sirve para lo de arriba y es peligroso para lo de abajo.
+**Un asiento cacheado cinco minutos es un asiento vendido dos veces.**
+
+La regla, entonces, no es por endpoint sino **por campo**:
+
+- **Se puede cachear** (5 min, tag `evento:<slug>`): `nombre`, `fecha`, `descripcion`,
+  `imagenPromocion`, `recinto`, `ciudad`, `artista`, `funciones`. Es lo que consume
+  `generateMetadata` y lo que pinta el LCP.
+- **Nunca**: `secciones[].asientosDisponibles`, `filas`, `preciosCategorias` con cupo, y cualquier
+  precio durante una preventa activa.
+
+En la práctica:
+
+```tsx
+// El servidor cachea el payload completo, pero SÓLO para los metadatos:
+// los campos de disponibilidad viajan en la respuesta y se descartan.
+export async function generateMetadata({ params }) { /* usa nombre, fecha, imagen… */ }
+
+export default async function Page({ params }) {
+  const { slug } = await params;
+  const evento = await getEvento(slug);
+
+  // Al cliente se le pasa un subconjunto EXPLÍCITO, nunca el objeto entero:
+  // así un campo de disponibilidad no puede colarse por descuido.
+  return (
+    <EventoDetalleView
+      slug={slug}
+      cabecera={evento && {
+        nombre: evento.nombre,
+        fecha: evento.fecha,
+        imagenPromocion: evento.imagenPromocion,
+        recinto: evento.recinto,
+        ciudad: evento.ciudad,
+        descripcion: evento.descripcion,
+      }}
+    />
+  );
+}
+```
+
+La vista pinta la cabecera con datos del servidor —eso es la ganancia de LCP— y pide la
+disponibilidad al montar con `no-store`. El mapa de asientos nunca se sirve de caché.
+
+> Lo ideal sería que el backend expusiera un `/eventos/:id/detalle_publico` sin disponibilidad.
+> Mientras no exista, el subconjunto explícito es la forma segura: **pasar el objeto completo es lo
+> que introduce el bug**, no cachear el fetch.
 
 ## Lo que NUNCA se cachea
 

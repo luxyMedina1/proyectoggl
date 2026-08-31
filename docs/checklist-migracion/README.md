@@ -43,6 +43,7 @@ Se pueden hacer antes, después o en paralelo a lo anterior. Cada uno se lee sue
 | 07 | [Fuentes](./07-fuentes.md) | `next/font`. Hoy se cargan 18 variantes de Poppins para usar 5, desde un dominio externo que bloquea el render. |
 | 08 | [Code-splitting](./08-code-splitting.md) | Que el navegador no baje lo que no usa. Incluye qué hace Next solo y qué **no** hay que configurar. |
 | 09 | [Adiós React Router](./09-adios-react-router.md) | Retirar `utils/nextRouterCompat.tsx`. Tiene tres bugs reales y bloquea la migración de 33 archivos. |
+| 10 | [Mejoras extra](./10-mejoras-extra.md) | 23 hallazgos de una pasada posterior: JSON-LD de eventos, soft 404s, cabeceras de seguridad, React Compiler, accesibilidad, tooling. Nada bloquea; se toman por gusto. |
 
 ### Referencia
 
