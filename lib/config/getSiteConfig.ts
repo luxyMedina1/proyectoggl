@@ -1,5 +1,6 @@
 import { cache } from "react";
 import type { ConfigResponse } from "@/context/ColorContext";
+import { apiBase } from "@/lib/config/apiBase";
 
 // Configuración de marca (/configuraciones/detail/1) leída EN EL SERVIDOR.
 //
@@ -28,21 +29,17 @@ export const DEFAULT_COLORS: BrandColors = {
   darker: "#1E293B",
 };
 
-const esHex = (c?: string | null): c is string =>
-  !!c && /^#([0-9a-f]{3}){1,2}$/i.test(c);
+const esHex = (c?: string | null): c is string => !!c && /^#([0-9a-f]{3}){1,2}$/i.test(c);
 
 const validarColores = (c: Record<string, unknown>): BrandColors => ({
   emphasis: esHex(c.enfasis as string) ? (c.enfasis as string) : DEFAULT_COLORS.emphasis,
   accentBase: esHex(c.acentoBase as string) ? (c.acentoBase as string) : DEFAULT_COLORS.accentBase,
-  accentLight: esHex(c.acentoBajo as string) ? (c.acentoBajo as string) : DEFAULT_COLORS.accentLight,
+  accentLight: esHex(c.acentoBajo as string)
+    ? (c.acentoBajo as string)
+    : DEFAULT_COLORS.accentLight,
   neutral: esHex(c.neutro as string) ? (c.neutro as string) : DEFAULT_COLORS.neutral,
   darker: esHex(c.fondo as string) ? (c.fondo as string) : DEFAULT_COLORS.darker,
 });
-
-const apiBase = (): string => {
-  const url = process.env.NEXT_PUBLIC_URL_BACKEND;
-  return url ? `${url}/api/v1` : "/api/v1";
-};
 
 // cache() de React: una sola ejecución por render. El layout y generateMetadata
 // la llaman por separado y comparten el resultado (no se duplica la petición).

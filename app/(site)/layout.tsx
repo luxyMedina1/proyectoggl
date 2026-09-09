@@ -35,7 +35,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [ciudades, setCiudades] = useState<Ciudad[]>([]);
-  const [ciudadId, setCiudadId] = useState('');
+  const [ciudadId, setCiudadId] = useState("");
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Placeholder hasta la Fase 4 (useCiudadesStore + citypass): con ciudades vacio
@@ -49,9 +49,13 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   useEffect(() => {
     let activo = true;
     getAllCiudades()
-      .then((data) => { if (activo) setCiudades(data); })
-      .catch((error) => console.error('Error cargando ciudades:', error));
-    return () => { activo = false; };
+      .then((data) => {
+        if (activo) setCiudades(data);
+      })
+      .catch((error) => console.error("Error cargando ciudades:", error));
+    return () => {
+      activo = false;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -63,7 +67,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   }, [status]);
 
   useEffect(() => {
-    if (status !== 'authenticated' || !user) {
+    if (status !== "authenticated" || !user) {
       setNotifCount(0);
       return;
     }
@@ -76,8 +80,8 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         getPendientesRecibidas(),
       ]);
       if (!active) return;
-      const amigosCount = amigos.status === 'fulfilled' ? amigos.value.length : 0;
-      const transferCount = transferencias.status === 'fulfilled' ? transferencias.value.length : 0;
+      const amigosCount = amigos.status === "fulfilled" ? amigos.value.length : 0;
+      const transferCount = transferencias.status === "fulfilled" ? transferencias.value.length : 0;
       setNotifCount(amigosCount + transferCount);
     };
 
@@ -106,18 +110,18 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   }, []);
 
   return (
-    <main className='min-h-screen bg-gray-50'>
+    <main className="min-h-screen bg-gray-50">
       <header className="bg-gradient-to-r from-accentBase to-emphasis lg:h-24">
-        <div className='container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 py-3 flex flex-row items-center justify-between h-inherit'>
+        <div className="container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 py-3 flex flex-row items-center justify-between h-inherit">
           <div className="flex flex-shrink-0 items-center gap-x-2 md:gap-x-4">
-            <Link className='w-28 sm:w-36 md:w-auto flex-shrink-0' href="/">
+            <Link className="w-28 sm:w-36 md:w-auto flex-shrink-0" href="/">
               <img
                 width={170}
                 height={90}
                 src={config?.logoMarca}
                 alt="Logo"
                 className="cursor-pointer aspect-video w-full md:w-[170px] h-auto max-w-none"
-                style={{ objectFit: 'contain' }}
+                style={{ objectFit: "contain" }}
               />
             </Link>
             <Link
@@ -140,9 +144,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               cityPassDisponible={ciudades.length > 0}
             />
           </div>
-          {status === 'unauthenticated' ? (
+          {status === "unauthenticated" ? (
             <>
-              <div className='hidden md:flex items-center justify-end flex-1 flex-wrap text-neutral gap-x-4'>
+              <div className="hidden md:flex items-center justify-end flex-1 flex-wrap text-neutral gap-x-4">
                 <button
                   type="button"
                   onClick={irCityPass}
@@ -150,7 +154,12 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 >
                   CityPass
                 </button>
-                <Link href="/auth/login" className="text-lg border-b-2 border-transparent hover:border-white transition-all">Iniciar Sesión</Link>
+                <Link
+                  href="/auth/login"
+                  className="text-lg border-b-2 border-transparent hover:border-white transition-all"
+                >
+                  Iniciar Sesión
+                </Link>
               </div>
               <button
                 className="md:hidden ml-auto text-neutral"
@@ -172,7 +181,10 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                     <button
                       type="button"
                       className="text-base border-b-2 border-transparent hover:border-accentBase transition-all py-2 text-left"
-                      onClick={() => { setMobileMenuOpen(false); irCityPass(); }}
+                      onClick={() => {
+                        setMobileMenuOpen(false);
+                        irCityPass();
+                      }}
                     >
                       CityPass
                     </button>
@@ -184,20 +196,28 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                       Iniciar Sesión
                     </Link>
                   </div>
-                  <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
+                  <button
+                    type="button"
+                    className="flex-1"
+                    aria-label="Cerrar menú"
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
                 </div>
               )}
             </>
           ) : (
             <>
               <div className="hidden md:flex relative items-center mb-1 ml-auto md:ml-0">
-                <Link href="/perfil/mis_compras" className='text-neutral px-4 py-2 rounded-t-md border-b-2 border-transparent hover:bg-accent-emphasis hover:border-b-2 hover:border-accentLight transition-colors mr-4' >
+                <Link
+                  href="/perfil/mis_compras"
+                  className="text-neutral px-4 py-2 rounded-t-md border-b-2 border-transparent hover:bg-accent-emphasis hover:border-b-2 hover:border-accentLight transition-colors mr-4"
+                >
                   Mis eventos
                 </Link>
                 <button
                   type="button"
                   onClick={irCityPass}
-                  className='text-neutral px-4 py-2 rounded-t-md border-b-2 border-transparent hover:bg-accent-emphasis hover:border-b-2 hover:border-accentLight transition-colors mr-4'
+                  className="text-neutral px-4 py-2 rounded-t-md border-b-2 border-transparent hover:bg-accent-emphasis hover:border-b-2 hover:border-accentLight transition-colors mr-4"
                 >
                   CityPass
                 </button>
@@ -208,12 +228,22 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                   <IoChevronDownOutline /> {user?.fullName}
                 </button>
                 {menuVisible && (
-                  <div ref={menuRef} className="absolute right-0 top-14 lg:top-10 mt-2 w-60 bg-white rounded-lg shadow-lg z-10">
-                    <Link href="/perfil/mi_perfil" className="flex items-center gap-x-2 w-full text-left p-2 text-gray-600 hover:bg-gray-200 rounded-t-lg">
-                      <LuUserRound className='text-2xl' />Mi perfil
+                  <div
+                    ref={menuRef}
+                    className="absolute right-0 top-14 lg:top-10 mt-2 w-60 bg-white rounded-lg shadow-lg z-10"
+                  >
+                    <Link
+                      href="/perfil/mi_perfil"
+                      className="flex items-center gap-x-2 w-full text-left p-2 text-gray-600 hover:bg-gray-200 rounded-t-lg"
+                    >
+                      <LuUserRound className="text-2xl" />
+                      Mi perfil
                     </Link>
-                    <button className="w-full text-left p-2 text-gray-600 hover:bg-gray-200 flex items-center gap-x-2" onClick={startLogout}>
-                      <TbLogout className='text-2xl' /> Cerrar sesión
+                    <button
+                      className="w-full text-left p-2 text-gray-600 hover:bg-gray-200 flex items-center gap-x-2"
+                      onClick={startLogout}
+                    >
+                      <TbLogout className="text-2xl" /> Cerrar sesión
                     </button>
                   </div>
                 )}
@@ -247,7 +277,10 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                       <button
                         type="button"
                         className="text-base border-b-2 border-transparent hover:border-accentBase transition-all py-2 text-left"
-                        onClick={() => { setMobileMenuOpen(false); irCityPass(); }}
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          irCityPass();
+                        }}
                       >
                         CityPass
                       </button>
@@ -256,17 +289,25 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                         className="text-base border-b-2 border-transparent hover:border-accentBase transition-all py-2 flex items-center gap-x-2"
                         onClick={() => setMobileMenuOpen(false)}
                       >
-                        <LuUserRound className='text-xl' /> Mi perfil
+                        <LuUserRound className="text-xl" /> Mi perfil
                       </Link>
                       <button
                         className="text-base border-b-2 border-transparent hover:border-accentBase transition-all py-2 flex items-center gap-x-2 text-left"
-                        onClick={() => { setMobileMenuOpen(false); startLogout(); }}
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                          startLogout();
+                        }}
                       >
-                        <TbLogout className='text-xl' /> Cerrar sesión
+                        <TbLogout className="text-xl" /> Cerrar sesión
                       </button>
                     </div>
                   </div>
-                  <div className="flex-1" onClick={() => setMobileMenuOpen(false)} />
+                  <button
+                    type="button"
+                    className="flex-1"
+                    aria-label="Cerrar menú"
+                    onClick={() => setMobileMenuOpen(false)}
+                  />
                 </div>
               )}
             </>
@@ -287,12 +328,18 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
 
       {children}
 
-      <footer className='bg-gradient-to-r from-accentBase to-emphasis py-8'>
+      <footer className="bg-gradient-to-r from-accentBase to-emphasis py-8">
         <div className="container mx-auto px-4 md:hidden grid grid-cols-1 gap-6 text-neutral">
           <div className="flex flex-col items-center justify-center">
-            <img className='mb-5' width={170} height={90} src={config?.logoMarca} alt="logo empresa" />
-            <p className='text-sm font-light text-center'>Descarga nuestras aplicaciones</p>
-            <div className='flex items-center gap-x-2 mt-3 justify-center'>
+            <img
+              className="mb-5"
+              width={170}
+              height={90}
+              src={config?.logoMarca}
+              alt="logo empresa"
+            />
+            <p className="text-sm font-light text-center">Descarga nuestras aplicaciones</p>
+            <div className="flex items-center gap-x-2 mt-3 justify-center">
               <img width={100} height={90} src="/app_store.png" alt="App Store" />
               <img width={100} height={90} src="/google_play.png" alt="Google Play" />
             </div>
@@ -303,21 +350,36 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               <ul className="grid grid-cols-2 gap-3 text-sm font-light">
                 {config?.urlTwitter && (
                   <li>
-                    <a href={config.urlTwitter} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg justify-center w-full">
+                    <a
+                      href={config.urlTwitter}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg justify-center w-full"
+                    >
                       <BsTwitterX className="text-lg flex-none w-5" /> X
                     </a>
                   </li>
                 )}
                 {config?.urlFacebook && (
                   <li>
-                    <a href={config.urlFacebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg justify-center w-full">
+                    <a
+                      href={config.urlFacebook}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg justify-center w-full"
+                    >
                       <BsFacebook className="text-lg flex-none w-5" /> Facebook
                     </a>
                   </li>
                 )}
                 {config?.urlInstagram && (
                   <li>
-                    <a href={config.urlInstagram} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg justify-center w-full">
+                    <a
+                      href={config.urlInstagram}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg justify-center w-full"
+                    >
                       <BsInstagram className="text-lg flex-none w-5" /> Instagram
                     </a>
                   </li>
@@ -326,12 +388,20 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             </div>
           )}
           <div>
-            <p className='text-2xl mb-5 text-center'>Legal</p>
-            <ul className='grid grid-cols-2 gap-3 text-sm font-light'>
-              <Link href="/legales/aviso_de_privacidad" className="text-center">Aviso de privacidad</Link>
-              <Link href="/legales/nuestras_politicas" className="text-center">Nuestras políticas</Link>
-              <Link href="/legales/terminos_y_condiciones" className="col-span-2 text-center">Términos y condiciones</Link>
-              <Link href="/legales/eliminacion_de_cuenta" className="col-span-2 text-center">Eliminar cuenta app</Link>
+            <p className="text-2xl mb-5 text-center">Legal</p>
+            <ul className="grid grid-cols-2 gap-3 text-sm font-light">
+              <Link href="/legales/aviso_de_privacidad" className="text-center">
+                Aviso de privacidad
+              </Link>
+              <Link href="/legales/nuestras_politicas" className="text-center">
+                Nuestras políticas
+              </Link>
+              <Link href="/legales/terminos_y_condiciones" className="col-span-2 text-center">
+                Términos y condiciones
+              </Link>
+              <Link href="/legales/eliminacion_de_cuenta" className="col-span-2 text-center">
+                Eliminar cuenta app
+              </Link>
             </ul>
           </div>
           {(config?.direccionContacto || config?.emailContacto || config?.telefonoContacto) && (
@@ -359,21 +429,30 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               </ul>
             </div>
           )}
-          <div className='border-t border-neutral pt-4 mt-3 text-sm font-light text-center'>
+          <div className="border-t border-neutral pt-4 mt-3 text-sm font-light text-center">
             <p className="max-w-2xl mx-auto">
               {config?.mensajeFooter ? (
                 <>{config?.mensajeFooter}</>
               ) : (
-                <>Consulta nuestros avisos de privacidad, asi como nuestras politicas. Conoce nuestros eventos y siguenos en nuestras redes sociales para mayor información.</>
+                <>
+                  Consulta nuestros avisos de privacidad, asi como nuestras politicas. Conoce
+                  nuestros eventos y siguenos en nuestras redes sociales para mayor información.
+                </>
               )}
             </p>
           </div>
         </div>
-        <div className='container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 hidden md:grid grid-cols-4 gap-3 text-neutral'>
-          <div className='col-span-4 md:col-span-1'>
-            <img className='mb-5' width={170} height={90} src={config?.logoMarca} alt="logo empresa" />
-            <p className='text-sm font-light'>Descarga nuestras aplicaciones</p>
-            <div className='flex items-center gap-x-2 mt-3'>
+        <div className="container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 hidden md:grid grid-cols-4 gap-3 text-neutral">
+          <div className="col-span-4 md:col-span-1">
+            <img
+              className="mb-5"
+              width={170}
+              height={90}
+              src={config?.logoMarca}
+              alt="logo empresa"
+            />
+            <p className="text-sm font-light">Descarga nuestras aplicaciones</p>
+            <div className="flex items-center gap-x-2 mt-3">
               <img width={100} height={90} src="/app_store.png" alt="App Store" />
               <img width={100} height={90} src="/google_play.png" alt="Google Play" />
             </div>
@@ -385,21 +464,36 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 <ul className="text-sm font-light grid gap-y-4">
                   {config?.urlTwitter && (
                     <li>
-                      <a href={config.urlTwitter} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg">
+                      <a
+                        href={config.urlTwitter}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg"
+                      >
                         <BsTwitterX className="text-lg flex-none w-5" /> X
                       </a>
                     </li>
                   )}
                   {config?.urlFacebook && (
                     <li>
-                      <a href={config.urlFacebook} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg">
+                      <a
+                        href={config.urlFacebook}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg"
+                      >
                         <BsFacebook className="text-lg flex-none w-5" /> Facebook
                       </a>
                     </li>
                   )}
                   {config?.urlInstagram && (
                     <li>
-                      <a href={config.urlInstagram} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg">
+                      <a
+                        href={config.urlInstagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-x-2 py-1 px-2 glass-effect rounded-lg"
+                      >
                         <BsInstagram className="text-lg flex-none w-5" /> Instagram
                       </a>
                     </li>
@@ -408,9 +502,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               </>
             )}
           </div>
-          <div className='col-span-4 md:col-span-1'>
-            <p className='text-2xl 2xl:text-3xl mb-5'>Legal</p>
-            <ul className='text-sm font-light grid gap-y-4'>
+          <div className="col-span-4 md:col-span-1">
+            <p className="text-2xl 2xl:text-3xl mb-5">Legal</p>
+            <ul className="text-sm font-light grid gap-y-4">
               <Link href="/legales/aviso_de_privacidad">Aviso de privacidad</Link>
               <Link href="/legales/nuestras_politicas">Nuestras políticas</Link>
               <Link href="/legales/terminos_y_condiciones">Términos y condiciones</Link>
@@ -444,12 +538,15 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               </>
             )}
           </div>
-          <div className='col-span-4 border-t border-neutral pt-4 mt-3 text-sm font-light text-center'>
+          <div className="col-span-4 border-t border-neutral pt-4 mt-3 text-sm font-light text-center">
             <p className="max-w-2xl mx-auto">
               {config?.mensajeFooter ? (
                 <>{config?.mensajeFooter}</>
               ) : (
-                <>Consulta nuestros avisos de privacidad, asi como nuestras politicas. Conoce nuestros eventos y siguenos en nuestras redes sociales para mayor información.</>
+                <>
+                  Consulta nuestros avisos de privacidad, asi como nuestras politicas. Conoce
+                  nuestros eventos y siguenos en nuestras redes sociales para mayor información.
+                </>
               )}
             </p>
           </div>
