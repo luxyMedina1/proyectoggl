@@ -2,7 +2,25 @@ import type { NextConfig } from "next";
 import path from "path";
 import withBundleAnalyzer from "@next/bundle-analyzer";
 
+// Config de `compiler.removeConsole` derivada de `NODE_ENV` (Req 14.1, 14.2).
+// En producción se eliminan los `console.*` salvo `error`/`warn` (los de los
+// `catch`); fuera de producción `false` para conservar todos los logs en dev/test.
+// Helper puro y exportado para poder verificar ambas ramas sin depender del
+// `NODE_ENV` con el que corra el runner (tarea 6.1).
+export const computeRemoveConsole = (
+  nodeEnv: string | undefined,
+): { exclude: string[] } | false =>
+  nodeEnv === "production" ? { exclude: ["error", "warn"] } : false;
+
 const nextConfig: NextConfig = {
+  // React Compiler (Req 11): memoiza componentes automáticamente, reduciendo la
+  // necesidad de `useMemo`/`useCallback` manuales. Requiere `babel-plugin-react-compiler`
+  // (devDependency, ya instalado en la tarea 9.2). Next aplica el compilador solo a los
+  // archivos con JSX/Hooks vía una optimización SWC, así que el coste de build es acotado.
+  // BLOQUEADO hasta que los errores TDZ (`react-hooks/immutability`) estuvieran en 0 —
+  // condición cumplida en la tarea 9.1. Ver `.../05-config/01-next-config-js/reactCompiler.md`.
+  reactCompiler: true,
+
   // Fija la raíz aquí: la carpeta padre (GGL) tiene su propio package-lock.json
   // y sin esto Next recalcula/advierte sobre cuál raíz usar en cada arranque.
   turbopack: {
@@ -13,6 +31,13 @@ const nextConfig: NextConfig = {
   // No anunciar la versión de Next en cada respuesta (cabecera `x-powered-by`).
   // Menos bytes por respuesta y menos superficie de fingerprinting.
   poweredByHeader: false,
+
+  // Elimina los `console.*` del bundle en producción (Req 14), conservando
+  // `console.error`/`console.warn` de los `catch`. Fuera de producción, `false`
+  // deja todos los logs (dev/test). Ver `computeRemoveConsole` arriba.
+  compiler: {
+    removeConsole: computeRemoveConsole(process.env.NODE_ENV),
+  },
 
   images: {
     // Hosts cuyas imágenes puede optimizar next/image. El backend sirve todo
@@ -48,6 +73,27 @@ const nextConfig: NextConfig = {
       "react-spinners",
       "react-toastify",
     ],
+  },
+
+  // Cabeceras de seguridad básicas aplicadas a todas las rutas (Req 7).
+  // La CSP completa (`script-src`, `style-src`…) queda fuera de alcance: el sitio
+  // carga SDKs de terceros y `sweetalert2`/`next/script` requieren nonces, así que
+  // aquí solo se fija `frame-ancestors 'self'` (anti-clickjacking del checkout).
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [
+          { key: "Content-Security-Policy", value: "frame-ancestors 'self'" },
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), microphone=(), geolocation=()",
+          },
+        ],
+      },
+    ];
   },
 };
 
