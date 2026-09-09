@@ -51,9 +51,7 @@ const resolverSlug = async (slug: string): Promise<EventoResuelto | null> => {
   if (idNumerico) return { eventoId: idNumerico, funcionId: null };
 
   try {
-    const data = await apiGet(`/eventos/slug/${encodeURIComponent(slug)}`, [
-      `evento:${slug}`,
-    ]);
+    const data = await apiGet(`/eventos/slug/${encodeURIComponent(slug)}`, [`evento:${slug}`]);
     if (data?.eventoId == null) throw new Error("respuesta sin eventoId");
     return {
       eventoId: String(data.eventoId),
@@ -61,9 +59,7 @@ const resolverSlug = async (slug: string): Promise<EventoResuelto | null> => {
     };
   } catch {
     try {
-      const lista = await apiGet("/eventos/get_all_select?tipoDispositivo=web", [
-        "eventos:lista",
-      ]);
+      const lista = await apiGet("/eventos/get_all_select?tipoDispositivo=web", ["eventos:lista"]);
       return resolverSlugEnLista(slug, lista?.eventosFiltrados ?? []);
     } catch {
       return null;
@@ -72,6 +68,37 @@ const resolverSlug = async (slug: string): Promise<EventoResuelto | null> => {
 };
 
 type Variante = "detalle" | "informacion";
+
+// Resuelve el evento por slug en el servidor y devuelve el detalle ya poblado, o
+// `null` si el slug no corresponde a ningún evento (o el back no responde).
+//
+// Se usa en el cascarón de `app/(site)/eventos/[slug]/page.tsx` para invocar
+// `notFound()` (404 real) ante slugs inválidos, cerrando la fuga de soft 404. Comparte
+// la misma resolución (`resolverSlug`) y el mismo fetch cacheado que las <meta> de
+// `buildMetadataEvento`, así que no golpea el back una segunda vez por request.
+export const getEvento = async (slug: string): Promise<any | null> => {
+  try {
+    const resuelto = await resolverSlug(slug);
+    if (!resuelto) return null;
+
+    const evento = await apiGet(`/eventos/${resuelto.eventoId}/detalle`, [
+      "eventos:lista",
+      `evento:${slug}`,
+    ]);
+    return evento?.nombre ? evento : null;
+  } catch {
+    return null;
+  }
+};
+
+// Listado publico de eventos para el servidor (mismo endpoint y cache que el sitemap).
+// Fetch directo, no la instancia axios (sus interceptores leen window/localStorage).
+// `apiGet` lanza si el back no responde; quien llama decide como manejarlo
+// (generateStaticParams lo captura y cae a [] para no romper el build, Req 3.2).
+export const getListaEventos = async (): Promise<any[]> => {
+  const data = await apiGet("/eventos/get_all_select?tipoDispositivo=web", ["eventos:lista"]);
+  return data?.eventosFiltrados ?? [];
+};
 
 export const buildMetadataEvento = async (
   slug: string,
@@ -94,7 +121,7 @@ export const buildMetadataEvento = async (
     const funcion: FuncionSlugInput | undefined =
       variante === "detalle" && resuelto.funcionId
         ? (evento.funciones ?? []).find(
-            (f: any) => String(f?.id) === resuelto.funcionId,
+            (f: FuncionSlugInput) => String(f?.id) === resuelto.funcionId,
           )
         : undefined;
 
@@ -106,9 +133,7 @@ export const buildMetadataEvento = async (
     const descripcion =
       textoPlano(evento.descripcion) ||
       [
-        evento.fecha
-          ? formatDate(evento.fecha, "d 'de' MMMM 'de' yyyy, hh:mm a")
-          : "",
+        evento.fecha ? formatDate(evento.fecha, "d 'de' MMMM 'de' yyyy, hh:mm a") : "",
         evento.recinto?.nombre,
         evento.ciudad?.nombre,
       ]
@@ -118,9 +143,7 @@ export const buildMetadataEvento = async (
     // Sin imagen propia: undefined => hereda app/opengraph-image.tsx.
     const imagen: string | undefined = evento.imagenPromocion || undefined;
     const ruta =
-      variante === "informacion"
-        ? rutaEventoInformacion(evento)
-        : rutaEvento(evento, funcion);
+      variante === "informacion" ? rutaEventoInformacion(evento) : rutaEvento(evento, funcion);
     const url = `${SITE_URL}${ruta}`;
 
     return {

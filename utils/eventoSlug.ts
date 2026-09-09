@@ -95,6 +95,21 @@ export const resolverSlugEnLista = (
     return null;
 };
 
+// Cuantos eventos como maximo se prerenderizan en build (los de mayor trafico).
+// El resto se sirve bajo demanda porque `dynamicParams` es true por defecto (Req 3.3).
+export const LIMITE_PRERENDER_EVENTOS = 50;
+
+// Mapeo puro (sin fetch ni I/O) del listado de eventos a los `params` de
+// `generateStaticParams`: acota a los primeros `limite` y produce `{ slug }` con el
+// mismo `buildEventoSlug` que usa el sitemap, para que los slugs prerenderizados
+// coincidan con los declarados. Extraido aparte para poder testearlo sin arrastrar
+// el codigo de servidor de Next (Req 3.1, 3.2).
+export const eventosAStaticParams = (
+    eventos: EventoSlugInput[],
+    limite: number = LIMITE_PRERENDER_EVENTOS,
+): { slug: string }[] =>
+    (eventos ?? []).slice(0, limite).map((evento) => ({ slug: buildEventoSlug(evento) }));
+
 export const rutaEvento = (evento: EventoSlugInput, funcion?: FuncionSlugInput | null): string =>
     `/eventos/${buildEventoSlug(evento, funcion)}`;
 
