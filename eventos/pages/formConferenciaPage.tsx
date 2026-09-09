@@ -17,6 +17,12 @@ import { IoKey } from "react-icons/io5";
 import Swal, { SweetAlertIcon } from "sweetalert2";
 import Loader from '@/publicUi/components/Loader';
 import apiApplication from '../../api/apiApplication';
+import {
+  filtrarPromocionesAplicablesPorCategoria,
+  obtenerMejorPromocionPorBoletos,
+  normalizarPromocionesAplicaDirecto,
+  type Promocion,
+} from '@/utils/promociones';
 
 import { toast } from 'react-toastify';
 import { LuBadgeCheck } from "react-icons/lu";
@@ -122,17 +128,7 @@ interface TarjetaGuardada {
   tarjeta: string;
   banco: string;
 }
-interface promocion {
-  id: number;
-  nombre: string;
-  tipo: 'PORCENTAJE' | 'CANTIDAD';
-  porcentaje: number;
-  cantidadCompra: number;
-  cantidadPaga: number;
-  aplicaTodoEvento: boolean;
-  categorias: { categoriaGeneral: { nombre: string } }[];
-  descuentoCalculado: number;
-}
+type promocion = Promocion;
 
 export const FormConferenciaPage = () => {
   const router = useRouter();
@@ -432,7 +428,7 @@ export const FormConferenciaPage = () => {
     if (res.data.total > 0) {
       setHabilitaPromocion(true);
       if (res.data.promocionesAplicaDirecto && res.data.promocionesAplicaDirecto.length > 0) {
-        setPromocionesAplicanDirecto(res.data.promocionesAplicaDirecto);
+        setPromocionesAplicanDirecto(normalizarPromocionesAplicaDirecto(res.data.promocionesAplicaDirecto));
       }
     } else {
       setHabilitaPromocion(false);
@@ -489,60 +485,13 @@ export const FormConferenciaPage = () => {
         setModalProps(seccion);
         if (evento && evento.udsPorCategoria) setUds(parseFloat(seccion.uds));
         if (promocionesAplicanDirecto.length > 0) {
-          const promocionesFiltradas = filtrarPromocionesAplicables(promocionesAplicanDirecto, seccion.nombreEspecial);
+          const promocionesFiltradas = filtrarPromocionesAplicablesPorCategoria(promocionesAplicanDirecto, seccion.nombreEspecial);
           setPromosAplicables(promocionesFiltradas);
         }
         setSeccionId(seccion.id);
       }
 
     }
-  };
-
-  const filtrarPromocionesAplicables = (promociones: any, categoria: string) => {
-    return promociones.filter((promo: { aplicaTodoEvento: any; categorias: any[]; }) => {
-      // Si aplica a todo el evento, siempre es válida
-      if (promo.aplicaTodoEvento) {
-        return true;
-      }
-
-      const categoriasGenerales = promo.categorias.map(c => c.categoriaGeneral?.nombre).filter(c => c !== null && c !== undefined);
-
-      // Si no aplica a todo el evento, verificar si la categoría está incluida
-      return categoriasGenerales && categoriasGenerales.includes(categoria);
-    });
-  };
-
-  const obtenerMejorPromocion = (promocionesAplicables: any[], cantidadBoletos: number, precioBoleto: number): promocion | null => {
-    if (!promocionesAplicables || promocionesAplicables.length === 0) {
-      return null;
-    }
-
-    let mejorPromocion = null;
-    let mayorDescuento = 0;
-
-    promocionesAplicables.forEach(promo => {
-      let descuentoTotal = 0;
-
-      if (promo.tipo === "PORCENTAJE") {
-        descuentoTotal = (precioBoleto * cantidadBoletos * promo.porcentaje) / 100;
-      }
-      else if (promo.tipo === "CANTIDAD") {
-        const gruposCompletos = Math.floor(cantidadBoletos / promo.cantidadCompra);
-        const boletosGratis = gruposCompletos * (promo.cantidadCompra - promo.cantidadPaga);
-        descuentoTotal = boletosGratis * precioBoleto;
-      }
-
-      if (descuentoTotal > mayorDescuento) {
-        mayorDescuento = descuentoTotal;
-        mejorPromocion = {
-          ...promo,
-          descuentoCalculado: descuentoTotal,
-          precioFinal: (precioBoleto * cantidadBoletos) - descuentoTotal
-        };
-      }
-    });
-
-    return mejorPromocion;
   };
 
   useEffect(() => {
@@ -681,11 +630,11 @@ export const FormConferenciaPage = () => {
 
           let mejorPromocion;
           if (discountCode == '') {
-            mejorPromocion = obtenerMejorPromocion(promosAplicables, boletos, precioBoletos);
+            mejorPromocion = obtenerMejorPromocionPorBoletos(promosAplicables, boletos, precioBoletos);
             console.log("🚀 ~ handleReservarAsientos ~ mejorPromocion:", mejorPromocion)
             if (mejorPromocion) {
               setPromocion(mejorPromocion);
-              setDiscountPorcent(mejorPromocion.porcentaje);
+              setDiscountPorcent(Number(mejorPromocion.porcentaje));
               setPromocionID(mejorPromocion.id);
               setDiscountAmount(mejorPromocion.descuentoCalculado);
             }
