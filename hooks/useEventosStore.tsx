@@ -1,5 +1,20 @@
+import type { AxiosRequestConfig } from "axios";
 import apiApplication from "../api/apiApplication";
 import { idNumericoDeSlug, resolverSlugEnLista, type EventoResuelto } from "../utils/eventoSlug";
+import type { CargoAbonoBody, ReservarAbonoBody } from "../types/Abono";
+
+// Config que fuerza frescura en las peticiones de DISPONIBILIDAD de asientos (Req 26.3).
+// `cache: "no-store"` es la instrucción explícita del diseño (respetada por el adaptador
+// fetch de axios); las cabeceras `Cache-Control`/`Pragma` la refuerzan para el adaptador
+// XHR y cualquier caché intermedia. Un mapa de asientos servido de caché vendería el mismo
+// asiento dos veces, así que este payload NUNCA debe servirse de una respuesta cacheada.
+export const SIN_CACHE_DISPONIBILIDAD: AxiosRequestConfig & { cache: "no-store" } = {
+    cache: "no-store",
+    headers: {
+        "Cache-Control": "no-store",
+        Pragma: "no-cache",
+    },
+};
 
 export const useEventosStore = () => {
 
@@ -45,18 +60,23 @@ export const useEventosStore = () => {
         }
     };
 
-    const getDetalleEventos = async (id: string) => {
+    // `config` permite forzar `cache: "no-store"` cuando este payload se usa como fuente de
+    // disponibilidad de asientos (Req 26.3). Ver SIN_CACHE_DISPONIBILIDAD.
+    const getDetalleEventos = async (id: string, config?: AxiosRequestConfig) => {
         try {
-            const { data } = await apiApplication.get(`/eventos/${id}/detalle`);
+            const { data } = await apiApplication.get(`/eventos/${id}/detalle`, config);
             return data;
         } catch (error) {
             throw new Error('Error al obtener la lista de eventos');
         }
     }
 
-    const getDetalleEventoSecciones = async (id: string, funcion?: any) => {
+    // El detalle por sección trae `secciones[].asientosDisponibles`: es la disponibilidad de
+    // asientos que ve el comprador. Debe pedirse siempre fresca (Req 26.3), de ahí el `config`
+    // con SIN_CACHE_DISPONIBILIDAD que le pasa la vista al montar.
+    const getDetalleEventoSecciones = async (id: string, funcion?: any, config?: AxiosRequestConfig) => {
         try {
-            const { data } = await apiApplication.get(`/eventos/${id}/detalle_seccion/false/web/${funcion}`);
+            const { data } = await apiApplication.get(`/eventos/${id}/detalle_seccion/false/web/${funcion}`, config);
             return data;
         } catch (error) {
             throw error;
@@ -72,7 +92,7 @@ export const useEventosStore = () => {
         }
     }
 
-    const reservarAbono = async (abonoId: string, payload: any) =>{
+    const reservarAbono = async (abonoId: string, payload: ReservarAbonoBody) =>{
         try {
             const { data } = await apiApplication.post(`/abonos/${abonoId}/reservar`, payload);
             return data;
@@ -85,7 +105,7 @@ export const useEventosStore = () => {
         }
     }
 
-    const comprarAbono = async (payload: any) =>{
+    const comprarAbono = async (payload: CargoAbonoBody) =>{
         try {
                 const { data } = await apiApplication.post(`/pagos/make/cargo_abono`, payload);
                 return data;
