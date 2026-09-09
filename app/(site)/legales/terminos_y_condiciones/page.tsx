@@ -1,7 +1,7 @@
-"use client";
+import LegalContent from "../LegalContent";
 
-import TerminosCondiciones from "@/eventos/pages/legales/TerminosCondiciones";
-
+// Server Component: el .docx de términos se convierte en servidor (mammoth) y su
+// HTML entra en la respuesta inicial. Ver lib/legales/getLegal.ts.
 export default function Page() {
-  return <TerminosCondiciones />;
+  return <LegalContent documento="terminosYCondiciones" />;
 }

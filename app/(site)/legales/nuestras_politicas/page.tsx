@@ -1,7 +1,7 @@
-"use client";
+import LegalContent from "../LegalContent";
 
-import NuestrasPoliticas from "@/eventos/pages/legales/NuestrasPoliticas";
-
+// Server Component: el .docx de políticas de uso se convierte en servidor
+// (mammoth) y su HTML entra en la respuesta inicial. Ver lib/legales/getLegal.ts.
 export default function Page() {
-  return <NuestrasPoliticas />;
+  return <LegalContent documento="politicasDeUso" />;
 }
