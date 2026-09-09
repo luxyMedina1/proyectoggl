@@ -8,6 +8,8 @@ import { BsCreditCard } from 'react-icons/bs';
 interface BoletoLike {
     id: number;
     precio?: string | number;
+    precioOriginal?: string | number;
+    promocion?: { id: number; nombre?: string; tipo?: string } | null;
     eventoSeccion?: {
         precioEspecial?: string;
         seccion?: { nombre?: string; bloque?: { nombre?: string } };
@@ -44,7 +46,7 @@ interface Props {
 
 const DetallesPedidoTab = ({ evento, perfil, boletos }: Props) => {
     const total = boletos.reduce((sum, b) => {
-        const p = b.eventoSeccion?.precioEspecial ?? b.precio ?? 0;
+        const p = b.precio ?? b.eventoSeccion?.precioEspecial ?? 0;
         return sum + Number(p);
     }, 0);
 
@@ -155,12 +157,15 @@ const DetallesPedidoTab = ({ evento, perfil, boletos }: Props) => {
                             const asiento = esPaseGeneral
                                 ? ''
                                 : ` Asiento ${b.asiento?.fila?.nombre ?? ''}${b.asiento?.numero ?? ''}`;
-                            const precio = b.eventoSeccion?.precioEspecial ?? b.precio ?? 0;
+                            const precio = b.precio ?? b.eventoSeccion?.precioEspecial ?? 0;
                             return (
                                 <li key={b.id} className="flex items-center justify-between text-sm">
                                     <span className="text-gray-700">
                                         {cat} B{bloque ?? '-'} S{sec ?? '-'}
                                         {asiento}
+                                        {b.promocion?.nombre && (
+                                            <span className="ml-1 text-[10px] font-semibold text-emerald-600 uppercase">· {b.promocion.nombre}</span>
+                                        )}
                                     </span>
                                     <span className="font-semibold text-gray-800">
                                         ${Number(precio).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}

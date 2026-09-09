@@ -29,6 +29,8 @@ export interface BoletoCardData {
     };
     categoria?: { nombre?: string };
     precio?: string | number;
+    precioOriginal?: string | number;
+    promocion?: { id: number; nombre?: string; tipo?: string } | null;
     quemadoFlag?: boolean;
     transferidoEn?: string;
     transferidoA?: { id: string; fullName: string; image?: string | null };
@@ -90,9 +92,7 @@ const BoletoCard = ({
     const asientoStr = esPaseGeneral
         ? '-'
         : `${boleto.asiento?.fila?.nombre ?? ''}${boleto.asiento?.numero ?? ''}` || '-';
-    const precio = esPaseGeneral
-        ? boleto.eventoSeccion?.precioEspecial ?? boleto.precio
-        : boleto.precio;
+    const precio = boleto.precio ?? boleto.eventoSeccion?.precioEspecial;
     const precioStr = precio != null ? `$${Number(precio).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—';
 
     const { dia, completa } = fechaCabecera(evento, boleto.funcion);
@@ -266,7 +266,19 @@ const BoletoCard = ({
                         )}
                     </div>
                 )}
-                <span className="text-lg font-bold text-gray-800 whitespace-nowrap">{precioStr}</span>
+                <div className="flex flex-col items-end whitespace-nowrap">
+                    {boleto.promocion?.nombre && (
+                        <span className="text-[10px] font-semibold text-emerald-600 uppercase leading-tight">
+                            PROMO: {boleto.promocion.nombre}
+                        </span>
+                    )}
+                    {boleto.promocion?.nombre && boleto.precioOriginal != null && Number(boleto.precioOriginal) !== Number(precio ?? 0) && (
+                        <span className="text-xs text-gray-400 line-through">
+                            ${Number(boleto.precioOriginal).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                        </span>
+                    )}
+                    <span className="text-lg font-bold text-gray-800">{precioStr}</span>
+                </div>
             </footer>
         </article>
     );

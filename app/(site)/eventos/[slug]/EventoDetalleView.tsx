@@ -20,6 +20,13 @@ import { formatDate, formatFechaConRango, formatHoraRelativa } from "../../../..
 import { validarNumeroTarjeta, validarCVC } from "../../../../utils/cardHelpers";
 import { sanitizeRichText } from "../../../../utils/sanitizeHtml";
 import { buildEventoSlug, type EventoResuelto } from "../../../../utils/eventoSlug";
+import {
+  filtrarPromocionesAplicablesPorCategoria,
+  obtenerMejorPromocionPorBoletos,
+  calcularDescuentoCantidadPorBoletos,
+  normalizarPromocionesAplicaDirecto,
+  type Promocion,
+} from "../../../../utils/promociones";
 import LocalLoader from "../../../../components/LocalLoader";
 import { LuBadgeCheck } from "react-icons/lu";
 import ListaPreciosCategorias from "../../../../eventos/components/ListaPreciosCategorias";
@@ -85,6 +92,10 @@ interface Evento {
   usoDeServicio: string;
   // Pixels de Meta del promotor de este evento (ademas de los de la marca).
   metaPixels?: string[];
+  // Leyenda configurable bajo el mapa de precios (reemplaza el texto fijo de
+  // "precios + cargos por servicio"). Sin valor no se muestra nada.
+  leyendaMapa?: string;
+  esMultiFuncion?: boolean;
 }
 interface Ciudad {
   id: number;
@@ -128,18 +139,6 @@ interface TarjetaGuardada {
   idtarjeta: string;
   tarjeta: string;
   banco: string;
-}
-
-interface promocion {
-  id: number;
-  nombre: string;
-  tipo: "PORCENTAJE" | "CANTIDAD";
-  porcentaje: number;
-  cantidadCompra: number;
-  cantidadPaga: number;
-  aplicaTodoEvento: boolean;
-  categorias: { categoriaGeneral: { nombre: string } }[];
-  descuentoCalculado: number;
 }
 
 // El subconjunto Cabecera_Evento y su proyección PURA viven en `./cabeceraEvento` (módulo sin
@@ -249,7 +248,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
   const [habilitaPromocion, setHabilitaPromocion] = useState(false);
   const [promocionesAplicanDirecto, setPromocionesAplicanDirecto] = useState<any[]>([]);
   const [promosAplicables, setPromosAplicables] = useState<any[]>([]);
-  const [promocion, setPromocion] = useState<promocion>({
+  const [promocion, setPromocion] = useState<Promocion>({
     id: 0,
     nombre: "",
     tipo: "PORCENTAJE",
@@ -319,7 +318,9 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     if (res.data.total > 0) {
       setHabilitaPromocion(true);
       if (res.data.promocionesAplicaDirecto && res.data.promocionesAplicaDirecto.length > 0) {
-        setPromocionesAplicanDirecto(res.data.promocionesAplicaDirecto);
+        setPromocionesAplicanDirecto(
+          normalizarPromocionesAplicaDirecto(res.data.promocionesAplicaDirecto),
+        );
       }
     } else {
       setHabilitaPromocion(false);
@@ -379,6 +380,21 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           } else {
             // Disponibilidad de asientos: siempre fresca, nunca de caché (Req 26.3).
             response = await getDetalleEventos(id, SIN_CACHE_DISPONIBILIDAD);
+
+            // Multifecha sin función elegida: aquí no hay mapa que mostrar (el detalle de
+            // secciones necesita una función y respondía con error -> redirigía al inicio).
+            // En vez de eso se manda a la página de información, que lista fechas y abonos.
+            if (!funcionId && response.esMultiFuncion) {
+              const diasDistintos = new Set(
+                (response.funciones ?? []).map((f: any) => formatDate(f.fecha, "yyyy-MM-dd")),
+              ).size;
+              if (diasDistintos > 1) {
+                const destino = buildEventoSlug(response) || slug;
+                router.replace(`/eventos/informacion/${destino}`);
+                return;
+              }
+            }
+
             if (funcionId && response.funciones) {
               const funcion = response.funciones.find((f: any) => f.id.toString() === funcionId);
               if (funcion) {
@@ -485,7 +501,8 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           );
           setSeccionesAdicionales(adicionalesConNombreEspecial);
 
-          // Ordenar los precios de cada categoría y de mayor a menor y si son iguales priorizar izquierda
+          // Ordenar las categorías por nombre ASC, pero dejando siempre al final las que
+          // sean DAYPASS (sin importar el nombre).
           const categoriasOrdenadas = (response.preciosCategorias ?? [])
             .map((categoria: any) => ({
               ...categoria,
@@ -494,23 +511,18 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
                 .sort((a: number, b: number) => b - a),
             }))
             .sort((a: any, b: any) => {
-              const precioA = a.precios[0] ?? 0;
-              const precioB = b.precios[0] ?? 0;
+              const nombreA = (a.categoria ?? "").toLowerCase();
+              const nombreB = (b.categoria ?? "").toLowerCase();
 
-              if (precioA !== precioB) {
-                return precioB - precioA;
-              }
+              // Se ignoran los espacios para cubrir "day pass" y "daypass".
+              const esDaypassA = nombreA.replace(/\s+/g, "").includes("daypass");
+              const esDaypassB = nombreB.replace(/\s+/g, "").includes("daypass");
 
-              // Si los precios son iguales, priorizar los que tienen izquierda en el nombre
-              const nombreA = a.categoria.toLowerCase();
-              const nombreB = b.categoria.toLowerCase();
+              // Los DAYPASS van al final.
+              if (esDaypassA && !esDaypassB) return 1;
+              if (!esDaypassA && esDaypassB) return -1;
 
-              const tieneIzquierdaA = nombreA.includes("izquierda");
-              const tieneIzquierdaB = nombreB.includes("izquierda");
-
-              if (tieneIzquierdaA && !tieneIzquierdaB) return -1;
-              if (!tieneIzquierdaA && tieneIzquierdaB) return 1;
-
+              // El resto se ordena por nombre en orden ascendente.
               return nombreA.localeCompare(nombreB);
             });
           setPreciosCategorias(categoriasOrdenadas);
@@ -566,7 +578,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       setModalProps(seccion);
       if (evento && evento.udsPorCategoria) setUds(parseFloat(seccion.uds));
       if (promocionesAplicanDirecto.length > 0) {
-        const promocionesFiltradas = filtrarPromocionesAplicables(
+        const promocionesFiltradas = filtrarPromocionesAplicablesPorCategoria(
           promocionesAplicanDirecto,
           seccion.nombreEspecial,
         );
@@ -602,58 +614,6 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       // Mismo efecto que la lista accesible: se delega en `seleccionarSeccion`.
       seleccionarSeccion(seccion);
     }
-  };
-
-  const filtrarPromocionesAplicables = (promociones: any, categoria: string) => {
-    return promociones.filter((promo: { aplicaTodoEvento: any; categorias: any[] }) => {
-      // Si aplica a todo el evento, siempre es válida
-      if (promo.aplicaTodoEvento) {
-        return true;
-      }
-
-      const categoriasGenerales = promo.categorias
-        .map((c) => c.categoriaGeneral?.nombre)
-        .filter((c) => c !== null && c !== undefined);
-
-      // Si no aplica a todo el evento, verificar si la categoría está incluida
-      return categoriasGenerales && categoriasGenerales.includes(categoria);
-    });
-  };
-
-  const obtenerMejorPromocion = (
-    promocionesAplicables: any[],
-    cantidadBoletos: number,
-    precioBoleto: number,
-  ): promocion | null => {
-    if (!promocionesAplicables || promocionesAplicables.length === 0) {
-      return null;
-    }
-
-    let mejorPromocion = null;
-    let mayorDescuento = 0;
-
-    promocionesAplicables.forEach((promo) => {
-      let descuentoTotal = 0;
-
-      if (promo.tipo === "PORCENTAJE") {
-        descuentoTotal = (precioBoleto * cantidadBoletos * promo.porcentaje) / 100;
-      } else if (promo.tipo === "CANTIDAD") {
-        const gruposCompletos = Math.floor(cantidadBoletos / promo.cantidadCompra);
-        const boletosGratis = gruposCompletos * (promo.cantidadCompra - promo.cantidadPaga);
-        descuentoTotal = boletosGratis * precioBoleto;
-      }
-
-      if (descuentoTotal > mayorDescuento) {
-        mayorDescuento = descuentoTotal;
-        mejorPromocion = {
-          ...promo,
-          descuentoCalculado: descuentoTotal,
-          precioFinal: precioBoleto * cantidadBoletos - descuentoTotal,
-        };
-      }
-    });
-
-    return mejorPromocion;
   };
 
   // dar funcionalidad al svg
@@ -1025,10 +985,14 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
 
           let mejorPromocion;
           if (discountCode == "") {
-            mejorPromocion = obtenerMejorPromocion(promosAplicables, boletos, precioBoletos);
+            mejorPromocion = obtenerMejorPromocionPorBoletos(
+              promosAplicables,
+              boletos,
+              precioBoletos,
+            );
             if (mejorPromocion) {
               setPromocion(mejorPromocion);
-              setDiscountPorcent(mejorPromocion.porcentaje);
+              setDiscountPorcent(Number(mejorPromocion.porcentaje));
               setPromocionID(mejorPromocion.id);
               setDiscountAmount(mejorPromocion.descuentoCalculado);
             }
@@ -1484,6 +1448,13 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     setIsModalOpen(true);
     setModalProps(seccion);
     if (evento && evento.udsPorCategoria) setUds(parseFloat(seccion.uds));
+    if (promocionesAplicanDirecto.length > 0) {
+      const promocionesFiltradas = filtrarPromocionesAplicablesPorCategoria(
+        promocionesAplicanDirecto,
+        seccion.nombreEspecial,
+      );
+      setPromosAplicables(promocionesFiltradas);
+    }
     setSeccionId(seccion.id);
   };
 
@@ -1536,15 +1507,12 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
             setDiscountAmount(0);
             return;
           }
-          const gruposCompletos = Math.floor(boletos / cantidadCompra);
-          const sobrantes = boletos % cantidadCompra;
-          const boletosPagadosEnGrupos = gruposCompletos * cantidadPaga;
-          const boletosPagadosExtras = sobrantes;
-          const boletosAPagar = boletosPagadosEnGrupos + boletosPagadosExtras;
-
-          const totalSinPromo = boletos * precioBoletos;
-          const totalConPromo = boletosAPagar * precioBoletos;
-          descuentoAplicado = totalSinPromo - totalConPromo;
+          descuentoAplicado = calcularDescuentoCantidadPorBoletos(
+            precioBoletos,
+            boletos,
+            cantidadCompra,
+            cantidadPaga,
+          );
         }
 
         setDiscountAmount(descuentoAplicado);
@@ -1725,8 +1693,11 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
                           seccion?.asientosDisponibles === null ||
                           seccion?.asientosDisponibles === 0
                         }
-                        className={`mt-auto w-full px-3 py-2 rounded-md bg-accentBase hover:bg-emphasis text-white text-sm transition-colors ${seccion?.asientosDisponibles === null || seccion?.asientosDisponibles === 0 ? "cursor-not-allowed" : ""}`}
+                        className={`mt-auto w-full px-3 py-2 rounded-md bg-accentBase hover:bg-emphasis text-white text-sm transition-colors ${seccion?.asientosDisponibles === null || seccion?.asientosDisponibles === 0 ? "cursor-not-allowed invisible" : ""}`}
                       >
+                        {/*
+                         // TODO regresar agotados
+                        */}
                         {seccion?.asientosDisponibles <= 0 ? "Agotados" : "Comprar boletos"}
                       </button>
                     </div>
@@ -1760,9 +1731,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
 
             {evento?.id !== 59 && (
               <p className="font-semibold text-gray-700 text-center">
-                *Los precios son{" "}
-                {Number(evento.usoDeServicio) == 0 ? "" : "más cargos por servicio y"} en pesos
-                mexicanos.*
+                {evento.leyendaMapa ? `*${evento.leyendaMapa}*` : ""}
               </p>
             )}
           </div>
