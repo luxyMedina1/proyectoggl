@@ -330,7 +330,7 @@ export const FormConferenciaPage = () => {
           });
 
           if (result.isConfirmed) {
-            window.location.href = '/eventos';
+            router.push("/eventos");
           }
         }
 
@@ -481,8 +481,8 @@ export const FormConferenciaPage = () => {
         }
       }); */
 
-      if (seccion.tipo_seccion != 'general') {
-        window.location.href = `/eventos/${eventoId}/${seccion.id}/${seccion.nombre}`
+      if (seccion.tipo_seccion != "general") {
+        router.push(`/eventos/${eventoId}/${seccion.id}/${seccion.nombre}`);
       } else {
         setPrecioBoletos(+seccion.precioSeccion); // Asignar el precio de la sección
         setIsModalOpen(true);

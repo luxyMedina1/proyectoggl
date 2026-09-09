@@ -1,5 +1,6 @@
 import { revalidateTag } from "next/cache";
 import { timingSafeEqual } from "node:crypto";
+import { permitido } from "@/lib/rateLimit";
 
 /**
  * Invalidación de caché disparada por el backend.
@@ -42,6 +43,17 @@ const secretoValido = (recibido: string | null): boolean => {
 };
 
 export async function POST(request: Request) {
+  // Límite por IP ANTES de validar el secreto: así el sondeo del secreto en
+  // bucle no llega siquiera a la comparación de tiempo constante. La IP viene
+  // del primer valor de x-forwarded-for (el resto son proxies); "desconocida"
+  // si el header falta, de modo que las peticiones sin IP comparten un cubo.
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    "desconocida";
+  if (!permitido(ip)) {
+    return Response.json({ ok: false }, { status: 429 });
+  }
+
   if (!secretoValido(request.headers.get("x-revalidate-secret"))) {
     // 401 sin detalle: no le digas a quien sondea si el secreto existe.
     return Response.json({ ok: false }, { status: 401 });
