@@ -31,6 +31,16 @@ import { useAuthModal } from '../../../../../../context/AuthModalContext';
 import { usePixelsDeEvento } from '../../../../../../hooks/useMetaPixel';
 import { useEventosStore } from '../../../../../../hooks/useEventosStore';
 import LocalLoader from '../../../../../../components/LocalLoader';
+import {
+  filtrarPromocionesAplicablesPorCategorias,
+  obtenerMejorPromocionPorAsientos,
+  asientosPorCategoriaPrecio as agruparAsientosPorCategoriaPrecio,
+  calcularDescuentoPorcentajePorCategoria,
+  calcularDescuentoCantidadPorAsientos,
+  normalizarPromocionesAplicaDirecto,
+  calcularDescuentoPorCategoriaDeAsientos,
+} from '@/utils/promociones';
+import type { Asiento as AsientoPromo } from '@/utils/promociones';
 
 interface Asiento {
     id: number;
@@ -85,18 +95,6 @@ interface PrecioAbono {
   color: string,
   categoriaId: number,
   precio: number,
-}
-
-interface MejorPromo {
-  id:number,
-  nombre: string,
-  aplicaTodoEvento: boolean,
-  porcentaje: string,
-  tipo:'PORCENTAJE' | 'CANTIDAD',
-  cantidadPaga:number,
-  cantidadCompra:number,
-  descuentoCalculado:number,
-  categorias: { categoria: { nombre: string } }[]
 }
 
 export default function AbonoSeccionAsientoPage() {
@@ -557,18 +555,19 @@ const AbonoSeccionAsientoContent = () => {
 
       if (promocion_id != 0) {
 
-        const asientosPorCategoriaPrecio = asientosSeleccionados.reduce((acc: { [categoria: string]: { [precio: number]: Asiento[] } }, asiento) => {
-          const categoria = asiento.categoria;
-          const precio = asiento.precio;
-          if (!acc[categoria]) acc[categoria] = {};
-          if (!acc[categoria][precio]) acc[categoria][precio] = [];
-          acc[categoria][precio].push(asiento);
-          return acc;
-        }, {} as { [categoria: string]: { [precio: number]: Asiento[] } });
+        // Sin asientos seleccionados no hay nada que validar: resetea en silencio
+        // (evita el falso positivo del toast al deseleccionar todo).
+        if (asientosSeleccionados.length === 0) {
+          setDiscountAmount(0);
+          setSubotal(0);
+          return;
+        }
+
+        const asientosAgrupados = agruparAsientosPorCategoriaPrecio(asientosSeleccionados as unknown as AsientoPromo[]);
 
         let categoriasAplicables: string | string[] = [];
         if (!aplicaTodoEvento){
-          const categoriasSeleccionadas = Object.keys(asientosPorCategoriaPrecio);
+          const categoriasSeleccionadas = Object.keys(asientosAgrupados);
           const categoriasValidas = categoriasPromo.map((c: { categoria: { nombre: any; }; }) => c.categoria.nombre);
           categoriasAplicables = categoriasSeleccionadas.filter(cat => categoriasValidas.includes(cat));
 
@@ -582,15 +581,13 @@ const AbonoSeccionAsientoContent = () => {
           }
         }
 
-        let descuentoAplicado = 0;
-
         if (tipoPromocion === 'PORCENTAJE') {
-          Object.entries(subtotalesPorCategoria).forEach(([categoria, subtotal]) => {
-            if (aplicaTodoEvento || (!aplicaTodoEvento && categoriasAplicables.includes(categoria))) {
-              const descuento = subtotal * (discountPorcent / 100);
-              descuentoAplicado += descuento;
-            }
-          });
+          const descuentoAplicado = calcularDescuentoPorcentajePorCategoria(
+            subtotalesPorCategoria,
+            discountPorcent,
+            aplicaTodoEvento,
+            categoriasAplicables as string[]
+          );
 
           const nuevoSubtotal = Math.max(0, totalBoletos - descuentoAplicado);
           setDiscountAmount(descuentoAplicado);
@@ -599,26 +596,13 @@ const AbonoSeccionAsientoContent = () => {
 
         if (tipoPromocion === 'CANTIDAD'){
           const { cantidadCompra, cantidadPaga} = cantidadesPromocion;
-          let algunaCategoriaCumple = false;
-
-          Object.entries(asientosPorCategoriaPrecio).forEach(([categoria, preciosObj]) => {
-            if (!aplicaTodoEvento && !categoriasAplicables.includes(categoria)) {
-              return;
-            }
-            Object.entries(preciosObj as Record<string, Asiento[]>).forEach(([precio, asientos]) => {
-              precio;
-              const cantidad = asientos.length;
-              const grupos = Math.floor(cantidad / cantidadCompra);
-              if (cantidad >= cantidadCompra) {
-                algunaCategoriaCumple = true;
-              }
-              for (let i = 0; i < grupos; i++) {
-                const grupo = asientos.slice(i * cantidadCompra, (i + 1) * cantidadCompra);
-                const gratis = grupo.slice(cantidadPaga);
-                descuentoAplicado += gratis.reduce((acc, asiento) => acc + Number(asiento.precio), 0);
-              }
-            });
-          });
+          const { descuentoTotal: descuentoAplicado, algunaCategoriaCumple } = calcularDescuentoCantidadPorAsientos(
+            asientosSeleccionados as unknown as AsientoPromo[],
+            cantidadCompra,
+            cantidadPaga,
+            aplicaTodoEvento,
+            categoriasAplicables as string[]
+          );
 
           if (!algunaCategoriaCumple) {
             toast.error(`Debes seleccionar al menos ${cantidadCompra} asientos en una misma categoría y precio para aplicar este código.`);
@@ -644,13 +628,13 @@ const AbonoSeccionAsientoContent = () => {
   useEffect(() => {
     if (discountCode == ''){
       const categoriasSeleccionadas = [...new Set(asientosSeleccionados.map(asiento => asiento.categoria))];
-      const promosValidas = filtrarPromocionesAplicables(promocionesAplicanDirecto, categoriasSeleccionadas);
-      const mejorPromocion = obtenerMejorPromocion(promosValidas,  asientosSeleccionados);
+      const promosValidas = filtrarPromocionesAplicablesPorCategorias(promocionesAplicanDirecto, categoriasSeleccionadas);
+      const mejorPromocion = obtenerMejorPromocionPorAsientos(promosValidas, asientosSeleccionados as unknown as AsientoPromo[], subtotalesPorCategoria);
 
       if (mejorPromocion) {
         setTipoPromocion(mejorPromocion.tipo);
         setAplicaTodoEvento(mejorPromocion.aplicaTodoEvento);
-        setCategoriasPromo(mejorPromocion.categorias);
+        setCategoriasPromo(mejorPromocion.categorias as unknown as { categoria: { nombre: string } }[]);
         setPromocionID(mejorPromocion.id);
         setPromoNombre(mejorPromocion.nombre || '');
 
@@ -665,7 +649,35 @@ const AbonoSeccionAsientoContent = () => {
         } else if (mejorPromocion.tipo === 'PORCENTAJE') {
           setDiscountAmount(mejorPromocion.descuentoCalculado);
           setSubotal(Math.max(0, totalBoletos - mejorPromocion.descuentoCalculado));
-          setDiscountPorcent(parseFloat(mejorPromocion.porcentaje));
+          setDiscountPorcent(parseFloat(String(mejorPromocion.porcentaje)));
+        } else if (mejorPromocion.tipo === 'RESTA') {
+          setDiscountAmount(mejorPromocion.descuentoCalculado);
+          setSubotal(Math.max(0, totalBoletos - mejorPromocion.descuentoCalculado));
+          setDiscountPorcent(0);
+        }
+
+        // Recalcular el cargo por servicio (UDS) sobre los subtotales YA descontados por categoría.
+        const categoriasSel = Object.keys(subtotalesPorCategoria);
+        const categoriasValidas = (mejorPromocion.categorias as any[]).map((c: any) => c?.categoria?.nombre).filter((n: any) => n != null);
+        const categoriasAplicables = mejorPromocion.aplicaTodoEvento ? categoriasSel : categoriasSel.filter(c => categoriasValidas.includes(c));
+
+        const descuentoPorCat = calcularDescuentoPorCategoriaDeAsientos(
+          { tipo: mejorPromocion.tipo, porcentaje: mejorPromocion.porcentaje, cantidadResta: mejorPromocion.cantidadResta, cantidadCompra: mejorPromocion.cantidadCompra, cantidadPaga: mejorPromocion.cantidadPaga, aplicaTodoEvento: mejorPromocion.aplicaTodoEvento },
+          asientosSeleccionados as unknown as AsientoPromo[],
+          subtotalesPorCategoria,
+          categoriasAplicables
+        );
+
+        if (evento?.udsPorCategoria) {
+          let udsTotal = 0;
+          Object.entries(subtotalesPorCategoria).forEach(([categoria, subtotalCat]) => {
+            const subtotalDescontado = Math.max(0, subtotalCat - (descuentoPorCat[categoria] ?? 0));
+            const cargoCategoria = cargosPorCategoria.find(c => c.categoria === categoria);
+            if (cargoCategoria && cargoCategoria.cargoPorCategoria) {
+              udsTotal += subtotalDescontado * Number(cargoCategoria.cargoPorCategoria);
+            }
+          });
+          setUDS(udsTotal);
         }
       } else {
         setTipoPromocion('');
@@ -678,10 +690,21 @@ const AbonoSeccionAsientoContent = () => {
         setSubotal(Math.max(0, totalBoletos));
         setDiscountPorcent(0);
 
+        // Sin promoción: restaurar el UDS con los subtotales completos (sin descuento).
+        if (evento?.udsPorCategoria) {
+          let udsTotal = 0;
+          Object.entries(subtotalesPorCategoria).forEach(([categoria, subtotalCat]) => {
+            const cargoCategoria = cargosPorCategoria.find(c => c.categoria === categoria);
+            if (cargoCategoria && cargoCategoria.cargoPorCategoria) {
+              udsTotal += subtotalCat * Number(cargoCategoria.cargoPorCategoria);
+            }
+          });
+          setUDS(udsTotal);
+        }
       }
     }
     validarDescuento(asientosSeleccionados);
-  }, [subtotalesPorCategoria]);
+  }, [subtotalesPorCategoria, asientosSeleccionados, totalBoletos]);
 
   if (status === 'checking') {
       checkAuthToken();
@@ -744,18 +767,11 @@ const AbonoSeccionAsientoContent = () => {
         setCategoriasPromo(promo.categorias);
 
 
-        const asientosPorCategoriaPrecio = asientosSeleccionados.reduce((acc: { [categoria: string]: { [precio: number]: Asiento[] } }, asiento) => {
-          const categoria = asiento.categoria;
-          const precio = asiento.precio;
-          if (!acc[categoria]) acc[categoria] = {};
-          if (!acc[categoria][precio]) acc[categoria][precio] = [];
-          acc[categoria][precio].push(asiento);
-          return acc;
-        }, {} as { [categoria: string]: { [precio: number]: Asiento[] } });
+        const asientosAgrupados = agruparAsientosPorCategoriaPrecio(asientosSeleccionados as unknown as AsientoPromo[]);
 
         let categoriasAplicables: string | string[] = [];
         if (!promo.aplicaTodoEvento){
-          const categoriasSeleccionadas = Object.keys(asientosPorCategoriaPrecio);
+          const categoriasSeleccionadas = Object.keys(asientosAgrupados);
           const categoriasValidas = promo.categorias.map((c: { categoria: { nombre: any; }; }) => c.categoria?.nombre).filter((cat: string) => cat !== null && cat !== undefined);
           categoriasAplicables = categoriasSeleccionadas.filter(cat => categoriasValidas.includes(cat));
           const categoriasGenerales = promo.categorias.map((c: { categoriaGeneral: { nombre: any; }; }) => c.categoriaGeneral?.nombre).filter((cat: string) => cat !== null && cat !== undefined);
@@ -773,29 +789,16 @@ const AbonoSeccionAsientoContent = () => {
         if (res.data.tipo == 'CANTIDAD') {
           const cantidadCompra = promo.cantidadCompra;
           const cantidadPaga = promo.cantidadPaga;
-          let totalDescuento = 0;
-          let algunaCategoriaCumple = false;
 
           setCantidadesPromocion({cantidadCompra, cantidadPaga});
 
-          Object.entries(asientosPorCategoriaPrecio).forEach(([categoria, preciosObj]) => {
-            if (!promo.aplicaTodoEvento && !categoriasAplicables.includes(categoria)) {
-              return;
-            }
-            Object.entries(preciosObj as Record<string, Asiento[]>).forEach(([precio, asientos]) => {
-              precio;
-              const cantidad = asientos.length;
-              const grupos = Math.floor(cantidad / cantidadCompra);
-              if (cantidad >= cantidadCompra) {
-                algunaCategoriaCumple = true;
-              }
-              for (let i = 0; i < grupos; i++) {
-                const grupo = asientos.slice(i * cantidadCompra, (i + 1) * cantidadCompra);
-                const gratis = grupo.slice(cantidadPaga);
-                totalDescuento += gratis.reduce((acc, asiento) => acc + Number(asiento.precio), 0);
-              }
-            });
-          });
+          const { descuentoTotal: totalDescuento, algunaCategoriaCumple } = calcularDescuentoCantidadPorAsientos(
+            asientosSeleccionados as unknown as AsientoPromo[],
+            cantidadCompra,
+            cantidadPaga,
+            promo.aplicaTodoEvento,
+            categoriasAplicables as string[]
+          );
 
           if (!algunaCategoriaCumple) {
             toast.error(`Debes seleccionar al menos ${cantidadCompra} asientos en una misma categoría y precio para aplicar este código.`);
@@ -885,18 +888,11 @@ const AbonoSeccionAsientoContent = () => {
         setCategoriasPromo(promo.categorias);
 
 
-        const asientosPorCategoriaPrecio = num_asientos.reduce((acc: { [categoria: string]: { [precio: number]: Asiento[] } }, asiento) => {
-          const categoria = asiento.categoria;
-          const precio = asiento.precio;
-          if (!acc[categoria]) acc[categoria] = {};
-          if (!acc[categoria][precio]) acc[categoria][precio] = [];
-          acc[categoria][precio].push(asiento);
-          return acc;
-        }, {} as { [categoria: string]: { [precio: number]: Asiento[] } });
+        const asientosAgrupados = agruparAsientosPorCategoriaPrecio(num_asientos as unknown as AsientoPromo[]);
 
         let categoriasAplicables: string | string[] = [];
         if (!promo.aplicaTodoEvento){
-          const categoriasSeleccionadas = Object.keys(asientosPorCategoriaPrecio);
+          const categoriasSeleccionadas = Object.keys(asientosAgrupados);
           const categoriasValidas = promo.categorias.map((c: { categoria: { nombre: any; }; }) => c.categoria?.nombre).filter((cat: string) => cat !== null && cat !== undefined);
           categoriasAplicables = categoriasSeleccionadas.filter(cat => categoriasValidas.includes(cat));
 
@@ -914,29 +910,16 @@ const AbonoSeccionAsientoContent = () => {
         if (res.data.tipo == 'CANTIDAD') {
           const cantidadCompra = promo.cantidadCompra;
           const cantidadPaga = promo.cantidadPaga;
-          let totalDescuento = 0;
-          let algunaCategoriaCumple = false;
 
           setCantidadesPromocion({cantidadCompra, cantidadPaga});
 
-          Object.entries(asientosPorCategoriaPrecio).forEach(([categoria, preciosObj]) => {
-            if (!promo.aplicaTodoEvento && !categoriasAplicables.includes(categoria)) {
-              return;
-            }
-            Object.entries(preciosObj as Record<string, Asiento[]>).forEach(([precio, asientos]) => {
-              precio;
-              const cantidad = asientos.length;
-              const grupos = Math.floor(cantidad / cantidadCompra);
-              if (cantidad >= cantidadCompra) {
-                algunaCategoriaCumple = true;
-              }
-              for (let i = 0; i < grupos; i++) {
-                const grupo = asientos.slice(i * cantidadCompra, (i + 1) * cantidadCompra);
-                const gratis = grupo.slice(cantidadPaga);
-                totalDescuento += gratis.reduce((acc, asiento) => acc + Number(asiento.precio), 0);
-              }
-            });
-          });
+          const { descuentoTotal: totalDescuento, algunaCategoriaCumple } = calcularDescuentoCantidadPorAsientos(
+            num_asientos as unknown as AsientoPromo[],
+            cantidadCompra,
+            cantidadPaga,
+            promo.aplicaTodoEvento,
+            categoriasAplicables as string[]
+          );
 
           if (!algunaCategoriaCumple) {
             // toast.error(`Debes seleccionar al menos ${cantidadCompra} asientos en una misma categoría y precio para aplicar este código.`);
@@ -1415,10 +1398,9 @@ const AbonoSeccionAsientoContent = () => {
     if (res.data.total > 0) {
       setHabilitaPromocion(true);
       if (res.data.promocionesAplicaDirecto && res.data.promocionesAplicaDirecto.length > 0) {
-        for (const a of res.data.promocionesAplicaDirecto) {
-          a.porcentaje_original = a.porcentaje;
-        }
-        setPromocionesAplicanDirecto(res.data.promocionesAplicaDirecto);
+        setPromocionesAplicanDirecto(
+          normalizarPromocionesAplicaDirecto(res.data.promocionesAplicaDirecto, true)
+        );
       }
     } else {
       setHabilitaPromocion(false);
@@ -1676,110 +1658,6 @@ const AbonoSeccionAsientoContent = () => {
     // validarDescuento(nuevosAsientos);
   };
 
-  const filtrarPromocionesAplicables = (promociones: any[], categorias: string | any[]) => {
-    return promociones.filter((promo: { aplicaTodoEvento: any; categorias: any[]; }) => {
-      // Si aplica a todo el evento, siempre es válida
-      if (promo.aplicaTodoEvento) {
-        return true;
-      }
-
-      const categoriasN = promo.categorias.map((c: { categoria: { nombre: any; }; }) => c.categoria?.nombre).filter((c: null | undefined) => c !== null && c !== undefined);
-
-      // Si no aplica a todo el evento, verificar si la categoría está incluida
-      return categoriasN && categoriasN.some((cat: any) => categorias.includes(cat));
-    });
-  };
-
-  const obtenerMejorPromocion = (promocionesAplicables: any[], asientosSeleccionados: any[]): MejorPromo | null => {
-    if (!promocionesAplicables || promocionesAplicables.length === 0) {
-      return null;
-    }
-
-    let mejorPromocion = null;
-    let mayorDescuento = 0;
-
-    promocionesAplicables.forEach(promo => {
-      let descuentoTotal = 0;
-
-      // Obtener categorías de asientos seleccionados
-      const categoriasAsientos = [...new Set(asientosSeleccionados.map(asiento => asiento.categoria))];
-
-      // Filtrar categorías aplicables
-      let categoriasAplicables = [];
-      if (!promo.aplicaTodoEvento) {
-        const categoriasValidas = promo.categorias.map((c: { categoria: { nombre: any; }; }) => c.categoria?.nombre).filter((c: null | undefined) => c !== null && c !== undefined);
-        categoriasAplicables = categoriasAsientos.filter(cat => categoriasValidas.includes(cat));
-
-        if (categoriasAplicables.length === 0) {
-          return;
-        }
-      }
-
-      if (promo.tipo === "PORCENTAJE") {
-        // Calcular descuento por categoría
-        Object.entries(subtotalesPorCategoria).forEach(([categoria, subtotal]) => {
-          if (promo.aplicaTodoEvento || categoriasAplicables.includes(categoria)) {
-            const descuento = subtotal * (parseFloat(promo.porcentaje) / 100);
-            descuentoTotal += descuento;
-          }
-        });
-      }
-      else if (promo.tipo === "CANTIDAD") {
-        const cantidadCompra = promo.cantidadCompra;
-        const cantidadPaga = promo.cantidadPaga;
-
-        const asientosPorCategoriaPrecio = asientosSeleccionados.reduce((acc, asiento) => {
-          const categoria = asiento.categoria;
-          const precio = asiento.precio;
-          if (!acc[categoria]) acc[categoria] = {};
-          if (!acc[categoria][precio]) acc[categoria][precio] = [];
-          acc[categoria][precio].push(asiento);
-          return acc;
-        }, {});
-
-        let algunaCategoriaCumple = false;
-
-        Object.entries(asientosPorCategoriaPrecio).forEach(([categoria, preciosObj]) => {
-          if (!promo.aplicaTodoEvento && !categoriasAplicables.includes(categoria)) {
-            return; // Esta categoría no aplica
-          }
-
-          Object.entries(preciosObj as Record<string, Asiento[]>).forEach(([precio, asientos]) => {
-            precio;
-            const cantidad = asientos.length;
-            const grupos = Math.floor(cantidad / cantidadCompra);
-
-            if (cantidad >= cantidadCompra) {
-              algunaCategoriaCumple = true;
-            }
-
-            // Para cada grupo, calcular descuento
-            for (let i = 0; i < grupos; i++) {
-              const grupo = asientos.slice(i * cantidadCompra, (i + 1) * cantidadCompra);
-              const gratis = grupo.slice(cantidadPaga);
-              descuentoTotal += gratis.reduce((acc: number, asiento: { precio: any; }) => acc + Number(asiento.precio), 0);
-            }
-          });
-        });
-
-        if (!algunaCategoriaCumple) {
-          return; // Esta promoción no cumple los requisitos
-        }
-      }
-
-
-
-      if (descuentoTotal > mayorDescuento) {
-        mayorDescuento = descuentoTotal;
-        mejorPromocion = {
-          ...promo,
-          descuentoCalculado: descuentoTotal,
-        };
-      }
-    });
-
-    return mejorPromocion;
-  };
 
   // RENDERS
   // _________________________________________________
