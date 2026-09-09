@@ -30,8 +30,9 @@ const CityPassTerminarCompra = () => {
                 setMensaje(data.message);
                 setBoletosEmitidos(data.boletosEmitidos ?? null);
                 setExito(true);
-            } catch (error: any) {
-                Swal.fire({ icon: 'error', title: 'Error', text: error?.message || 'Hubo un problema al confirmar el pago.' });
+            } catch (error) {
+                const texto = error instanceof Error ? error.message : '';
+                Swal.fire({ icon: 'error', title: 'Error', text: texto || 'Hubo un problema al confirmar el pago.' });
             } finally {
                 setLoading(false);
             }

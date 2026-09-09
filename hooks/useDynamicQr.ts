@@ -26,6 +26,14 @@ export interface UseDynamicQrResult {
 
 const REFRESH_THRESHOLD_SEC = 30 * 60;
 
+// Extrae el mensaje de un error tipo axios (`error.response.data.message`) sin asumir
+// que el valor capturado sea de un tipo concreto. `catch` entrega `unknown`.
+const mensajeDeErrorApi = (e: unknown): string | undefined => {
+    const message = (e as { response?: { data?: { message?: unknown } } })?.response?.data
+        ?.message;
+    return typeof message === 'string' ? message : undefined;
+};
+
 export const useDynamicQr = ({
     tipo,
     boletoId,
@@ -47,9 +55,9 @@ export const useDynamicQr = ({
                 const cached = await fetchSeed(tipo, boletoId);
                 setSeed(cached);
                 setStatus('ready');
-            } catch (e: any) {
+            } catch (e) {
                 console.error('fetchSeed error', e);
-                setError(e?.response?.data?.message ?? 'No se pudo obtener el QR');
+                setError(mensajeDeErrorApi(e) ?? 'No se pudo obtener el QR');
                 setStatus('error');
             } finally {
                 inFlight.current = null;

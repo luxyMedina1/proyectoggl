@@ -1,3 +1,13 @@
+// Subconjunto de la API global de OpenPay que se usa aquí. La librería se carga
+// por <script> externo, así que solo tipamos los métodos que realmente invocamos.
+interface OpenPayCard {
+  validateCardNumber?: (numero: string) => boolean;
+  validateCVC?: (cvc: string, numero?: string) => boolean;
+}
+interface OpenPayGlobal {
+  card?: OpenPayCard;
+}
+
 /**
  * Validación del número de tarjeta para los formularios de pago.
  *
@@ -14,7 +24,7 @@ export const validarNumeroTarjeta = (numeroTarjeta: string): boolean => {
   }
 
   // Si OpenPay está cargado, validamos con su función oficial
-  const openPay = (window as { OpenPay?: any }).OpenPay;
+  const openPay = (window as { OpenPay?: OpenPayGlobal }).OpenPay;
   if (openPay?.card?.validateCardNumber) {
     return openPay.card.validateCardNumber(digitos);
   }
@@ -38,7 +48,7 @@ export const validarCVC = (cvc: string, numeroTarjeta?: string): boolean => {
   }
 
   // Si OpenPay está cargado, validamos con su función oficial
-  const openPay = (window as { OpenPay?: any }).OpenPay;
+  const openPay = (window as { OpenPay?: OpenPayGlobal }).OpenPay;
   if (openPay?.card?.validateCVC) {
     const numero = (numeroTarjeta || "").replace(/\D/g, "");
     return numero

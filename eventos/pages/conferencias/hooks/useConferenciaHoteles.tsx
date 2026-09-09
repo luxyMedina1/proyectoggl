@@ -48,12 +48,14 @@ export const useConferencia = () => {
         const { data } = await apiApplication.get(`/eventos/conferencia/hoteles/${eventoId}`);
         setConferencia(data);
         // console.log("🚀 ~ getConferenciaDetalle ~ data:", data)
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error al obtener los datos:", error);
         let message = "Ha ocurrido un error al obtener los datos.";
 
-        if (error.response && error.response.data) {
-          message = error.response.data.message || message;
+        const backendMessage = (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message;
+        if (backendMessage) {
+          message = backendMessage;
         }
 
         setError(message);

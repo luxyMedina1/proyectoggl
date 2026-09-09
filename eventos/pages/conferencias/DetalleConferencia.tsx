@@ -67,8 +67,8 @@ function DetalleConferencia() {
         <div className="container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 py-10">
           <h2 className="text-white text-center font-bold leading-normal text-3xl max-w-xl mx-auto mb-10">En CosmoTech exploramos y presentamos soluciones reales en:</h2>
           <div className="grid sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-y-16 gap-x-10 p-8 max-w-7xl mx-auto">
-            {solucionesData.map((solucion) => ( 
-              <SolucionesCard solucion={solucion} />
+            {solucionesData.map((solucion, idx) => (
+              <SolucionesCard key={solucion.id ?? idx} solucion={solucion} />
             ))}
           </div>
         </div>

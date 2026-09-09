@@ -131,3 +131,43 @@ export const textoPlano = (html?: string | null, maxLargo = 200): string => {
     if (texto.length <= maxLargo) return texto;
     return `${texto.slice(0, maxLargo - 1).trimEnd()}…`;
 };
+
+/**
+ * Saneado de HTML apto para SERVIDOR (sin depender de `document`).
+ *
+ * `sanitizeRichText` usa DOMPurify, que necesita el DOM del navegador; en un
+ * Server Component (donde `mammoth` convierte el .docx de legales) no hay
+ * `document`, así que no sirve. Este saneador trabaja sobre la cadena.
+ *
+ * El HTML de legales lo produce `mammoth` a partir de documentos propios
+ * versionados, no de entrada de usuario, así que el riesgo real es bajo. Esto
+ * es DEFENSA EN PROFUNDIDAD: aunque un .docx malicioso o comprometido colara
+ * markup peligroso, aquí se retira antes de renderizarlo.
+ *
+ * A diferencia de `sanitizeRichText` (lista blanca estrecha para el editor
+ * rich-text), aquí se conserva la estructura amplia que emite mammoth
+ * (encabezados, listas, tablas, negritas, enlaces) y solo se eliminan los
+ * vectores de ejecución: elementos peligrosos, manejadores `on*` y protocolos
+ * de URL no navegables.
+ */
+export const sanitizeLegalHtml = (html?: string | null): string => {
+    if (!html) return "";
+
+    return (
+        html
+            // Elementos que ejecutan código o embeben contenido externo, con su contenido.
+            .replace(
+                /<(script|style|iframe|object|embed|link|meta|base|form)\b[^>]*>[\s\S]*?<\/\1>/gi,
+                "",
+            )
+            // Sus variantes auto-cerradas o sin cierre (link/meta/base no llevan cierre).
+            .replace(/<(script|style|iframe|object|embed|link|meta|base|form)\b[^>]*\/?>/gi, "")
+            // Manejadores de eventos inline: onload=, onclick=, onerror=, ... (con o sin comillas).
+            .replace(/\son[a-z]+\s*=\s*(?:"[^"]*"|'[^']*'|[^\s>]+)/gi, "")
+            // URLs con protocolo peligroso en href/src (javascript:, data:, vbscript:).
+            .replace(
+                /\s(href|src)\s*=\s*(?:"(?:\s*(?:javascript|data|vbscript):[^"]*)"|'(?:\s*(?:javascript|data|vbscript):[^']*)'|(?:javascript|data|vbscript):[^\s>]+)/gi,
+                "",
+            )
+    );
+};

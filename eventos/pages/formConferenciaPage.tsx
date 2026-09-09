@@ -1,11 +1,11 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
 import { TbTicket } from "react-icons/tb";
-import { useAuthStore } from '../../hooks/useAuthStore';
-import { useAuthModal } from '../../context/AuthModalContext';
-import { useEventosStore } from '../../hooks/useEventosStore';
+import { useAuthStore } from "../../hooks/useAuthStore";
+import { useAuthModal } from "../../context/AuthModalContext";
+import { useEventosStore } from "../../hooks/useEventosStore";
 
 import { IoIosClose } from "react-icons/io";
 import { IoTrashOutline, IoLocationOutline } from "react-icons/io5";
@@ -15,17 +15,17 @@ import { HiOutlineCalendarDateRange } from "react-icons/hi2";
 import { IoKey } from "react-icons/io5";
 
 import Swal, { SweetAlertIcon } from "sweetalert2";
-import Loader from '@/publicUi/components/Loader';
-import apiApplication from '../../api/apiApplication';
+import Loader from "@/publicUi/components/Loader";
+import apiApplication from "../../api/apiApplication";
 
-import { toast } from 'react-toastify';
+import { toast } from "react-toastify";
 import { LuBadgeCheck } from "react-icons/lu";
-import { formatDate } from '../../utils/dateHelpers';
-import { validarNumeroTarjeta, validarCVC } from '../../utils/cardHelpers';
-import { formatearDinero } from '../helpers/formatearDinero';
-import ConferenciaHero from './conferencias/components/ConferenciaHero';
+import { formatDate } from "../../utils/dateHelpers";
+import { validarNumeroTarjeta, validarCVC } from "../../utils/cardHelpers";
+import { formatearDinero } from "../helpers/formatearDinero";
+import ConferenciaHero from "./conferencias/components/ConferenciaHero";
 // import NavBar from './conferencias/components/NavBar';
-import ConferenciaFooter from './conferencias/components/ConferenciaFooter';
+import ConferenciaFooter from "./conferencias/components/ConferenciaFooter";
 
 import "swiper/css";
 import "swiper/css/navigation";
@@ -39,7 +39,7 @@ declare global {
 interface Asiento {
   id: number;
   numero: string;
-  estado: 'disponible' | 'vendido' | 'bloqueado';
+  estado: "disponible" | "vendido" | "bloqueado";
 }
 interface Fila {
   id: number;
@@ -53,7 +53,7 @@ interface Seccion {
   precioAdicional: string;
   asientosDisponibles: number;
   filas: Fila[];
-  tipo_seccion: 'general' | 'numerada' | 'suite' | 'mesas';
+  tipo_seccion: "general" | "numerada" | "suite" | "mesas";
   color: string;
 }
 interface Recinto {
@@ -91,7 +91,7 @@ interface Secciones {
   nombre: string;
   asientosDisponibles: number;
   precioSeccion: string;
-  tipo_seccion: 'general' | 'numerada' | 'suite' | 'mesas';
+  tipo_seccion: "general" | "numerada" | "suite" | "mesas";
   precioAdicional: string;
   bloque: string;
   color: string;
@@ -105,19 +105,19 @@ interface Secciones {
 interface Categorias {
   precios: [];
   categoria: string;
-  color: string,
+  color: string;
 }
 interface ModalProps {
   id: number;
   nombre: string;
-  tipo_seccion: 'general' | 'numerada' | 'suite' | 'mesas';
+  tipo_seccion: "general" | "numerada" | "suite" | "mesas";
   asientosDisponibles: number;
   bloque: string;
   nombreEspecial: string;
   colorGeneral: string;
 }
 interface TarjetaGuardada {
-  id: number,
+  id: number;
   idtarjeta: string;
   tarjeta: string;
   banco: string;
@@ -125,7 +125,7 @@ interface TarjetaGuardada {
 interface promocion {
   id: number;
   nombre: string;
-  tipo: 'PORCENTAJE' | 'CANTIDAD';
+  tipo: "PORCENTAJE" | "CANTIDAD";
   porcentaje: number;
   cantidadCompra: number;
   cantidadPaga: number;
@@ -139,7 +139,8 @@ export const FormConferenciaPage = () => {
   const { checkAuthToken, user, status } = useAuthStore();
   const { requestLogin } = useAuthModal();
   const [reservaPendiente, setReservaPendiente] = useState<number | null>(null);
-  const { getDetalleEventos, getDetalleEventoSecciones, reservarGeneral, cancelar } = useEventosStore();
+  const { getDetalleEventos, getDetalleEventoSecciones, reservarGeneral, cancelar } =
+    useEventosStore();
   const { eventoId } = useParams<{ eventoId: string }>();
 
   const [evento, setEvento] = useState<Evento | null>(null);
@@ -170,40 +171,42 @@ export const FormConferenciaPage = () => {
   const [uds, setUds] = useState<number>(0);
   const [iva, setIva] = useState<number>(0);
   const [ivaApplied, setIvaApplied] = useState(false);
-  const [tabMetodo, setTabMetodo] = useState('nueva_tarjeta');
+  const [tabMetodo, setTabMetodo] = useState("nueva_tarjeta");
   const [cargando, setCargando] = useState(false);
-  const [tooltip, setTooltip] = useState<{ visible: boolean, text: string, x: number, y: number }>({
+  const [tooltip, setTooltip] = useState<{ visible: boolean; text: string; x: number; y: number }>({
     visible: false,
     text: "",
     x: 0,
-    y: 0
+    y: 0,
   });
   // const [eventoActivo, setEventoActivo] = useState(false);
   const [claveAccesoEvento, setClaveAccesoEvento] = useState(null);
   const [claveAcceso, setClaveAcceso] = useState("");
-  const [acceso, setAcceso] = useState(false);
+  // `acceso` es un valor derivado puro (clave del evento vs. la que teclea el
+  // expositor); se calcula en render en vez de reflejarse vía setState en un
+  // efecto, evitando un render extra sin cambiar el comportamiento.
+  const acceso = claveAccesoEvento == claveAcceso;
 
-  const [formValues, setFormValues] = useState(
-    {
-      nombre: '',
-      tarjeta: '',
-      expiracion: '',
-      cvv: '',
-      tipoParticipante: 'invitado',
-      nombre_conferencia: '',
-      correo_conferencia: '',
-      telefono_conferencia: '',
-      empresa_conferencia: '',
-      puesto_conferencia: '',
-      temas_exponer: '',
-      que_ofrecer: '',
-      requerimientos_espacio: '',
-      personas_expositor: '',
-      foto: null as File | string | null,
-    });
+  const [formValues, setFormValues] = useState({
+    nombre: "",
+    tarjeta: "",
+    expiracion: "",
+    cvv: "",
+    tipoParticipante: "invitado",
+    nombre_conferencia: "",
+    correo_conferencia: "",
+    telefono_conferencia: "",
+    empresa_conferencia: "",
+    puesto_conferencia: "",
+    temas_exponer: "",
+    que_ofrecer: "",
+    requerimientos_espacio: "",
+    personas_expositor: "",
+    foto: null as File | string | null,
+  });
 
   // Codigos de descuento
-  const [discountCode, setDiscountCode] = useState('');
+  const [discountCode, setDiscountCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [discountPorcent, setDiscountPorcent] = useState(0);
   const [promocion_id, setPromocionID] = useState(0);
@@ -211,19 +214,42 @@ export const FormConferenciaPage = () => {
   const [habilitaPromocion, setHabilitaPromocion] = useState(false);
   const [promocionesAplicanDirecto, setPromocionesAplicanDirecto] = useState<any[]>([]);
   const [promosAplicables, setPromosAplicables] = useState<any[]>([]);
-  const [promocion, setPromocion] = useState<promocion>({ id: 0, nombre: '', tipo: 'PORCENTAJE', porcentaje: 0, cantidadCompra: 0, cantidadPaga: 0, aplicaTodoEvento: false, categorias: [], descuentoCalculado: 0 });
+  const [promocion, setPromocion] = useState<promocion>({
+    id: 0,
+    nombre: "",
+    tipo: "PORCENTAJE",
+    porcentaje: 0,
+    cantidadCompra: 0,
+    cantidadPaga: 0,
+    aplicaTodoEvento: false,
+    categorias: [],
+    descuentoCalculado: 0,
+  });
+
+  const habilitarpromocion = async (id_evento_web: string) => {
+    const params = {
+      evento_id: parseInt(id_evento_web),
+    };
+
+    const res = await apiApplication.post("/promociones/validar_promo_web", params);
+
+    if (res.data.total > 0) {
+      setHabilitaPromocion(true);
+      if (res.data.promocionesAplicaDirecto && res.data.promocionesAplicaDirecto.length > 0) {
+        setPromocionesAplicanDirecto(res.data.promocionesAplicaDirecto);
+      }
+    } else {
+      setHabilitaPromocion(false);
+    }
+  };
 
   // DETALLES DE LA CONFERENCIA
   useEffect(() => {
-
     const fetchEvento = async () => {
-
       if (eventoId) {
-
         setCargando(true);
 
         try {
-
           habilitarpromocion(eventoId);
           const response = await getDetalleEventos(eventoId);
 
@@ -241,44 +267,36 @@ export const FormConferenciaPage = () => {
           setClaveAccesoEvento(response.clave_acceso);
 
           console.log(seccionId);
-
         } catch (error: any) {
-          console.error('Error al obtener el evento:', error);
-          let mensajeError = 'Error al obtener el evento.';
+          console.error("Error al obtener el evento:", error);
+          let mensajeError = "Error al obtener el evento.";
           if (error.response && error.response.data && error.response.data.message) {
             mensajeError = error.response.data.message;
           } else if (error.message) {
             mensajeError = error.message;
           }
-          Swal.fire({ title: 'Error', text: mensajeError, icon: 'error', confirmButtonText: 'OK', });
+          Swal.fire({ title: "Error", text: mensajeError, icon: "error", confirmButtonText: "OK" });
         } finally {
           setCargando(false);
         }
-
       }
-
     };
 
     fetchEvento();
-
   }, [eventoId]);
 
   // SECCIONES DEL EVENTO
   useEffect(() => {
-
     const fetchSecciones = async () => {
-
       if (eventoId) {
-
         try {
-
           const response = await getDetalleEventoSecciones(eventoId);
 
           setSecciones(response.secciones);
 
           // Filtrar solo las secciones que tienen un nombreEspecial válido
           const adicionalesConNombreEspecial = response.secciones.filter(
-            (seccion: any) => seccion.seccionAdicional != null && seccion.seccionAdicional !== 0
+            (seccion: any) => seccion.seccionAdicional != null && seccion.seccionAdicional !== 0,
           );
 
           setSeccionesAdicionales(adicionalesConNombreEspecial);
@@ -311,20 +329,19 @@ export const FormConferenciaPage = () => {
           //   });
 
           // setPreciosCategorias(categoriasOrdenadas);
-
         } catch (error: any) {
-          console.error('Error al obtener las secciones:', error);
-          let mensajeError = 'Error al obtener las secciones.';
+          console.error("Error al obtener las secciones:", error);
+          let mensajeError = "Error al obtener las secciones.";
           if (error.response && error.response.data && error.response.data.message) {
             mensajeError = error.response.data.message;
           } else if (error.message) {
             mensajeError = error.message;
           }
           const result = await Swal.fire({
-            title: 'Error',
+            title: "Error",
             text: mensajeError,
-            icon: 'error',
-            confirmButtonText: 'OK',
+            icon: "error",
+            confirmButtonText: "OK",
             allowOutsideClick: false,
             allowEscapeKey: false,
           });
@@ -333,46 +350,27 @@ export const FormConferenciaPage = () => {
             router.push("/eventos");
           }
         }
-
       }
-
     };
 
     fetchSecciones();
-
   }, [eventoId]);
-
-  useEffect(() => {
-    if (!seccionesAdicionales?.length) return;
-
-    const timer = setTimeout(() => {
-      const primeraDisponible = seccionesAdicionales.find(
-        (s) => s.asientosDisponibles > 0
-      );
-
-      if (primeraDisponible) {
-        handleClickSeccionAdicional(primeraDisponible);
-      }
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, [seccionesAdicionales]);
 
   // OBTENER CREDENCIALES DE OPENPAY
   useEffect(() => {
-
     const getCredenciales = async () => {
-      const res = await apiApplication.get('/pagos/get/credenciales');
+      const res = await apiApplication.get("/pagos/get/credenciales");
       const { data } = res;
       return data;
-    }
+    };
 
-    const scriptOpenPay = document.createElement('script');
-    scriptOpenPay.src = 'https://resources.openpay.mx/lib/openpay.v1.min.js';
+    const scriptOpenPay = document.createElement("script");
+    scriptOpenPay.src = "https://resources.openpay.mx/lib/openpay.v1.min.js";
     scriptOpenPay.async = false;
     scriptOpenPay.onload = () => {
-      const scriptDeviceData = document.createElement('script');
-      scriptDeviceData.src = 'https://resources.openpay.mx/lib/openpay-data-js/1.2.38/openpay-data.v1.min.js';
+      const scriptDeviceData = document.createElement("script");
+      scriptDeviceData.src =
+        "https://resources.openpay.mx/lib/openpay-data-js/1.2.38/openpay-data.v1.min.js";
       scriptDeviceData.async = false;
       scriptDeviceData.onload = async () => {
         if (window.OpenPay) {
@@ -381,10 +379,10 @@ export const FormConferenciaPage = () => {
           window.OpenPay.setApiKey(publicKey);
           window.OpenPay.setSandboxMode(sandbox);
 
-          const id = window.OpenPay.deviceData.setup('formId');
+          const id = window.OpenPay.deviceData.setup("formId");
           setDeviceDataId(id);
         } else {
-          console.error('La librería OpenPay no se ha cargado correctamente');
+          console.error("La librería OpenPay no se ha cargado correctamente");
         }
       };
       document.body.appendChild(scriptDeviceData);
@@ -399,7 +397,7 @@ export const FormConferenciaPage = () => {
   }, []);
 
   useEffect(() => {
-    if (status === 'checking') {
+    if (status === "checking") {
       checkAuthToken();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -408,9 +406,9 @@ export const FormConferenciaPage = () => {
   const handleModalClose = (e: any) => {
     setIsModalOpen(false); // Cerrar el modal
     setBoletos(1);
-    // Cancelar también 
+    // Cancelar también
     handleCancelarCompra(e);
-    setDiscountCode('');
+    setDiscountCode("");
     setDiscountAmount(0);
   };
 
@@ -419,25 +417,6 @@ export const FormConferenciaPage = () => {
     if (!isNaN(value) && value >= 1 && value <= limite) {
       setBoletos(value);
     }
-  };
-
-  const habilitarpromocion = async (id_evento_web: string) => {
-
-    const params = {
-      evento_id: parseInt(id_evento_web)
-    };
-
-    const res = await apiApplication.post('/promociones/validar_promo_web', params);
-
-    if (res.data.total > 0) {
-      setHabilitaPromocion(true);
-      if (res.data.promocionesAplicaDirecto && res.data.promocionesAplicaDirecto.length > 0) {
-        setPromocionesAplicanDirecto(res.data.promocionesAplicaDirecto);
-      }
-    } else {
-      setHabilitaPromocion(false);
-    }
-
   };
 
   const handleExpiracionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -456,25 +435,26 @@ export const FormConferenciaPage = () => {
   const handleSectionClick = (event: Event) => {
     const target = event.currentTarget as SVGElement;
 
-    if (!target.classList.contains('interactive-section')) return;
+    if (!target.classList.contains("interactive-section")) return;
 
-
-    const seccion = secciones?.find((s: Secciones) =>
-      // s.nombre.toLowerCase().includes(target.id.toLowerCase())
-      s.nombre.toLowerCase() === (target.id.toLowerCase()) &&
-      s.bloque.toLowerCase() === (target.attributes.getNamedItem('bloque')?.value.toLowerCase() || '')
+    const seccion = secciones?.find(
+      (s: Secciones) =>
+        // s.nombre.toLowerCase().includes(target.id.toLowerCase())
+        s.nombre.toLowerCase() === target.id.toLowerCase() &&
+        s.bloque.toLowerCase() ===
+          (target.attributes.getNamedItem("bloque")?.value.toLowerCase() || ""),
     );
 
     if (seccion) {
       // Resetear clases de secciones
-      const sections = containerRef.current?.querySelectorAll('.verify-section');
-      sections?.forEach(section => {
-        section.classList.remove('section-animated');
-        section.classList.remove('opacity-20');
+      const sections = containerRef.current?.querySelectorAll(".verify-section");
+      sections?.forEach((section) => {
+        section.classList.remove("section-animated");
+        section.classList.remove("opacity-20");
       });
 
       // Resaltar sección seleccionada
-      target.classList.add('section-animated');
+      target.classList.add("section-animated");
       /* sections?.forEach(section => {
         if (section !== target) {
           section.classList.add('opacity-20');
@@ -489,30 +469,38 @@ export const FormConferenciaPage = () => {
         setModalProps(seccion);
         if (evento && evento.udsPorCategoria) setUds(parseFloat(seccion.uds));
         if (promocionesAplicanDirecto.length > 0) {
-          const promocionesFiltradas = filtrarPromocionesAplicables(promocionesAplicanDirecto, seccion.nombreEspecial);
+          const promocionesFiltradas = filtrarPromocionesAplicables(
+            promocionesAplicanDirecto,
+            seccion.nombreEspecial,
+          );
           setPromosAplicables(promocionesFiltradas);
         }
         setSeccionId(seccion.id);
       }
-
     }
   };
 
   const filtrarPromocionesAplicables = (promociones: any, categoria: string) => {
-    return promociones.filter((promo: { aplicaTodoEvento: any; categorias: any[]; }) => {
+    return promociones.filter((promo: { aplicaTodoEvento: any; categorias: any[] }) => {
       // Si aplica a todo el evento, siempre es válida
       if (promo.aplicaTodoEvento) {
         return true;
       }
 
-      const categoriasGenerales = promo.categorias.map(c => c.categoriaGeneral?.nombre).filter(c => c !== null && c !== undefined);
+      const categoriasGenerales = promo.categorias
+        .map((c) => c.categoriaGeneral?.nombre)
+        .filter((c) => c !== null && c !== undefined);
 
       // Si no aplica a todo el evento, verificar si la categoría está incluida
       return categoriasGenerales && categoriasGenerales.includes(categoria);
     });
   };
 
-  const obtenerMejorPromocion = (promocionesAplicables: any[], cantidadBoletos: number, precioBoleto: number): promocion | null => {
+  const obtenerMejorPromocion = (
+    promocionesAplicables: any[],
+    cantidadBoletos: number,
+    precioBoleto: number,
+  ): promocion | null => {
     if (!promocionesAplicables || promocionesAplicables.length === 0) {
       return null;
     }
@@ -520,13 +508,12 @@ export const FormConferenciaPage = () => {
     let mejorPromocion = null;
     let mayorDescuento = 0;
 
-    promocionesAplicables.forEach(promo => {
+    promocionesAplicables.forEach((promo) => {
       let descuentoTotal = 0;
 
       if (promo.tipo === "PORCENTAJE") {
         descuentoTotal = (precioBoleto * cantidadBoletos * promo.porcentaje) / 100;
-      }
-      else if (promo.tipo === "CANTIDAD") {
+      } else if (promo.tipo === "CANTIDAD") {
         const gruposCompletos = Math.floor(cantidadBoletos / promo.cantidadCompra);
         const boletosGratis = gruposCompletos * (promo.cantidadCompra - promo.cantidadPaga);
         descuentoTotal = boletosGratis * precioBoleto;
@@ -537,58 +524,13 @@ export const FormConferenciaPage = () => {
         mejorPromocion = {
           ...promo,
           descuentoCalculado: descuentoTotal,
-          precioFinal: (precioBoleto * cantidadBoletos) - descuentoTotal
+          precioFinal: precioBoleto * cantidadBoletos - descuentoTotal,
         };
       }
     });
 
     return mejorPromocion;
   };
-
-  useEffect(() => {
-    if (!containerRef.current || !evento) return;
-
-    const sections = containerRef.current.querySelectorAll('.verify-section');
-
-    sections.forEach(section => {
-      const seccion = secciones?.find((s: Secciones) =>
-        s.nombre.toLowerCase() === section.id.toLowerCase() &&
-        s.bloque.toLowerCase() === (section.attributes.getNamedItem("bloque")?.value.toLowerCase() || "")
-      );
-
-      if (seccion) {
-        section.classList.add("cursor-pointer", "interactive-section");
-        (section as HTMLElement).dataset.nombre = seccion.nombre;
-        (section as HTMLElement).dataset.tipo_seccion = seccion.tipo_seccion;
-        (section as HTMLElement).dataset.asientosDisponibles = seccion.asientosDisponibles != null ? seccion.asientosDisponibles.toString() : '';
-
-
-        // Extraer `disponiblesPorCategoria` desde la misma `seccion`
-        const disponiblesPorCategoria = seccion.disponiblesPorCategoria
-          ? JSON.stringify(seccion.disponiblesPorCategoria)
-          : "[]";
-
-        (section as HTMLElement).dataset.disponiblesPorCategoria = disponiblesPorCategoria;
-
-        section.addEventListener('click', handleSectionClick);
-        section.addEventListener("mouseenter", handleMouseEnter as EventListener);
-        section.addEventListener("mouseleave", handleMouseLeave as EventListener);
-      } else {
-        section.classList.remove("cursor-pointer", "interactive-section");
-        section.removeEventListener('click', handleSectionClick);
-        section.removeEventListener("mouseenter", handleMouseEnter as EventListener);
-        section.removeEventListener("mouseleave", handleMouseLeave as EventListener);
-      }
-    });
-
-    return () => {
-      sections.forEach(section => {
-        section.removeEventListener('click', handleSectionClick);
-        section.removeEventListener("mouseenter", handleMouseEnter as EventListener);
-        section.removeEventListener("mouseleave", handleMouseLeave as EventListener);
-      });
-    };
-  }, [evento, secciones]);
 
   const handleMouseEnter = (event: MouseEvent) => {
     const section = event.target as HTMLElement;
@@ -603,9 +545,12 @@ export const FormConferenciaPage = () => {
 
     // Generar HTML dinámico con las categorías y disponibles
     const disponiblesTexto = disponiblesPorCategoria.length
-      ? disponiblesPorCategoria.map((cat: { categoria: string | null, disponibles: number | null }) =>
-        `Categoría: ${cat.categoria ?? "General"} (Disponibles: ${cat.disponibles ? cat.disponibles : "Agotado"})`
-      ).join("<br>")
+      ? disponiblesPorCategoria
+          .map(
+            (cat: { categoria: string | null; disponibles: number | null }) =>
+              `Categoría: ${cat.categoria ?? "General"} (Disponibles: ${cat.disponibles ? cat.disponibles : "Agotado"})`,
+          )
+          .join("<br>")
       : "Sin categorías disponibles";
 
     setTooltip({
@@ -615,28 +560,65 @@ export const FormConferenciaPage = () => {
         Tipo: ${bloque} <br> 
         ${disponiblesTexto}`,
       x: event.pageX + 10,
-      y: event.pageY + 10
+      y: event.pageY + 10,
     });
   };
 
   const handleMouseLeave = () => {
-    setTooltip(prev => ({ ...prev, visible: false }));
+    setTooltip((prev) => ({ ...prev, visible: false }));
   };
+
+  useEffect(() => {
+    if (!containerRef.current || !evento) return;
+
+    const sections = containerRef.current.querySelectorAll(".verify-section");
+
+    sections.forEach((section) => {
+      const seccion = secciones?.find(
+        (s: Secciones) =>
+          s.nombre.toLowerCase() === section.id.toLowerCase() &&
+          s.bloque.toLowerCase() ===
+            (section.attributes.getNamedItem("bloque")?.value.toLowerCase() || ""),
+      );
+
+      if (seccion) {
+        section.classList.add("cursor-pointer", "interactive-section");
+        (section as HTMLElement).dataset.nombre = seccion.nombre;
+        (section as HTMLElement).dataset.tipo_seccion = seccion.tipo_seccion;
+        (section as HTMLElement).dataset.asientosDisponibles =
+          seccion.asientosDisponibles != null ? seccion.asientosDisponibles.toString() : "";
+
+        // Extraer `disponiblesPorCategoria` desde la misma `seccion`
+        const disponiblesPorCategoria = seccion.disponiblesPorCategoria
+          ? JSON.stringify(seccion.disponiblesPorCategoria)
+          : "[]";
+
+        (section as HTMLElement).dataset.disponiblesPorCategoria = disponiblesPorCategoria;
+
+        section.addEventListener("click", handleSectionClick);
+        section.addEventListener("mouseenter", handleMouseEnter as EventListener);
+        section.addEventListener("mouseleave", handleMouseLeave as EventListener);
+      } else {
+        section.classList.remove("cursor-pointer", "interactive-section");
+        section.removeEventListener("click", handleSectionClick);
+        section.removeEventListener("mouseenter", handleMouseEnter as EventListener);
+        section.removeEventListener("mouseleave", handleMouseLeave as EventListener);
+      }
+    });
+
+    return () => {
+      sections.forEach((section) => {
+        section.removeEventListener("click", handleSectionClick);
+        section.removeEventListener("mouseenter", handleMouseEnter as EventListener);
+        section.removeEventListener("mouseleave", handleMouseLeave as EventListener);
+      });
+    };
+  }, [evento, secciones]);
 
   const nextStep = async () => {
     // await handleReservarAsientos();
     setStep((prevStep) => prevStep + 1);
   };
-
-  // Tras iniciar sesión en el modal, reintenta la reserva automáticamente (sin salir de la página).
-  useEffect(() => {
-    if (reservaPendiente !== null && user) {
-      const seccionId = reservaPendiente;
-      setReservaPendiente(null);
-      handleReservarAsientos(seccionId);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [reservaPendiente, user]);
 
   const handleReservarAsientos = async (seccion_id: number) => {
     // Si no hay sesión, abre el modal de login (sin navegar) y continúa al iniciar sesión.
@@ -648,7 +630,6 @@ export const FormConferenciaPage = () => {
     }
 
     try {
-
       setCargando(true);
       let seccion_evento_id = seccion_id;
 
@@ -673,16 +654,15 @@ export const FormConferenciaPage = () => {
               setCargando(false);
               console.error("Error al obtener/crear OpenPay ID", error);
             }
-
           } /* [INVITADO DESHABILITADO] else {
             setUsuarioInvitado(true);
             setCargando(false);
           } */
 
           let mejorPromocion;
-          if (discountCode == '') {
+          if (discountCode == "") {
             mejorPromocion = obtenerMejorPromocion(promosAplicables, boletos, precioBoletos);
-            console.log("🚀 ~ handleReservarAsientos ~ mejorPromocion:", mejorPromocion)
+            console.log("🚀 ~ handleReservarAsientos ~ mejorPromocion:", mejorPromocion);
             if (mejorPromocion) {
               setPromocion(mejorPromocion);
               setDiscountPorcent(mejorPromocion.porcentaje);
@@ -702,31 +682,30 @@ export const FormConferenciaPage = () => {
 
           // Iniciar temporizador correctamente
           const intervalId = setInterval(() => {
-            setTiempoRestante(prev => {
+            setTiempoRestante((prev) => {
               if (prev === null || prev <= 0) {
                 clearInterval(intervalId);
                 Swal.fire({
-                  title: '¡Atención!',
-                  text: 'El tiempo de tu reserva ha expirado. La página se recargará.',
-                  icon: 'warning',
+                  title: "¡Atención!",
+                  text: "El tiempo de tu reserva ha expirado. La página se recargará.",
+                  icon: "warning",
                   timer: 2000,
-                  showConfirmButton: false
+                  showConfirmButton: false,
                 }).then(() => window.location.reload());
                 return 0;
               }
               return prev - 1;
             });
           }, 1000);
-
         } else {
           setReservaExitosa(false);
           Swal.fire({
-            title: '¡Atención!',
-            text: 'Uno o más asientos ya no están disponibles. Por favor, actualiza la página.',
-            icon: 'warning',
-            confirmButtonText: 'OK'
+            title: "¡Atención!",
+            text: "Uno o más asientos ya no están disponibles. Por favor, actualiza la página.",
+            icon: "warning",
+            confirmButtonText: "OK",
           });
-          return window.location.reload();  // En lugar de recargar la página
+          return window.location.reload(); // En lugar de recargar la página
         }
       }
 
@@ -744,13 +723,49 @@ export const FormConferenciaPage = () => {
       setCargando(false);
       console.error("Error en la reserva:", error);
       Swal.fire({
-        title: 'Atención!',
-        text: 'Ocurrió un error al reservar. Por favor, intenta nuevamente.',
-        icon: 'error',
-        confirmButtonText: 'OK'
+        title: "Atención!",
+        text: "Ocurrió un error al reservar. Por favor, intenta nuevamente.",
+        icon: "error",
+        confirmButtonText: "OK",
       });
     }
   };
+
+  const handleClickSeccionAdicional = async (seccion: any) => {
+    setPrecioBoletos(+seccion.precioSeccion);
+    setIsModalOpen(true);
+    setModalProps(seccion);
+    if (evento && evento.udsPorCategoria) setUds(parseFloat(seccion.uds));
+    setSeccionId(seccion.id);
+
+    // Saltar paso 1
+    await handleReservarAsientos(seccion.id);
+    setStep((prevStep) => prevStep + 1);
+  };
+
+  useEffect(() => {
+    if (!seccionesAdicionales?.length) return;
+
+    const timer = setTimeout(() => {
+      const primeraDisponible = seccionesAdicionales.find((s) => s.asientosDisponibles > 0);
+
+      if (primeraDisponible) {
+        handleClickSeccionAdicional(primeraDisponible);
+      }
+    }, 500);
+
+    return () => clearTimeout(timer);
+  }, [seccionesAdicionales]);
+
+  // Tras iniciar sesión en el modal, reintenta la reserva automáticamente (sin salir de la página).
+  useEffect(() => {
+    if (reservaPendiente !== null && user) {
+      const seccionId = reservaPendiente;
+      setReservaPendiente(null);
+      handleReservarAsientos(seccionId);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reservaPendiente, user]);
 
   const handleEliminarTarjeta = async (tarjetaId: string) => {
     try {
@@ -769,15 +784,23 @@ export const FormConferenciaPage = () => {
       const has_user = await apiApplication.get("/pagos/get/mi_perfil");
       const clienteId = has_user.data.idOpenpay;
       if (!has_user.data.idOpenpay) {
-        Swal.fire({ icon: 'error', title: 'Error', text: 'No puedes eliminar la tarjeta porque no tiene un usuario Openpay.', });
+        Swal.fire({
+          icon: "error",
+          title: "Error",
+          text: "No puedes eliminar la tarjeta porque no tiene un usuario Openpay.",
+        });
         return;
       }
       const res = await apiApplication.delete(`/pagos/tarjeta/${clienteId}/${tarjetaId}`);
-      Swal.fire({ icon: 'success', title: 'Tarjeta eliminada', text: res.data.message });
-      setTarjetas(tarjetas => tarjetas.filter(tarjeta => tarjeta.idtarjeta !== tarjetaId));
+      Swal.fire({ icon: "success", title: "Tarjeta eliminada", text: res.data.message });
+      setTarjetas((tarjetas) => tarjetas.filter((tarjeta) => tarjeta.idtarjeta !== tarjetaId));
     } catch (error) {
-      console.error('Error al eliminar la tarjeta:', error);
-      Swal.fire({ icon: 'error', title: 'Error', text: 'Ocurrió un error al eliminar la tarjeta. Por favor, inténtalo de nuevo.' });
+      console.error("Error al eliminar la tarjeta:", error);
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "Ocurrió un error al eliminar la tarjeta. Por favor, inténtalo de nuevo.",
+      });
     }
   };
 
@@ -787,17 +810,33 @@ export const FormConferenciaPage = () => {
       if (evento?.id && reservaId) {
         const response = await cancelar(reservaId.toString(), evento?.id.toString(), true);
         if (response) {
-          Swal.fire({ title: '¡Atención!', text: 'El registro se ha cancelado.', icon: 'warning', timer: 2000, showConfirmButton: false }).then(() => {
+          Swal.fire({
+            title: "¡Atención!",
+            text: "El registro se ha cancelado.",
+            icon: "warning",
+            timer: 2000,
+            showConfirmButton: false,
+          }).then(() => {
             // window.location.reload();
             // reirect a conferencia/44 ej
             router.push(`/cosmotech/${evento?.id}`);
           });
         } else {
-          Swal.fire({ title: 'Error', text: 'No se pudo cancelar la reserva. Inténtalo de nuevo.', icon: 'error', confirmButtonText: 'OK' });
+          Swal.fire({
+            title: "Error",
+            text: "No se pudo cancelar la reserva. Inténtalo de nuevo.",
+            icon: "error",
+            confirmButtonText: "OK",
+          });
         }
       }
     } catch (error) {
-      Swal.fire({ title: 'Error', text: 'Ocurrió un error al cancelar la reserva.', icon: 'error', confirmButtonText: 'OK' });
+      Swal.fire({
+        title: "Error",
+        text: "Ocurrió un error al cancelar la reserva.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
     }
   };
 
@@ -1107,7 +1146,11 @@ export const FormConferenciaPage = () => {
       console.log("Pago exitoso:", data);
 
       // Verificar 3D Secure
-      if (precioBoletos > 0 && data.cargo?.payment_method?.url && data.cargo?.payment_method?.type === "redirect") {
+      if (
+        precioBoletos > 0 &&
+        data.cargo?.payment_method?.url &&
+        data.cargo?.payment_method?.type === "redirect"
+      ) {
         window.location.href = data.cargo.payment_method.url;
         return;
       }
@@ -1115,11 +1158,11 @@ export const FormConferenciaPage = () => {
       // Redirigir si es gratis
       if (usuarioInvitado) {
         router.push(
-          `/terminar_compra_invitado_conferencia_gratis/${reservaId}/${true}/${data.invitadoId}/${promocion_id}`
+          `/terminar_compra_invitado_conferencia_gratis/${reservaId}/${true}/${data.invitadoId}/${promocion_id}`,
         );
       } else {
         router.push(
-          `/terminar_compra_conferencia_gratis/${reservaId}/${true}/${data.invitadoId}/${promocion_id}`
+          `/terminar_compra_conferencia_gratis/${reservaId}/${true}/${data.invitadoId}/${promocion_id}`,
         );
       }
     } catch (error: any) {
@@ -1140,16 +1183,43 @@ export const FormConferenciaPage = () => {
   };
 
   const handleVenderGenerales = async (e: React.FormEvent) => {
-
     e.preventDefault();
 
-    if (formValues.tipoParticipante == 'invitado' && (!formValues.nombre_conferencia || !formValues.telefono_conferencia || !formValues.empresa_conferencia || !formValues.puesto_conferencia || !formValues.correo_conferencia)) {
-      Swal.fire({ title: "Mensaje", text: "Completa el formulario de Invitado", icon: "warning", confirmButtonText: "OK" });
+    if (
+      formValues.tipoParticipante == "invitado" &&
+      (!formValues.nombre_conferencia ||
+        !formValues.telefono_conferencia ||
+        !formValues.empresa_conferencia ||
+        !formValues.puesto_conferencia ||
+        !formValues.correo_conferencia)
+    ) {
+      Swal.fire({
+        title: "Mensaje",
+        text: "Completa el formulario de Invitado",
+        icon: "warning",
+        confirmButtonText: "OK",
+      });
       return;
     }
 
-    if (formValues.tipoParticipante == 'expositor' && (!formValues.nombre_conferencia || !formValues.telefono_conferencia || !formValues.empresa_conferencia || !formValues.puesto_conferencia || !formValues.correo_conferencia || !formValues.temas_exponer || !formValues.que_ofrecer || !formValues.requerimientos_espacio || !formValues.personas_expositor)) {
-      Swal.fire({ title: "Mensaje", text: "Completa el formulario de Expositor", icon: "warning", confirmButtonText: "OK" });
+    if (
+      formValues.tipoParticipante == "expositor" &&
+      (!formValues.nombre_conferencia ||
+        !formValues.telefono_conferencia ||
+        !formValues.empresa_conferencia ||
+        !formValues.puesto_conferencia ||
+        !formValues.correo_conferencia ||
+        !formValues.temas_exponer ||
+        !formValues.que_ofrecer ||
+        !formValues.requerimientos_espacio ||
+        !formValues.personas_expositor)
+    ) {
+      Swal.fire({
+        title: "Mensaje",
+        text: "Completa el formulario de Expositor",
+        icon: "warning",
+        confirmButtonText: "OK",
+      });
       return;
     }
 
@@ -1157,15 +1227,30 @@ export const FormConferenciaPage = () => {
     if (!tarjetaSeleccionada && precioBoletos > 0) {
       // 📌 Validaciones de pago solo si NO hay una tarjeta guardada seleccionada
       if (!formValues.nombre || !/^[a-zA-Z\s]+$/.test(formValues.nombre)) {
-        Swal.fire({ title: "Mensaje", text: "El nombre del titular no es válido o no puede ir vacío.", icon: "warning", confirmButtonText: "OK" });
+        Swal.fire({
+          title: "Mensaje",
+          text: "El nombre del titular no es válido o no puede ir vacío.",
+          icon: "warning",
+          confirmButtonText: "OK",
+        });
         return;
       }
       if (!validarNumeroTarjeta(formValues.tarjeta)) {
-        Swal.fire({ title: "Mensaje", text: "El número de tarjeta no es válido. Verifica que esté completo y sea correcto (de 14 a 19 dígitos).", icon: "warning", confirmButtonText: "OK" });
+        Swal.fire({
+          title: "Mensaje",
+          text: "El número de tarjeta no es válido. Verifica que esté completo y sea correcto (de 14 a 19 dígitos).",
+          icon: "warning",
+          confirmButtonText: "OK",
+        });
         return;
       }
       if (!expiracion || !/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiracion)) {
-        Swal.fire({ title: "Mensaje", text: "La fecha de vencimiento debe estar en formato MM/YY.", icon: "warning", confirmButtonText: "OK" });
+        Swal.fire({
+          title: "Mensaje",
+          text: "La fecha de vencimiento debe estar en formato MM/YY.",
+          icon: "warning",
+          confirmButtonText: "OK",
+        });
         return;
       }
 
@@ -1175,27 +1260,36 @@ export const FormConferenciaPage = () => {
       const mesActual = new Date().getMonth() + 1; // Enero = 0, sumamos 1
 
       if (año < añoActual || (año === añoActual && mes < mesActual)) {
-        Swal.fire({ title: "Mensaje", text: "La tarjeta está vencida.", icon: "warning", confirmButtonText: "OK" });
+        Swal.fire({
+          title: "Mensaje",
+          text: "La tarjeta está vencida.",
+          icon: "warning",
+          confirmButtonText: "OK",
+        });
         return;
       }
 
       if (!validarCVC(formValues.cvv, formValues.tarjeta)) {
-        Swal.fire({ title: "Mensaje", text: "El código de seguridad (CVV) no es válido.", icon: "warning", confirmButtonText: "OK" });
+        Swal.fire({
+          title: "Mensaje",
+          text: "El código de seguridad (CVV) no es válido.",
+          icon: "warning",
+          confirmButtonText: "OK",
+        });
         return;
       }
-
     }
 
     try {
-
       await procesarPago();
-
     } catch (error: any) {
-
-      Swal.fire({ title: "Error", text: error.message || "Ocurrió un error al comprar.", icon: "error", confirmButtonText: "OK" });
-
+      Swal.fire({
+        title: "Error",
+        text: error.message || "Ocurrió un error al comprar.",
+        icon: "error",
+        confirmButtonText: "OK",
+      });
     }
-
   };
 
   // Actualizar el contador cada segundo y manejar pestaña inactiva
@@ -1228,11 +1322,11 @@ export const FormConferenciaPage = () => {
       }
     };
 
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
 
     return () => {
       clearInterval(interval);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
     };
   }, [fechaExpiracion]);
 
@@ -1243,50 +1337,51 @@ export const FormConferenciaPage = () => {
     const segundos = tiempoRestante % 60;
 
     return (
-      <div className='flex items-end justify-between'>
-        <p className='text-sm font-semibold text-center'>Tiempo restante <span className='block font-normal text-sm'>(minutos)</span></p>
-        <div className='flex items-center gap-x-3 text-xl'>
-          <span className='font-semibold text-red-500 w-8 h-8 p-1 rounded shadow grid place-items-center'>{minutos.toString().padStart(2, '0')}</span>
-          <span className='font-semibold w-8 h-8 p-1 rounded shadow grid place-items-center'>:</span>
-          <span className='font-semibold text-red-500 w-8 h-8 p-1 rounded shadow grid place-items-center'>{segundos.toString().padStart(2, '0')}</span>
+      <div className="flex items-end justify-between">
+        <p className="text-sm font-semibold text-center">
+          Tiempo restante <span className="block font-normal text-sm">(minutos)</span>
+        </p>
+        <div className="flex items-center gap-x-3 text-xl">
+          <span className="font-semibold text-red-500 w-8 h-8 p-1 rounded shadow grid place-items-center">
+            {minutos.toString().padStart(2, "0")}
+          </span>
+          <span className="font-semibold w-8 h-8 p-1 rounded shadow grid place-items-center">
+            :
+          </span>
+          <span className="font-semibold text-red-500 w-8 h-8 p-1 rounded shadow grid place-items-center">
+            {segundos.toString().padStart(2, "0")}
+          </span>
         </div>
       </div>
     );
   };
 
   const calcularTotal = () => {
-    let totalBase = (((boletos * precioBoletos) - discountAmount));
-    const totalUdt = (totalBase * udt);
-    const totalUds = (totalBase * uds);
+    let totalBase = boletos * precioBoletos - discountAmount;
+    const totalUdt = totalBase * udt;
+    const totalUds = totalBase * uds;
 
     let total = totalBase + totalUdt + totalUds;
 
     if (ivaApplied) {
-      const totalIva = (totalBase * iva);
+      const totalIva = totalBase * iva;
       total += totalIva;
     }
 
     return Number(total.toFixed(2));
   };
 
-  const increment = () => setBoletos((prev) => (prev < limite && ((modalProps?.asientosDisponibles && (prev < modalProps?.asientosDisponibles)) || !modalProps?.asientosDisponibles) ? prev + 1 : prev));
+  const increment = () =>
+    setBoletos((prev) =>
+      prev < limite &&
+      ((modalProps?.asientosDisponibles && prev < modalProps?.asientosDisponibles) ||
+        !modalProps?.asientosDisponibles)
+        ? prev + 1
+        : prev,
+    );
   const decrement = () => setBoletos((prev) => (prev > 1 ? prev - 1 : 1));
 
-  const handleClickSeccionAdicional = async (seccion: any) => {
-    setPrecioBoletos(+seccion.precioSeccion);
-    setIsModalOpen(true);
-    setModalProps(seccion);
-    if (evento && evento.udsPorCategoria) setUds(parseFloat(seccion.uds));
-    setSeccionId(seccion.id);
-
-    // Saltar paso 1
-    await handleReservarAsientos(seccion.id);
-    setStep((prevStep) => prevStep + 1);
-
-  }
-
   const handleCheckDiscount = async () => {
-
     if (!discountCode.trim()) {
       Swal.fire("Mensaje", "Ingresa un código valido", "warning");
       return;
@@ -1297,38 +1392,44 @@ export const FormConferenciaPage = () => {
     try {
       const params = {
         clave: discountCode.toUpperCase(),
-        evento_id: eventoId
+        evento_id: eventoId,
       };
 
-      const res = await apiApplication.post('/promociones/validar_clave_web', params);
+      const res = await apiApplication.post("/promociones/validar_clave_web", params);
 
       if (res.data.id) {
         const promo = res.data;
-        console.log("🚀 ~ handleCheckDiscount ~ promo:", promo)
+        console.log("🚀 ~ handleCheckDiscount ~ promo:", promo);
         setPromocion(promo);
 
-        const categoriasValidas = promo.categorias.map((cat: { categoriaGeneral: { nombre: string; }; }) => cat.categoriaGeneral?.nombre).filter((cat: string) => cat !== null && cat !== undefined);
+        const categoriasValidas = promo.categorias
+          .map((cat: { categoriaGeneral: { nombre: string } }) => cat.categoriaGeneral?.nombre)
+          .filter((cat: string) => cat !== null && cat !== undefined);
 
-        console.log("🚀 ~ handleCheckDiscount ~ categoriasValidas:", categoriasValidas)
+        console.log("🚀 ~ handleCheckDiscount ~ categoriasValidas:", categoriasValidas);
         if (!promo.aplicaTodoEvento && !categoriasValidas.includes(modalProps?.nombreEspecial)) {
-          toast.error(`El código de descuento no es válido para la sección ${modalProps?.nombreEspecial}.`);
+          toast.error(
+            `El código de descuento no es válido para la sección ${modalProps?.nombreEspecial}.`,
+          );
           return;
         }
 
-        // Simulando cuenta 
+        // Simulando cuenta
         setPromocionID(res.data.id);
         setDiscountPorcent(parseFloat(res.data.porcentaje));
         console.log(discountPorcent);
         let descuentoAplicado = parseFloat(res.data.porcentaje);
 
-        descuentoAplicado = (boletos * precioBoletos) * (descuentoAplicado / 100);
+        descuentoAplicado = boletos * precioBoletos * (descuentoAplicado / 100);
 
-        if (res.data.tipo === 'CANTIDAD') {
+        if (res.data.tipo === "CANTIDAD") {
           const cantidadCompra = res.data.cantidadCompra;
           const cantidadPaga = res.data.cantidadPaga;
 
           if (boletos < cantidadCompra) {
-            toast.error(`Debes comprar al menos ${cantidadCompra} boletos para aplicar el descuento.`);
+            toast.error(
+              `Debes comprar al menos ${cantidadCompra} boletos para aplicar el descuento.`,
+            );
             setDiscountAmount(0);
             return;
           }
@@ -1348,11 +1449,9 @@ export const FormConferenciaPage = () => {
         // setTotalWithDiscount(nuevoTotal);
 
         toast.success(`Descuento aplicado correctamente!`);
-
       } else {
         toast.error(`Código de descuento inválido.`);
       }
-
     } catch (err) {
       toast.error(`Código de descuento inválido.`);
       setDiscountAmount(0);
@@ -1362,20 +1461,9 @@ export const FormConferenciaPage = () => {
     }
   };
 
-   useEffect(() => {
-    if (claveAccesoEvento == claveAcceso) {
-      setAcceso(true);
-    } else {
-      setAcceso(false);
-    }
-  }, [claveAcceso]);
-
   return (
     <div>
-
-      {cargando && (
-        <Loader />
-      )}
+      {cargando && <Loader />}
 
       {tooltip.visible && (
         <div
@@ -1389,32 +1477,57 @@ export const FormConferenciaPage = () => {
             borderRadius: "5px",
             fontSize: "14px",
             pointerEvents: "none",
-            zIndex: 1000
+            zIndex: 1000,
           }}
           dangerouslySetInnerHTML={{ __html: tooltip.text }}
         />
       )}
 
       {evento && (
-
         <>
           <ConferenciaHero conferencia={evento} />
           <div className="container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 relative mb-10 mt-36">
             <div className="grid lg:grid-cols-2 gap-4">
               <aside className="p-3 md:p-4 bg-white rounded-2xl shadow-sm border border-gray-200 space-y-4 hidden">
-                <Link href={`/cosmotech/${evento.id}`} className='bg-gray-900 text-white rounded-full px-4 py-2 inline-flex items-center gap-x-2'><FaArrowLeftLong className='flex-none' />Regresar al inicio</Link>
+                <Link
+                  href={`/cosmotech/${evento.id}`}
+                  className="bg-gray-900 text-white rounded-full px-4 py-2 inline-flex items-center gap-x-2"
+                >
+                  <FaArrowLeftLong className="flex-none" />
+                  Regresar al inicio
+                </Link>
                 <figure>
-                  <img className='rounded-2xl aspect-video object-cover max-h-[30rem]' src={evento.imagenPromocion || '/beneficio_4.webp'} alt="" />
+                  <img
+                    className="rounded-2xl aspect-video object-cover max-h-[30rem]"
+                    src={evento.imagenPromocion || "/beneficio_4.webp"}
+                    alt=""
+                  />
                 </figure>
-                <h3 className='font-semibold text-2xl text-gray-800'>{evento.nombre}</h3>
-                <p className='text-base lg:text-lg text-gray-600 flex items-center gap-x-2 font-medium'><HiOutlineCalendarDateRange className='flex-none' size={36} />{formatDate(evento.fecha)}</p>
-                <p className='text-base lg:text-lg text-gray-600 flex items-center gap-x-2 font-medium'><IoLocationOutline className='flex-none' size={36} />{evento.ubicacion}</p>
-                <span className='bg-amber-100 text-amber-700 uppercase px-3 py-1 text-sm rounded-full font-semibold inline-block'>Importante</span>
-                <p className='text-base lg:text-lg text-gray-600  font-medium'>Después de registrarte <strong>recibirás un código QR</strong> digital que deberás descargar. <br />Este será tu pase de entrada al evento.</p>
+                <h3 className="font-semibold text-2xl text-gray-800">{evento.nombre}</h3>
+                <p className="text-base lg:text-lg text-gray-600 flex items-center gap-x-2 font-medium">
+                  <HiOutlineCalendarDateRange className="flex-none" size={36} />
+                  {formatDate(evento.fecha)}
+                </p>
+                <p className="text-base lg:text-lg text-gray-600 flex items-center gap-x-2 font-medium">
+                  <IoLocationOutline className="flex-none" size={36} />
+                  {evento.ubicacion}
+                </p>
+                <span className="bg-amber-100 text-amber-700 uppercase px-3 py-1 text-sm rounded-full font-semibold inline-block">
+                  Importante
+                </span>
+                <p className="text-base lg:text-lg text-gray-600  font-medium">
+                  Después de registrarte <strong>recibirás un código QR</strong> digital que deberás
+                  descargar. <br />
+                  Este será tu pase de entrada al evento.
+                </p>
               </aside>
-              <section className='mx-auto col-span-2 p-3 md:p-4 bg-white rounded-2xl shadow-sm border border-gray-200'>
-                <h3 className='text-2xl font-semibold text-center text-gray-800 mb-2'>Registrate aquí</h3>
-                <p className='text-center text-gray-600'>Complete el formulario para registrarte en nuestro evento.</p>
+              <section className="mx-auto col-span-2 p-3 md:p-4 bg-white rounded-2xl shadow-sm border border-gray-200">
+                <h3 className="text-2xl font-semibold text-center text-gray-800 mb-2">
+                  Registrate aquí
+                </h3>
+                <p className="text-center text-gray-600">
+                  Complete el formulario para registrarte en nuestro evento.
+                </p>
                 {seccionesAdicionales?.map((seccion, index) => (
                   <div
                     key={seccion.id || index}
@@ -1443,12 +1556,10 @@ export const FormConferenciaPage = () => {
                     <button
                       onClick={() => handleClickSeccionAdicional(seccion)}
                       disabled={
-                        seccion?.asientosDisponibles === null ||
-                        seccion?.asientosDisponibles === 0
+                        seccion?.asientosDisponibles === null || seccion?.asientosDisponibles === 0
                       }
                       className={`mt-auto w-full px-3 py-2 rounded-md bg-accentBase hover:bg-emphasis text-white text-sm transition-colors ${
-                        seccion?.asientosDisponibles === null ||
-                        seccion?.asientosDisponibles === 0
+                        seccion?.asientosDisponibles === null || seccion?.asientosDisponibles === 0
                           ? "cursor-not-allowed"
                           : ""
                       }`}
@@ -1462,18 +1573,18 @@ export const FormConferenciaPage = () => {
           </div>
           <ConferenciaFooter conferencia={evento} />
         </>
-
-
       )}
 
       {/* Modal de compra */}
       {isModalOpen && (
         <div className="fixed inset-0 flex justify-center items-center bg-black bg-opacity-50 z-50">
-          <div className={`bg-white p-2 md:p-4 rounded-2xl shadow-2xl w-11/12 max-h-[95vh] overflow-y-auto relative ${step === 1 ? 'max-w-lg' : 'max-w-4xl'}`}>
-
+          <div
+            className={`bg-white p-2 md:p-4 rounded-2xl shadow-2xl w-11/12 max-h-[95vh] overflow-y-auto relative ${step === 1 ? "max-w-lg" : "max-w-4xl"}`}
+          >
             {/* Botón de cerrar */}
             <button
               onClick={(e) => handleModalClose(e)}
+              aria-label="Cerrar"
               className="absolute top-0 right-0 text-gray-400 hover:text-gray-600 transition-colors"
             >
               <IoIosClose className="text-3xl" />
@@ -1500,10 +1611,15 @@ export const FormConferenciaPage = () => {
                 {/* Precios */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mb-4">
                   <div className="flex items-center gap-3">
-                    <div className="rounded-lg w-10 h-10 flex items-center justify-center" style={{ backgroundColor: `${modalProps?.colorGeneral}` }}>
+                    <div
+                      className="rounded-lg w-10 h-10 flex items-center justify-center"
+                      style={{ backgroundColor: `${modalProps?.colorGeneral}` }}
+                    >
                       <TbTicket className="text-white text-lg" />
                     </div>
-                    <span className="text-gray-800 font-medium">{modalProps?.tipo_seccion ?? "N/A"}</span>
+                    <span className="text-gray-800 font-medium">
+                      {modalProps?.tipo_seccion ?? "N/A"}
+                    </span>
                   </div>
                   {Math.abs(Number(precioBoletos)) < 0.01 ? (
                     <p className="text-accentLight font-semibold text-lg ml-auto">Invitado</p>
@@ -1515,16 +1631,21 @@ export const FormConferenciaPage = () => {
                       </span>
                     </div>
                   )}
-
                 </div>
 
                 <hr className="my-5 border-gray-200" />
 
                 {/* Selector de boletos */}
                 <div className="flex flex-col md:flex-row items-center justify-between mb-5 gap-4">
-                  <label htmlFor="boletos_general" className="text-gray-600 font-medium">Cantidad de boletos</label>
+                  <label htmlFor="boletos_general" className="text-gray-600 font-medium">
+                    Cantidad de boletos
+                  </label>
                   <div className="flex items-center border border-gray-300 rounded-full overflow-hidden">
-                    <button onClick={decrement} className="w-10 h-10 grid place-items-center text-gray-600 hover:bg-gray-100 transition">
+                    <button
+                      onClick={decrement}
+                      aria-label="Quitar un boleto"
+                      className="w-10 h-10 grid place-items-center text-gray-600 hover:bg-gray-100 transition"
+                    >
                       <FiMinus />
                     </button>
                     <input
@@ -1536,7 +1657,11 @@ export const FormConferenciaPage = () => {
                       max={limite}
                       className="w-16 text-center border-l border-r border-gray-300 focus:outline-none"
                     />
-                    <button onClick={increment} className="w-10 h-10 bg-accentBase text-white grid place-items-center hover:bg-accentHover transition">
+                    <button
+                      onClick={increment}
+                      aria-label="Agregar un boleto"
+                      className="w-10 h-10 bg-accentBase text-white grid place-items-center hover:bg-accentHover transition"
+                    >
                       <FiPlus className="text-xl" />
                     </button>
                   </div>
@@ -1546,7 +1671,9 @@ export const FormConferenciaPage = () => {
                 <div className="flex justify-between items-center text-3xl font-bold text-accentLight mb-6">
                   <span>Total:</span>
                   <span>
-                    {Math.abs(precioBoletos * boletos) < 0.01 ? "Invitado" : `$${(precioBoletos * boletos).toFixed(2)}`}
+                    {Math.abs(precioBoletos * boletos) < 0.01
+                      ? "Invitado"
+                      : `$${(precioBoletos * boletos).toFixed(2)}`}
                   </span>
                 </div>
 
@@ -1554,8 +1681,11 @@ export const FormConferenciaPage = () => {
                 <button
                   type="button"
                   onClick={nextStep}
-                  disabled={modalProps?.asientosDisponibles === null || modalProps?.asientosDisponibles === 0}
-                  className={`w-full py-3 rounded-lg text-white font-semibold transition-colors ${modalProps?.asientosDisponibles ? 'bg-accentBase hover:bg-accentHover' : 'bg-gray-300 cursor-not-allowed'}`}
+                  disabled={
+                    modalProps?.asientosDisponibles === null ||
+                    modalProps?.asientosDisponibles === 0
+                  }
+                  className={`w-full py-3 rounded-lg text-white font-semibold transition-colors ${modalProps?.asientosDisponibles ? "bg-accentBase hover:bg-accentHover" : "bg-gray-300 cursor-not-allowed"}`}
                 >
                   Siguiente
                 </button>
@@ -1564,53 +1694,74 @@ export const FormConferenciaPage = () => {
 
             {/* Contenido del Paso 2 */}
             {step === 2 && (
-
-              <div className='grid grid-cols-2 gap-3 text-gray-500'>
-
+              <div className="grid grid-cols-2 gap-3 text-gray-500">
                 {/* SECCION IZQUIERDA */}
                 <section className="col-span-2 lg:col-span-1 flex- flex-col gap-4 hidden">
-
                   {/* INFO DEL EVENTO */}
                   <div className="bg-gray-50 p-4 rounded-xl shadow-sm flex flex-col gap-2">
                     {/* <p className="bg-gray-100 text-center inline-block px-3 py-1 rounded-full text-sm text-gray-600">
                       {boletos} {boletos === 1 ? 'asiento' : 'asientos'} {boletos === 1 ? 'seleccionado' : 'seleccionados'}
                     </p> */}
-                    <p className="text-sm text-gray-500">Conferencia <span className="block font-medium text-gray-800">{evento?.nombre}</span></p>
-                    <p className="text-sm text-gray-500">Fecha <span className="block font-medium text-gray-800">{evento?.fecha ? formatDate(evento.fecha) : 'Fecha no disponible'}</span></p>
-                    <img className="rounded-md w-24 h-24 object-cover mt-2 self-end" src={evento?.imagenPromocion} alt="" />
+                    <p className="text-sm text-gray-500">
+                      Conferencia{" "}
+                      <span className="block font-medium text-gray-800">{evento?.nombre}</span>
+                    </p>
+                    <p className="text-sm text-gray-500">
+                      Fecha{" "}
+                      <span className="block font-medium text-gray-800">
+                        {evento?.fecha ? formatDate(evento.fecha) : "Fecha no disponible"}
+                      </span>
+                    </p>
+                    <img
+                      className="rounded-md w-24 h-24 object-cover mt-2 self-end"
+                      src={evento?.imagenPromocion}
+                      alt=""
+                    />
                   </div>
 
                   {/* ORDENES DE ARTÍCULOS */}
-                  {Math.abs(Number(calcularTotal())) < 0.01
-                    ? ""
-                    : (
-                      <div className="bg-gray-50 p-4 rounded-xl shadow-sm flex flex-col gap-2">
-                        <h3 className="font-semibold text-lg text-gray-800">Orden de artículos</h3>
-                        <div className="flex justify-between text-sm text-gray-500 px-1 mb-2">
-                          <span>Boleto</span>
-                          <span>Precio</span>
-                        </div>
-                        <ul className="grid gap-2 overflow-y-auto max-h-32 pr-1">
-                          {Array.from({ length: boletos }).map((_, index) => (
-                            <li key={index} className="bg-white rounded-lg p-2 flex items-center gap-2 shadow-sm border border-gray-200">
-                              <div className="rounded-lg w-7 h-7 flex items-center justify-center" style={{ backgroundColor: `${modalProps?.colorGeneral}` }}>
-                                <TbTicket className="text-white text-lg" />
-                              </div>
-                              <div className="w-full">
-                                <p className="font-medium text-gray-800">Asiento {modalProps?.tipo_seccion}</p>
-                                <div className="flex justify-between text-gray-600">
-                                  <span className='text-sm'>{modalProps?.nombreEspecial}, {modalProps?.nombre}, {modalProps?.bloque}</span>
-                                  <span className="font-medium text-sm">
-                                    {Math.abs(Number(precioBoletos)) < 0.01 ? "Invitado" : `$${precioBoletos}`}
-                                  </span>
-                                </div>
-                              </div>
-                            </li>
-                          ))}
-                        </ul>
+                  {Math.abs(Number(calcularTotal())) < 0.01 ? (
+                    ""
+                  ) : (
+                    <div className="bg-gray-50 p-4 rounded-xl shadow-sm flex flex-col gap-2">
+                      <h3 className="font-semibold text-lg text-gray-800">Orden de artículos</h3>
+                      <div className="flex justify-between text-sm text-gray-500 px-1 mb-2">
+                        <span>Boleto</span>
+                        <span>Precio</span>
                       </div>
-                    )
-                  }
+                      <ul className="grid gap-2 overflow-y-auto max-h-32 pr-1">
+                        {Array.from({ length: boletos }).map((_, index) => (
+                          <li
+                            key={index}
+                            className="bg-white rounded-lg p-2 flex items-center gap-2 shadow-sm border border-gray-200"
+                          >
+                            <div
+                              className="rounded-lg w-7 h-7 flex items-center justify-center"
+                              style={{ backgroundColor: `${modalProps?.colorGeneral}` }}
+                            >
+                              <TbTicket className="text-white text-lg" />
+                            </div>
+                            <div className="w-full">
+                              <p className="font-medium text-gray-800">
+                                Asiento {modalProps?.tipo_seccion}
+                              </p>
+                              <div className="flex justify-between text-gray-600">
+                                <span className="text-sm">
+                                  {modalProps?.nombreEspecial}, {modalProps?.nombre},{" "}
+                                  {modalProps?.bloque}
+                                </span>
+                                <span className="font-medium text-sm">
+                                  {Math.abs(Number(precioBoletos)) < 0.01
+                                    ? "Invitado"
+                                    : `$${precioBoletos}`}
+                                </span>
+                              </div>
+                            </div>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
 
                   {/* PROMOCIÓN */}
                   {habilitaPromocion && (
@@ -1626,7 +1777,7 @@ export const FormConferenciaPage = () => {
                         />
                         <button
                           type="button"
-                          className={`px-2 rounded-md text-white transition-colors ${isCheckingCode ? 'bg-gray-300' : 'bg-accentBase hover:bg-accentHover'}`}
+                          className={`px-2 rounded-md text-white transition-colors ${isCheckingCode ? "bg-gray-300" : "bg-accentBase hover:bg-accentHover"}`}
                           onClick={handleCheckDiscount}
                           disabled={isCheckingCode}
                         >
@@ -1662,28 +1813,28 @@ export const FormConferenciaPage = () => {
                           <p className="flex justify-between">
                             Subtotal:{" "}
                             <span className="font-medium">
-                              ${((boletos * precioBoletos) - discountAmount).toFixed(2)}
+                              ${(boletos * precioBoletos - discountAmount).toFixed(2)}
                             </span>
                           </p>
 
                           <p className="flex justify-between">
                             Cargo por servicio:{" "}
                             <span className="font-medium">
-                              ${(uds * ((boletos * precioBoletos) - discountAmount)).toFixed(2)}
+                              ${(uds * (boletos * precioBoletos - discountAmount)).toFixed(2)}
                             </span>
                           </p>
 
                           <p className="flex justify-between">
                             Cargo por uso de tarjeta:{" "}
                             <span className="font-medium">
-                              ${(udt * ((boletos * precioBoletos) - discountAmount)).toFixed(2)}
+                              ${(udt * (boletos * precioBoletos - discountAmount)).toFixed(2)}
                             </span>
                           </p>
                           {ivaApplied && (
                             <p className="flex justify-between">
                               IVA:{" "}
                               <span className="font-medium">
-                                ${(iva * ((boletos * precioBoletos) - discountAmount)).toFixed(2)}
+                                ${(iva * (boletos * precioBoletos - discountAmount)).toFixed(2)}
                               </span>
                             </p>
                           )}
@@ -1693,10 +1844,8 @@ export const FormConferenciaPage = () => {
                       <hr className="my-2 border-gray-200" />
 
                       <p className="flex justify-between font-bold text-xl lg:text-2xl text-accentLight">
-                        {Math.abs(Number(calcularTotal())) < 0.01
-                          ? ""
-                          : `Total`}
-                        <span className='ml-auto'>
+                        {Math.abs(Number(calcularTotal())) < 0.01 ? "" : `Total`}
+                        <span className="ml-auto">
                           {Math.abs(Number(calcularTotal())) < 0.01
                             ? "Invitado"
                             : `$${Number(calcularTotal()).toFixed(2)}`}
@@ -1704,7 +1853,6 @@ export const FormConferenciaPage = () => {
                       </p>
                     </div>
                   </div>
-
                 </section>
 
                 {/* SECCION DERECHA */}
@@ -1718,7 +1866,6 @@ export const FormConferenciaPage = () => {
 
                   {/* FORMULARIO */}
                   <div className="w-full max-w-2xl mx-auto p-4 bg-gray-100 rounded-xl shadow-sm flex flex-col gap-4 relative">
-
                     <div className="scrolldown absolute right-50 z-50 -top-10 -left-10">
                       <div className="chevrons">
                         <div className="chevrondown"></div>
@@ -1736,86 +1883,113 @@ export const FormConferenciaPage = () => {
                       <div className="flex justify-center gap-4 mb-6">
                         <button
                           type="button"
-                          className={`px-6 py-1 rounded-full font-semibold text-xs transition-all duration-200 ${formValues.tipoParticipante === 'invitado'
-                            ? 'bg-blue-600 text-white shadow-md'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                          onClick={() => setFormValues({ ...formValues, tipoParticipante: 'invitado' })}
+                          className={`px-6 py-1 rounded-full font-semibold text-xs transition-all duration-200 ${
+                            formValues.tipoParticipante === "invitado"
+                              ? "bg-blue-600 text-white shadow-md"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                          onClick={() =>
+                            setFormValues({ ...formValues, tipoParticipante: "invitado" })
+                          }
                         >
                           Invitado
                         </button>
 
                         <button
                           type="button"
-                          className={`px-6 py-2 rounded-full font-semibold text-xs transition-all duration-200 ${formValues.tipoParticipante === 'expositor'
-                            ? 'bg-blue-600 text-white shadow-md'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                            }`}
-                          onClick={() => setFormValues({ ...formValues, tipoParticipante: 'expositor' })}
+                          className={`px-6 py-2 rounded-full font-semibold text-xs transition-all duration-200 ${
+                            formValues.tipoParticipante === "expositor"
+                              ? "bg-blue-600 text-white shadow-md"
+                              : "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                          }`}
+                          onClick={() =>
+                            setFormValues({ ...formValues, tipoParticipante: "expositor" })
+                          }
                         >
                           Expositor
                         </button>
                       </div>
 
                       {/* Campos comunes */}
-                      {(formValues.tipoParticipante === 'invitado' || (formValues.tipoParticipante === 'expositor' && acceso == true)) && (
-
+                      {(formValues.tipoParticipante === "invitado" ||
+                        (formValues.tipoParticipante === "expositor" && acceso == true)) && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
-
                           {/* NOMBRE */}
-                          <div className='col-span-2 lg:col-span-1'>
-                            <label className="text-sm text-gray-600 font-medium mb-1 block">Nombre completo</label>
+                          <div className="col-span-2 lg:col-span-1">
+                            <label className="text-sm text-gray-600 font-medium mb-1 block">
+                              Nombre completo
+                            </label>
                             <input
                               type="text"
                               name="nombre_conferencia"
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                               placeholder="Nombre completo"
                               value={formValues.nombre_conferencia}
-                              onChange={(e) => setFormValues({ ...formValues, nombre_conferencia: e.target.value })}
+                              onChange={(e) =>
+                                setFormValues({ ...formValues, nombre_conferencia: e.target.value })
+                              }
                               required
                             />
                           </div>
 
-                          <div className='col-span-2 lg:col-span-1'>
-                            <label className="text-sm text-gray-600 font-medium mb-1 block">Número de teléfono</label>
+                          <div className="col-span-2 lg:col-span-1">
+                            <label className="text-sm text-gray-600 font-medium mb-1 block">
+                              Número de teléfono
+                            </label>
                             <input
                               type="tel"
                               name="telefono_conferencia"
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                               placeholder="Número de teléfono"
                               value={formValues.telefono_conferencia}
-                              onChange={(e) => setFormValues({ ...formValues, telefono_conferencia: e.target.value })}
+                              onChange={(e) =>
+                                setFormValues({
+                                  ...formValues,
+                                  telefono_conferencia: e.target.value,
+                                })
+                              }
                               required
                             />
                           </div>
 
-                          <div className='col-span-2 lg:col-span-1'>
-                            <label className="text-sm text-gray-600 font-medium mb-1 block">Empresa</label>
+                          <div className="col-span-2 lg:col-span-1">
+                            <label className="text-sm text-gray-600 font-medium mb-1 block">
+                              Empresa
+                            </label>
                             <input
                               type="text"
                               name="empresa_conferencia"
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                               placeholder="Empresa"
                               value={formValues.empresa_conferencia}
-                              onChange={(e) => setFormValues({ ...formValues, empresa_conferencia: e.target.value })}
+                              onChange={(e) =>
+                                setFormValues({
+                                  ...formValues,
+                                  empresa_conferencia: e.target.value,
+                                })
+                              }
                               required
                             />
                           </div>
 
-                          <div className='col-span-2 lg:col-span-1'>
-                            <label className="text-sm text-gray-600 font-medium mb-1 block">Puesto</label>
+                          <div className="col-span-2 lg:col-span-1">
+                            <label className="text-sm text-gray-600 font-medium mb-1 block">
+                              Puesto
+                            </label>
                             <input
                               type="text"
                               name="puesto_conferencia"
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                               placeholder="Puesto"
                               value={formValues.puesto_conferencia}
-                              onChange={(e) => setFormValues({ ...formValues, puesto_conferencia: e.target.value })}
+                              onChange={(e) =>
+                                setFormValues({ ...formValues, puesto_conferencia: e.target.value })
+                              }
                               required
                             />
                           </div>
 
-                          <div className='col-span-2 lg:col-span-1'>
+                          <div className="col-span-2 lg:col-span-1">
                             <label className="text-sm text-gray-600 font-medium mb-1 flex items-center gap-x-2">
                               Correo electrónico
                               {/* <span className="text-xs text-red-400 ml-auto">(Aquí recibirás tus boletos)</span> */}
@@ -1826,14 +2000,18 @@ export const FormConferenciaPage = () => {
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                               placeholder="Correo electrónico"
                               value={formValues.correo_conferencia}
-                              onChange={(e) => setFormValues({ ...formValues, correo_conferencia: e.target.value })}
+                              onChange={(e) =>
+                                setFormValues({ ...formValues, correo_conferencia: e.target.value })
+                              }
                               required
                             />
                           </div>
 
                           {/* FOTO */}
                           <div className="col-span-2 lg:col-span-1">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Foto</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1">
+                              Foto
+                            </label>
                             <input
                               type="file"
                               accept="image/*"
@@ -1860,7 +2038,7 @@ export const FormConferenciaPage = () => {
 
                                   const preguntarContinuar = (
                                     mensaje: string,
-                                    icono: SweetAlertIcon = "warning"
+                                    icono: SweetAlertIcon = "warning",
                                   ) => {
                                     Swal.fire({
                                       title: "Tamaño no recomendado",
@@ -1883,12 +2061,12 @@ export const FormConferenciaPage = () => {
                                   if (width < 300 || height < 300) {
                                     preguntarContinuar(
                                       `Tu imagen mide ${width}x${height}px. El mínimo recomendado es 300x300 px.`,
-                                      "info"
+                                      "info",
                                     );
                                   } else if (width > 400 || height > 400) {
                                     preguntarContinuar(
                                       `Tu imagen mide ${width}x${height}px. El máximo recomendado es 400x400 px.`,
-                                      "info"
+                                      "info",
                                     );
                                   } else {
                                     setFormValues({ ...formValues, foto: file });
@@ -1903,7 +2081,8 @@ export const FormConferenciaPage = () => {
                             />
 
                             <span className="text-gray-500 text-xs mb-1 hidden">
-                              (Las imágenes deben medir un mínimo de 300x300 px y un máximo de 400x400 px)
+                              (Las imágenes deben medir un mínimo de 300x300 px y un máximo de
+                              400x400 px)
                             </span>
                             {/* Previsualización de la foto */}
                             {formValues.foto && (
@@ -1920,63 +2099,80 @@ export const FormConferenciaPage = () => {
                               </div>
                             )}
                           </div>
-
                         </div>
-
                       )}
 
                       {/* Campos adicionales si es Expositor */}
-                      {(formValues.tipoParticipante === 'expositor' && acceso == true) && (
+                      {formValues.tipoParticipante === "expositor" && acceso == true && (
                         <div className="mt-6 space-y-4">
                           <div>
-                            <label className="text-sm text-gray-600 font-medium mb-1 block">Temas a exponer</label>
+                            <label className="text-sm text-gray-600 font-medium mb-1 block">
+                              Temas a exponer
+                            </label>
                             <textarea
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                               rows={2}
                               placeholder="Describe los temas que abordarás..."
-                              value={formValues.temas_exponer || ''}
-                              onChange={(e) => setFormValues({ ...formValues, temas_exponer: e.target.value })}
+                              value={formValues.temas_exponer || ""}
+                              onChange={(e) =>
+                                setFormValues({ ...formValues, temas_exponer: e.target.value })
+                              }
                             ></textarea>
                           </div>
 
                           <div>
-                            <label className="text-sm text-gray-600 font-medium mb-1 block">¿Qué vas a ofrecer?</label>
+                            <label className="text-sm text-gray-600 font-medium mb-1 block">
+                              ¿Qué vas a ofrecer?
+                            </label>
                             <textarea
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                               rows={2}
                               placeholder="Menciona lo que ofrecerás en tu espacio..."
-                              value={formValues.que_ofrecer || ''}
-                              onChange={(e) => setFormValues({ ...formValues, que_ofrecer: e.target.value })}
+                              value={formValues.que_ofrecer || ""}
+                              onChange={(e) =>
+                                setFormValues({ ...formValues, que_ofrecer: e.target.value })
+                              }
                             ></textarea>
                           </div>
 
                           <div>
-                            <label className="text-sm text-gray-600 font-medium mb-1 block">Requerimientos del espacio</label>
+                            <label className="text-sm text-gray-600 font-medium mb-1 block">
+                              Requerimientos del espacio
+                            </label>
                             <textarea
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                               rows={2}
                               placeholder="Ejemplo: conexión eléctrica, mesas, sillas, etc."
-                              value={formValues.requerimientos_espacio || ''}
-                              onChange={(e) => setFormValues({ ...formValues, requerimientos_espacio: e.target.value })}
+                              value={formValues.requerimientos_espacio || ""}
+                              onChange={(e) =>
+                                setFormValues({
+                                  ...formValues,
+                                  requerimientos_espacio: e.target.value,
+                                })
+                              }
                             ></textarea>
                           </div>
 
                           <div>
-                            <label className="text-sm text-gray-600 font-medium mb-1 block">¿Cuántas personas serán?</label>
+                            <label className="text-sm text-gray-600 font-medium mb-1 block">
+                              ¿Cuántas personas serán?
+                            </label>
                             <input
                               type="number"
                               min="1"
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-400 focus:border-blue-400 outline-none"
                               placeholder="Número de personas"
-                              value={formValues.personas_expositor || ''}
-                              onChange={(e) => setFormValues({ ...formValues, personas_expositor: e.target.value })}
+                              value={formValues.personas_expositor || ""}
+                              onChange={(e) =>
+                                setFormValues({ ...formValues, personas_expositor: e.target.value })
+                              }
                             />
                           </div>
                         </div>
                       )}
 
                       {/* Clave de acceso para un expositor */}
-                      {formValues.tipoParticipante === 'expositor' && acceso === false && (
+                      {formValues.tipoParticipante === "expositor" && acceso === false && (
                         <div className="mt-6">
                           <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 shadow-sm">
                             <label
@@ -1997,7 +2193,7 @@ export const FormConferenciaPage = () => {
 
                               {/* Ícono opcional */}
                               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-accentBase">
-                                <IoKey className='flex-none' size={24} />
+                                <IoKey className="flex-none" size={24} />
                               </span>
                             </div>
 
@@ -2007,25 +2203,22 @@ export const FormConferenciaPage = () => {
                           </div>
                         </div>
                       )}
-
-
                     </div>
 
-                    {(precioBoletos > 0) && (
-
+                    {precioBoletos > 0 && (
                       <>
-
                         {/* METODO DE PAGO */}
-                        <h3 className="font-semibold text-lg text-gray-800">Seleccionar método de pago</h3>
+                        <h3 className="font-semibold text-lg text-gray-800">
+                          Seleccionar método de pago
+                        </h3>
 
                         <div className="flex gap-2">
-
                           <label className="w-full text-sm font-medium h-10 relative hover:bg-zinc-100 flex items-center px-2 gap-2 rounded-lg has-[:checked]:text-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:ring-blue-300 has-[:checked]:ring-1 select-none">
                             <input
                               className="w-4 h-4 absolute accent-current right-3"
                               type="radio"
-                              checked={tabMetodo === 'nueva_tarjeta'}
-                              onChange={() => setTabMetodo('nueva_tarjeta')}
+                              checked={tabMetodo === "nueva_tarjeta"}
+                              onChange={() => setTabMetodo("nueva_tarjeta")}
                             />
                             Nueva tarjeta
                           </label>
@@ -2035,13 +2228,12 @@ export const FormConferenciaPage = () => {
                               <input
                                 className="w-4 h-4 absolute accent-current right-3"
                                 type="radio"
-                                checked={tabMetodo === 'tarjetas_guardadas'}
-                                onChange={() => setTabMetodo('tarjetas_guardadas')}
+                                checked={tabMetodo === "tarjetas_guardadas"}
+                                onChange={() => setTabMetodo("tarjetas_guardadas")}
                               />
                               Tarjetas guardadas
                             </label>
                           )}
-
                         </div>
 
                         {/* TARJETAS */}
@@ -2050,9 +2242,21 @@ export const FormConferenciaPage = () => {
                             <p className="text-gray-500 text-sm">Tarjetas de crédito</p>
                             <div className="flex flex-wrap gap-3 mt-2">
                               <img className="w-10 h-6 object-contain" src="/visa.png" alt="Visa" />
-                              <img className="w-10 h-6 object-contain" src="/masterCard.png" alt="MasterCard" />
-                              <img className="w-10 h-6 object-contain" src="/americanExpress.png" alt="American Express" />
-                              <img className="w-12 h-6 object-contain" src="/carnet.png" alt="Carnet" />
+                              <img
+                                className="w-10 h-6 object-contain"
+                                src="/masterCard.png"
+                                alt="MasterCard"
+                              />
+                              <img
+                                className="w-10 h-6 object-contain"
+                                src="/americanExpress.png"
+                                alt="American Express"
+                              />
+                              <img
+                                className="w-12 h-6 object-contain"
+                                src="/carnet.png"
+                                alt="Carnet"
+                              />
                             </div>
                           </div>
 
@@ -2060,45 +2264,72 @@ export const FormConferenciaPage = () => {
                             <p className="text-gray-500 text-sm">Tarjetas de débito</p>
                             <div className="flex flex-wrap gap-3 mt-2">
                               <img className="w-12 h-6 object-contain" src="/BBVA.png" alt="BBVA" />
-                              <img className="w-12 h-6 object-contain" src="/santander.png" alt="Santander" />
+                              <img
+                                className="w-12 h-6 object-contain"
+                                src="/santander.png"
+                                alt="Santander"
+                              />
                               <img className="w-12 h-6 object-contain" src="/hsbc.png" alt="HSBC" />
-                              <img className="w-12 h-6 object-contain" src="/scotiabank.png" alt="Scotiabank" />
-                              <img className="w-12 h-6 object-contain" src="/inbursa.png" alt="Inbursa" />
+                              <img
+                                className="w-12 h-6 object-contain"
+                                src="/scotiabank.png"
+                                alt="Scotiabank"
+                              />
+                              <img
+                                className="w-12 h-6 object-contain"
+                                src="/inbursa.png"
+                                alt="Inbursa"
+                              />
                               <img className="w-12 h-6 object-contain" src="/ixe.png" alt="IXE" />
                             </div>
                           </div>
                         </div>
 
                         {/* NUEVA TARJETA */}
-                        {tabMetodo === 'nueva_tarjeta' && (
+                        {tabMetodo === "nueva_tarjeta" && (
                           <div className="flex flex-col gap-3">
-
                             <div className="flex flex-col gap-1">
-                              <label className="text-sm text-gray-500 font-semibold">Nombre del titular</label>
+                              <label className="text-sm text-gray-500 font-semibold">
+                                Nombre del titular
+                              </label>
                               <input
                                 type="text"
                                 placeholder="Nombre en la tarjeta"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                 value={formValues.nombre}
-                                onChange={(e) => setFormValues({ ...formValues, nombre: e.target.value.replace(/[^a-zA-Z\s]/g, '') })}
+                                onChange={(e) =>
+                                  setFormValues({
+                                    ...formValues,
+                                    nombre: e.target.value.replace(/[^a-zA-Z\s]/g, ""),
+                                  })
+                                }
                               />
                             </div>
 
                             <div className="flex flex-col gap-1">
-                              <label className="text-sm text-gray-500 font-semibold">Número de la tarjeta</label>
+                              <label className="text-sm text-gray-500 font-semibold">
+                                Número de la tarjeta
+                              </label>
                               <input
                                 type="text"
                                 placeholder="Número de tarjeta"
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                 value={formValues.tarjeta}
-                                onChange={(e) => setFormValues({ ...formValues, tarjeta: e.target.value.replace(/\D/g, '') })}
+                                onChange={(e) =>
+                                  setFormValues({
+                                    ...formValues,
+                                    tarjeta: e.target.value.replace(/\D/g, ""),
+                                  })
+                                }
                                 maxLength={19}
                               />
                             </div>
 
                             <div className="flex gap-2">
                               <div className="flex-1 flex flex-col gap-1">
-                                <label className="text-sm text-gray-500 font-semibold">Fecha de vencimiento</label>
+                                <label className="text-sm text-gray-500 font-semibold">
+                                  Fecha de vencimiento
+                                </label>
                                 <input
                                   type="text"
                                   placeholder="MM/AA"
@@ -2116,7 +2347,12 @@ export const FormConferenciaPage = () => {
                                   placeholder="CVV"
                                   className="w-full px-3 py-2 border border-gray-300 rounded-md"
                                   value={formValues.cvv}
-                                  onChange={(e) => setFormValues({ ...formValues, cvv: e.target.value.replace(/\D/g, '') })}
+                                  onChange={(e) =>
+                                    setFormValues({
+                                      ...formValues,
+                                      cvv: e.target.value.replace(/\D/g, ""),
+                                    })
+                                  }
                                   maxLength={4}
                                 />
                               </div>
@@ -2124,26 +2360,41 @@ export const FormConferenciaPage = () => {
 
                             <div className="flex flex-col gap-2">
                               <figure className="flex justify-end items-center gap-2">
-                                <small className="text-gray-500 text-xs">Transacciones realizadas vía:</small>
-                                <img className="w-24 h-12 object-contain" src="/openpay.webp" alt="OpenPay" />
+                                <small className="text-gray-500 text-xs">
+                                  Transacciones realizadas vía:
+                                </small>
+                                <img
+                                  className="w-24 h-12 object-contain"
+                                  src="/openpay.webp"
+                                  alt="OpenPay"
+                                />
                               </figure>
                               <figure className="flex items-center gap-2">
                                 <LuBadgeCheck className="text-green-500 text-3xl" />
-                                <small className="text-gray-500 text-xs">Tus pagos se realizan de forma segura con encriptación de 256 bits</small>
+                                <small className="text-gray-500 text-xs">
+                                  Tus pagos se realizan de forma segura con encriptación de 256 bits
+                                </small>
                               </figure>
                             </div>
-
                           </div>
                         )}
 
                         {/* TARJETAS GUARDADAS */}
-                        {tabMetodo === 'tarjetas_guardadas' && tarjetas.length > 0 && (
+                        {tabMetodo === "tarjetas_guardadas" && tarjetas.length > 0 && (
                           <div className="w-full p-2 lg:p-4 bg-white flex flex-col gap-3 rounded-md shadow-sm">
-                            <div className='w-full'>
-                              <h3 className='ftext-gray-400 font-semibold text-base mb-2'>Mis Tarjetas Guardadas</h3>
+                            <div className="w-full">
+                              <h3 className="ftext-gray-400 font-semibold text-base mb-2">
+                                Mis Tarjetas Guardadas
+                              </h3>
                               {tarjetas.map((tarjeta) => (
-                                <div className="w-full flex items-center gap-x-3 bg-gray-100 relative hover:bg-gray-200 transition-colors rounded-lg p-2 mb-2 group" key={tarjeta.idtarjeta}>
-                                  <label className="w-full text-sm font-medium h-10 relative hover:bg-zinc-100 flex items-center px-3 gap-3 rounded-lg has-[:checked]:text-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:ring-blue-300 has-[:checked]:ring-1 select-none" key={tarjeta.idtarjeta}>
+                                <div
+                                  className="w-full flex items-center gap-x-3 bg-gray-100 relative hover:bg-gray-200 transition-colors rounded-lg p-2 mb-2 group"
+                                  key={tarjeta.idtarjeta}
+                                >
+                                  <label
+                                    className="w-full text-sm font-medium h-10 relative hover:bg-zinc-100 flex items-center px-3 gap-3 rounded-lg has-[:checked]:text-blue-500 has-[:checked]:bg-blue-50 has-[:checked]:ring-blue-300 has-[:checked]:ring-1 select-none"
+                                    key={tarjeta.idtarjeta}
+                                  >
                                     <input
                                       className="w-4 h-4 absolute accent-current right-3"
                                       type="radio"
@@ -2151,30 +2402,34 @@ export const FormConferenciaPage = () => {
                                       checked={tarjetaSeleccionada === tarjeta.idtarjeta}
                                       onChange={() => setTarjetaSeleccionada(tarjeta.idtarjeta)}
                                     />
-                                    {tarjeta.tarjeta}  ({tarjeta.banco})
+                                    {tarjeta.tarjeta} ({tarjeta.banco})
                                   </label>
                                   <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-100">
-                                    <button type='button' onClick={() => handleEliminarTarjeta(tarjeta.idtarjeta)}><IoTrashOutline className='text-red-500 text-xl' /></button>
+                                    <button
+                                      type="button"
+                                      aria-label="Eliminar tarjeta"
+                                      onClick={() => handleEliminarTarjeta(tarjeta.idtarjeta)}
+                                    >
+                                      <IoTrashOutline className="text-red-500 text-xl" />
+                                    </button>
                                   </span>
                                 </div>
                               ))}
                             </div>
-                            <figure className='flex justify-end'>
+                            <figure className="flex justify-end">
                               <img width={100} height={60} src="/openpay.webp" alt="" />
                             </figure>
                           </div>
                         )}
-
                       </>
-
                     )}
-
                   </div>
 
                   {/* FOOTER */}
                   <footer className="flex flex-col gap-2 max-w-2xl mx-auto">
                     <p className="text-center text-xs text-gray-500">
-                      Al hacer clic en el botón, confirmas que has leído y aceptas nuestros términos y condiciones, así como nuestra política de privacidad.
+                      Al hacer clic en el botón, confirmas que has leído y aceptas nuestros términos
+                      y condiciones, así como nuestra política de privacidad.
                     </p>
                     {reservaExitosa && (
                       <>
@@ -2193,20 +2448,14 @@ export const FormConferenciaPage = () => {
                       </>
                     )}
                   </footer>
-
                 </section>
-
               </div>
-
             )}
-
           </div>
         </div>
       )}
-
     </div>
   );
-
 };
 
 export default FormConferenciaPage;

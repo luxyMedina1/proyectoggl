@@ -28,8 +28,7 @@ const LIMIT = 6;
 const APP_NAME = process.env.NEXT_PUBLIC_TITLE_APP || "Taquilla VIP";
 
 const prefiereMenosMovimiento = () =>
-  typeof window !== "undefined" &&
-  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  typeof window !== "undefined" && window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
 
 const filtrosDesdeParams = (params: { get(key: string): string | null }): ReelFiltros => ({
   cuando: (params.get("cuando") as ReelCuando) || "",
@@ -43,8 +42,15 @@ const filtrosDesdeParams = (params: { get(key: string): string | null }): ReelFi
 export const ExplorarPage = () => {
   const router = useRouter();
   const pathname = usePathname();
-  const { getFeed, getContadores, getCategorias, getPrecios, getEstadoLikes, toggleLike, registrarVista } =
-    useContenidoStore();
+  const {
+    getFeed,
+    getContadores,
+    getCategorias,
+    getPrecios,
+    getEstadoLikes,
+    toggleLike,
+    registrarVista,
+  } = useContenidoStore();
   const { getDetalleEventos } = useEventosStore();
   const { user } = useAuthStore();
   const searchParams = useSearchParams();
@@ -62,7 +68,10 @@ export const ExplorarPage = () => {
   });
   const [categorias, setCategorias] = useState<ReelCategoria[]>([]);
   const [contadores, setContadores] = useState<Contadores | null>(null);
-  const [preciosBounds, setPreciosBounds] = useState<{ min: number; max: number }>({ min: 0, max: 0 });
+  const [preciosBounds, setPreciosBounds] = useState<{ min: number; max: number }>({
+    min: 0,
+    max: 0,
+  });
   const [activeIndex, setActiveIndex] = useState(0);
   const [muted, setMuted] = useState(true);
   const [filtrosOpen, setFiltrosOpen] = useState(false);
@@ -103,7 +112,13 @@ export const ExplorarPage = () => {
       activo = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filtros.categoriaId, filtros.precioMin, filtros.precioMax, filtros.ciudadId, filtros.eventoId]);
+  }, [
+    filtros.categoriaId,
+    filtros.precioMin,
+    filtros.precioMax,
+    filtros.ciudadId,
+    filtros.eventoId,
+  ]);
 
   // ---- Límites del slider de precio ----
   // Se adapta al contexto (categoría en borrador + ciudad/cuándo aplicados),
@@ -295,7 +310,9 @@ export const ExplorarPage = () => {
     try {
       const res = await toggleLike(reel.id);
       setReels((prev) =>
-        prev.map((r) => (r.id === reel.id ? { ...r, liked: res.liked, likesCount: res.likesCount } : r)),
+        prev.map((r) =>
+          r.id === reel.id ? { ...r, liked: res.liked, likesCount: res.likesCount } : r,
+        ),
       );
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (e: any) {
@@ -315,7 +332,11 @@ export const ExplorarPage = () => {
   // así que las pedimos con el endpoint de detalle del evento y dejamos elegir.
   const elegirFuncion = async (evento: ReelEvento) => {
     const eventoId = evento.id as number;
-    Swal.fire({ title: "Cargando fechas...", didOpen: () => Swal.showLoading(), allowOutsideClick: false });
+    Swal.fire({
+      title: "Cargando fechas...",
+      didOpen: () => Swal.showLoading(),
+      allowOutsideClick: false,
+    });
     try {
       const detalle = await getDetalleEventos(String(eventoId));
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -347,7 +368,11 @@ export const ExplorarPage = () => {
         router.push(RUTAS_REEL.detalle(evento, elegida));
       }
     } catch {
-      Swal.fire({ icon: "error", title: "No se pudieron cargar las fechas", confirmButtonColor: accentColor() });
+      Swal.fire({
+        icon: "error",
+        title: "No se pudieron cargar las fechas",
+        confirmButtonColor: accentColor(),
+      });
     }
   };
 
@@ -402,11 +427,19 @@ export const ExplorarPage = () => {
     if (cargandoInicial) return <ReelSkeleton />;
     if (error)
       return (
-        <EstadoFeed tipo="error" onAccion={() => setReloadKey((k) => k + 1)} accionLabel="Reintentar" />
+        <EstadoFeed
+          tipo="error"
+          onAccion={() => setReloadKey((k) => k + 1)}
+          accionLabel="Reintentar"
+        />
       );
     if (displayReels.length === 0)
       return filtrosCount > 0 ? (
-        <EstadoFeed tipo="sin-resultados" onAccion={onLimpiarFiltros} accionLabel="Limpiar filtros" />
+        <EstadoFeed
+          tipo="sin-resultados"
+          onAccion={onLimpiarFiltros}
+          accionLabel="Limpiar filtros"
+        />
       ) : (
         <EstadoFeed tipo="vacio" />
       );
@@ -493,7 +526,9 @@ export const ExplorarPage = () => {
         <div
           aria-hidden={!filtrosOpen}
           className={`h-full w-full max-w-[clamp(22rem,30vw,32rem)] transition duration-300 ease-out motion-reduce:transition-none ${
-            filtrosOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
+            filtrosOpen
+              ? "translate-x-0 opacity-100"
+              : "pointer-events-none translate-x-full opacity-0"
           }`}
         >
           <FiltrosPanel
@@ -512,7 +547,12 @@ export const ExplorarPage = () => {
       {/* Filtros como hoja inferior (mobile) */}
       {filtrosOpen && (
         <div className="fixed inset-0 z-50 flex flex-col justify-end bg-black/50 lg:hidden">
-          <div className="absolute inset-0" onClick={() => setFiltrosOpen(false)} />
+          <button
+            type="button"
+            className="absolute inset-0"
+            aria-label="Cerrar filtros"
+            onClick={() => setFiltrosOpen(false)}
+          />
           <div className="reel-sheet relative h-[85dvh] w-full">
             <FiltrosPanel
               categorias={categorias}

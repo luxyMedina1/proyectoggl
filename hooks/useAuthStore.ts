@@ -35,8 +35,22 @@ export interface OtpSendResult {
     serviceUnavailable: boolean;
 }
 
+// Forma parcial del error de axios que este archivo consulta: el backend puede
+// devolver `message` como string o como lista de strings de validación.
+interface ApiError {
+    message?: string;
+    response?: {
+        status?: number;
+        data?: {
+            message?: string | string[];
+            error?: string;
+            code?: string;
+        };
+    };
+}
+
 // Detecta el caso "service unavailable" del backend (503 o mensaje/código).
-const isServiceUnavailable = (error: any): boolean => {
+const isServiceUnavailable = (error: ApiError): boolean => {
     const status = error?.response?.status;
     const data = error?.response?.data;
     const raw = `${data?.message ?? ''} ${data?.error ?? ''} ${data?.code ?? ''}`
@@ -90,11 +104,12 @@ export const useAuthStore = () => {
         try {
             await apiApplication.post('/auth/otp/send', buildOtpBody(destino, canal));
             return { ok: true, serviceUnavailable: false };
-        } catch (error: any) {
-            if (isServiceUnavailable(error)) {
+        } catch (error) {
+            const err = error as ApiError;
+            if (isServiceUnavailable(err)) {
                 return { ok: false, serviceUnavailable: true };
             }
-            const msg = error.response?.data?.message ?? 'No se pudo enviar el código';
+            const msg = err.response?.data?.message ?? 'No se pudo enviar el código';
             Swal.fire('Error', Array.isArray(msg) ? msg.join('\n') : msg, 'error');
             return { ok: false, serviceUnavailable: false };
         } finally {
@@ -109,11 +124,12 @@ export const useAuthStore = () => {
         try {
             await apiApplication.post('/auth/otp/resend', buildOtpBody(destino, canal));
             return { ok: true, serviceUnavailable: false };
-        } catch (error: any) {
-            if (isServiceUnavailable(error)) {
+        } catch (error) {
+            const err = error as ApiError;
+            if (isServiceUnavailable(err)) {
                 return { ok: false, serviceUnavailable: true };
             }
-            const msg = error.response?.data?.message ?? 'No se pudo reenviar el código';
+            const msg = err.response?.data?.message ?? 'No se pudo reenviar el código';
             Swal.fire('Error', Array.isArray(msg) ? msg.join('\n') : msg, 'error');
             return { ok: false, serviceUnavailable: false };
         } finally {
@@ -121,7 +137,6 @@ export const useAuthStore = () => {
             dispatch(onChangeLoaderStatus(false));
         }
     };
-
     const startValidateOtp = async (
         destino: string,
         codigo: string,
@@ -140,8 +155,8 @@ export const useAuthStore = () => {
                 await requestResetToken();
             }
             return data;
-        } catch (error: any) {
-            const msg = error.response?.data?.message ?? 'No se pudo validar el código';
+        } catch (error) {
+            const msg = (error as ApiError).response?.data?.message ?? 'No se pudo validar el código';
             Swal.fire('Error', Array.isArray(msg) ? msg.join('\n') : msg, 'error');
             return null;
         } finally {
@@ -163,8 +178,8 @@ export const useAuthStore = () => {
             dispatch(onLogin({ user: userWithFlag, token: data.token, isVerified: data.isVerified }));
             await requestResetToken();
             return data;
-        } catch (error: any) {
-            const msg = error.response?.data?.message ?? 'No se pudo completar el perfil';
+        } catch (error) {
+            const msg = (error as ApiError).response?.data?.message ?? 'No se pudo completar el perfil';
             Swal.fire('Error', Array.isArray(msg) ? msg.join('\n') : msg, 'error');
             return null;
         } finally {
@@ -182,13 +197,14 @@ export const useAuthStore = () => {
             persistTokens(data.token, data.refreshToken ?? null, true);
             dispatch( onLogin(data) );
             await requestResetToken();
-        } catch (error: any) {
-            if (error.response) {
-                const { message } = error.response.data;
+        } catch (error) {
+            const err = error as ApiError;
+            if (err.response) {
+                const message = err.response.data?.message;
                 if (message && Array.isArray(message)) {
                     Swal.fire('Error', message.join('\n'), 'error');
                 } else {
-                    Swal.fire('Error', error.response.data.message, 'error');
+                    Swal.fire('Error', message, 'error');
                 }
                 dispatch(onLogout('Credenciales incorrectas'));
             } else {
@@ -225,9 +241,10 @@ export const useAuthStore = () => {
             dispatch(onLogin(data));
             await requestResetToken();
 
-        } catch (error: any) {
-            if (error.response) {
-                const { message } = error.response.data;
+        } catch (error) {
+            const err = error as ApiError;
+            if (err.response) {
+                const message = err.response.data?.message;
                 Swal.fire('Error', Array.isArray(message) ? message.join('\n') : message, 'error');
                 dispatch(onLogout('Credenciales incorrectas'));
             } else {
@@ -289,10 +306,10 @@ export const useAuthStore = () => {
             }
 
             dispatch(onLogin(data));
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error en checkAuthToken:", error);
 
-            if (error.message === "Usuario no verificado") {
+            if ((error as ApiError).message === "Usuario no verificado") {
                 Swal.fire({
                     icon: "warning",
                     title: "Verificación requerida",
@@ -361,14 +378,16 @@ export const useAuthStore = () => {
                 throw new Error('No se recibió token del servidor');
             }
 
-        } catch (error: any) {
-            console.error('❌ Error en loginWithGoogle:', error);
+        } catch (error) {
+            const err = error as ApiError;
+            console.error('❌ Error en loginWithGoogle:', err);
 
             let errorMessage = 'Error al procesar el login con Google';
-            if (error.response?.data?.message) {
-                errorMessage = error.response.data.message;
-            } else if (error.message) {
-                errorMessage = error.message;
+            const backendMessage = err.response?.data?.message;
+            if (backendMessage) {
+                errorMessage = Array.isArray(backendMessage) ? backendMessage.join('\n') : backendMessage;
+            } else if (err.message) {
+                errorMessage = err.message;
             }
 
             Swal.fire('Error', errorMessage, 'error');
@@ -404,14 +423,16 @@ export const useAuthStore = () => {
             } else {
                 throw new Error('No se recibió token del servidor');
             }
-        } catch (error: any) {
-            console.error('❌ Error en loginWithApple:', error);
+        } catch (error) {
+            const err = error as ApiError;
+            console.error('❌ Error en loginWithApple:', err);
 
             let errorMessage = 'Error al procesar el login con Apple';
-            if (error.response?.data?.message) {
-                errorMessage = error.response.data.message;
-            } else if (error.message) {
-                errorMessage = error.message;
+            const backendMessage = err.response?.data?.message;
+            if (backendMessage) {
+                errorMessage = Array.isArray(backendMessage) ? backendMessage.join('\n') : backendMessage;
+            } else if (err.message) {
+                errorMessage = err.message;
             }
 
             Swal.fire('Error', errorMessage, 'error');
