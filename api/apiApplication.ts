@@ -15,7 +15,11 @@ const getBackendUrl = () => {
 }
 
 const apiApplication = axios.create({
-    baseURL: getBackendUrl()
+    baseURL: getBackendUrl(),
+    // Sin esto, si el backend (LAN) esta caido o lento, cada request cuelga hasta
+    // el timeout de TCP del navegador (~1-2 min) y las vistas se quedan en spinner.
+    // 20 s es techo de cortesia: falla rapido y el componente muestra su error.
+    timeout: 20000,
 })
 
 const SKIP_REFRESH_URLS = [
@@ -142,7 +146,17 @@ apiApplication.interceptors.response.use(
     },
     async (error: AxiosError) => {
         const original = error.config as RetriableConfig | undefined;
-        if (!error.response || !original) return Promise.reject(error);
+        // Sin respuesta = red caida, DNS, CORS o timeout. Se normaliza el mensaje
+        // para que las vistas muestren algo claro en vez de "Network Error" /
+        // "timeout of 20000ms exceeded".
+        if (!error.response) {
+            error.message =
+                error.code === 'ECONNABORTED'
+                    ? 'El servidor tardo demasiado en responder. Revisa tu conexion.'
+                    : 'No se pudo conectar con el servidor. Revisa tu conexion.';
+            return Promise.reject(error);
+        }
+        if (!original) return Promise.reject(error);
         if (error.response.status !== 401) return Promise.reject(error);
         if (original._retry) return Promise.reject(error);
         if (shouldSkipRefresh(original.url)) return Promise.reject(error);

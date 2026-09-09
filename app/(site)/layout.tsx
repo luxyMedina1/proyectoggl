@@ -118,7 +118,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               <img
                 width={170}
                 height={90}
-                src={config?.logoMarca}
+                src={config?.logoMarca || "/logo.png"}
                 alt="Logo"
                 className="cursor-pointer aspect-video w-full md:w-[170px] h-auto max-w-none"
                 style={{ objectFit: "contain" }}
@@ -335,7 +335,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               className="mb-5"
               width={170}
               height={90}
-              src={config?.logoMarca}
+              src={config?.logoMarca || "/logo.png"}
               alt="logo empresa"
             />
             <p className="text-sm font-light text-center">Descarga nuestras aplicaciones</p>
@@ -448,7 +448,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               className="mb-5"
               width={170}
               height={90}
-              src={config?.logoMarca}
+              src={config?.logoMarca || "/logo.png"}
               alt="logo empresa"
             />
             <p className="text-sm font-light">Descarga nuestras aplicaciones</p>

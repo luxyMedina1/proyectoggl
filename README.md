@@ -140,9 +140,9 @@ Además, `lighthouse.yml` corre los lunes 06:00 UTC —y a mano desde Actions—
 `/eventos`, `/eventos/general` y `/explorar`. Los presupuestos de `lighthouserc.json` están todos en
 modo `warn`: registran el número, nunca rompen CI.
 
-Pruebas: Vitest + jsdom + Testing Library. Hoy son **5 pruebas en 2 archivos** — el arnés está montado
-y la cobertura real está por escribirse. Cualquier `*.test.ts(x)` o `*.spec.ts(x)` en cualquier
-carpeta se recoge solo.
+Pruebas: Vitest + jsdom + Testing Library. Hoy son **135 pruebas en 18 archivos**, la mayoría de
+propiedad (`fast-check`) sobre los helpers puros de `utils/` (promociones, slugs, JSON-LD, fechas).
+Cualquier `*.test.ts(x)` o `*.spec.ts(x)` en cualquier carpeta se recoge solo.
 
 ---
 
@@ -153,16 +153,19 @@ Sharing Debugger de Facebook. Lo que falta es dejar de renderizar todo en el nav
 
 | | Hoy |
 |---|---|
-| Páginas que abren con `'use client'` | 29 de 34 (2 de las otras son `redirect()` de una línea) |
-| Rutas con `generateMetadata` | 3 de contenido, más el layout raíz |
-| `<img>` nativos vs. `next/image` | 112 contra 1 archivo migrado |
+| Páginas que abren con `'use client'` | 23 de 34 (2 de las otras son `redirect()` de una línea) |
+| Rutas con `generateMetadata` | 4 de contenido, más el layout raíz |
+| `<img>` nativos vs. `next/image` | 111 contra 2 archivos migrados (`/eventos` y el detalle de evento) |
 | Perfil y "mis compras" en el servidor | Bloqueado por la sesión en `localStorage` |
 
-De las 29 páginas cliente, **21 lo son con razón**: perfil, auth y checkout son privadas y están
+De las 23 páginas cliente, **20 lo son con razón**: perfil, auth y checkout son privadas y están
 excluidas en `robots.ts`, y la selección de asiento necesita disponibilidad en tiempo real, que no se
-debe cachear nunca. Las 8 que faltan por migrar son públicas y compartibles: el listado `/eventos`,
-las dos de CityPass, las cuatro de legales y `/explorar`. **"Todo SSR" no es la meta** — la meta es
-cáscara de servidor con islas de cliente.
+debe cachear nunca. Las 3 que faltan por migrar son públicas y compartibles: las dos de CityPass y
+`/explorar`. El listado `/eventos` ya es cáscara de servidor (`generateMetadata` con imagen OG del
+evento destacado + `ItemList` JSON-LD), pero todavía trae la lista en el cliente: el SSR de los datos
+para el LCP sigue pendiente (ver
+[`docs/commits-nuevos/05-rendimiento-lcp-next.md`](docs/commits-nuevos/05-rendimiento-lcp-next.md)).
+**"Todo SSR" no es la meta** — la meta es cáscara de servidor con islas de cliente.
 
 El plan está escrito y numerado en [`docs/checklist-migracion/`](docs/checklist-migracion/README.md):
 los docs 01 → 05 se leen en orden, del 06 al 10 son optimizaciones independientes. Si sólo vas a leer
@@ -218,8 +221,8 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 ---
 
-**Última revisión:** 2026-08-31, contra Next 16.3.2 y React 19.2.8.
+**Última revisión:** 2026-09-09, contra Next 16.3.2 y React 19.2.8.
 
-Los números de este archivo (34 páginas, 29 cliente, 112 `<img>`, 301 errores de lint, 5 pruebas,
+Los números de este archivo (34 páginas, 23 cliente, 111 `<img>`, 301 errores de lint, 135 pruebas,
 39 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
 actualiza.

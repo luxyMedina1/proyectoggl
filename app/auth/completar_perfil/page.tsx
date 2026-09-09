@@ -81,7 +81,7 @@ export default function CompletarPerfilPage() {
             <div className="col-span-2 lg:col-span-1 h-auto lg:min-h-screen">
                 <div className="auth-bg p-5 md:p-8 lg:p-10">
                     <Link href="/">
-                        <img className="mb-16" width={240} height={120} src={config?.logoMarca} alt="logo company" />
+                        <img className="mb-16" width={240} height={120} src={config?.logoMarca || "/logo.png"} alt="logo company" />
                     </Link>
                     <h1 className="text-white text-3xl lg:text-5xl font-semibold">Bienvenido a tu acceso exclusivo a los mejores conciertos</h1>
                     <p className="text-lg lg:text-xl text-gray-300 mt-10">
