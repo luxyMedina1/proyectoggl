@@ -114,7 +114,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               <img
                 width={170}
                 height={90}
-                src={config?.logoMarca}
+                src={config?.logoMarca || "/logo.png"}
                 alt="Logo"
                 className="cursor-pointer aspect-video w-full md:w-[170px] h-auto max-w-none"
                 style={{ objectFit: 'contain' }}
@@ -290,7 +290,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
       <footer className='bg-gradient-to-r from-accentBase to-emphasis py-8'>
         <div className="container mx-auto px-4 md:hidden grid grid-cols-1 gap-6 text-neutral">
           <div className="flex flex-col items-center justify-center">
-            <img className='mb-5' width={170} height={90} src={config?.logoMarca} alt="logo empresa" />
+            <img className='mb-5' width={170} height={90} src={config?.logoMarca || "/logo.png"} alt="logo empresa" />
             <p className='text-sm font-light text-center'>Descarga nuestras aplicaciones</p>
             <div className='flex items-center gap-x-2 mt-3 justify-center'>
               <img width={100} height={90} src="/app_store.png" alt="App Store" />
@@ -371,7 +371,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
         </div>
         <div className='container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 hidden md:grid grid-cols-4 gap-3 text-neutral'>
           <div className='col-span-4 md:col-span-1'>
-            <img className='mb-5' width={170} height={90} src={config?.logoMarca} alt="logo empresa" />
+            <img className='mb-5' width={170} height={90} src={config?.logoMarca || "/logo.png"} alt="logo empresa" />
             <p className='text-sm font-light'>Descarga nuestras aplicaciones</p>
             <div className='flex items-center gap-x-2 mt-3'>
               <img width={100} height={90} src="/app_store.png" alt="App Store" />
