@@ -93,6 +93,17 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        // Assets con hash de contenido en la ruta (`/_next/static/...`): el nombre
+        // cambia si cambia el archivo, así que se pueden cachear para siempre.
+        // Next ya lo hace en su propio server; se declara explícito para que la
+        // regla también aplique detrás de un proxy/CDN que no herede ese default
+        // (oportunidad "tiempos de vida de caché eficientes" del doc 05).
+        source: "/_next/static/:path*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
     ];
   },
 };

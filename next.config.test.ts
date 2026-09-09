@@ -13,13 +13,23 @@ describe("next.config — cabeceras de seguridad (Req 7)", () => {
 
     const reglas = await nextConfig.headers!();
 
-    expect(reglas).toHaveLength(1);
-    expect(reglas[0].source).toBe("/:path*");
+    const seguridad = reglas.find((r) => r.source === "/:path*");
+    expect(seguridad).toBeDefined();
+  });
+
+  it("cachea inmutable los assets versionados de /_next/static (doc 05)", async () => {
+    const reglas = await nextConfig.headers!();
+    const estatica = reglas.find((r) => r.source === "/_next/static/:path*");
+    expect(estatica).toBeDefined();
+    const porClave = Object.fromEntries(
+      estatica!.headers.map((h) => [h.key, h.value]),
+    );
+    expect(porClave["Cache-Control"]).toBe("public, max-age=31536000, immutable");
   });
 
   it("declara los cuatro pares clave/valor de seguridad (Req 7.2–7.5)", async () => {
     const reglas = await nextConfig.headers!();
-    const cabeceras = reglas[0].headers;
+    const cabeceras = reglas.find((r) => r.source === "/:path*")!.headers;
 
     const porClave = Object.fromEntries(
       cabeceras.map((h) => [h.key, h.value]),

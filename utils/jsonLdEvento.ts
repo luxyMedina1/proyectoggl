@@ -121,3 +121,32 @@ export const construirEventosJsonLd = (
     ),
   );
 };
+
+// --- ItemList de la home (doc 05) ---
+
+// Entrada minima para un elemento del ItemList: lo que pide la URL (EventoSlugInput)
+// mas el nombre para el `name` del ListItem.
+export type EventoParaItemList = EventoSlugInput & { nombre?: string | null };
+
+/**
+ * Construye el schema `ItemList` de schema.org para la home (`/eventos`), un
+ * `ListItem` por evento con su posicion (1-indexada), su URL absoluta (mismo
+ * `rutaEvento` que el resto del sitio) y su nombre.
+ *
+ * Función pura (sin I/O): el cascarón de servidor de la home le pasa el listado
+ * ya resuelto y el origen del sitio. Se emite con `JSON.stringify`, que escapa el
+ * contenido: no hay vector de inyección.
+ */
+export const construirItemListEventosJsonLd = (
+  eventos: EventoParaItemList[],
+  siteUrl: string,
+): Record<string, unknown> => ({
+  "@context": "https://schema.org",
+  "@type": "ItemList",
+  itemListElement: (eventos ?? []).map((evento, i) => ({
+    "@type": "ListItem",
+    position: i + 1,
+    url: `${siteUrl}${rutaEvento(evento)}`,
+    name: evento.nombre ?? undefined,
+  })),
+});
