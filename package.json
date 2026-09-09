@@ -12,12 +12,11 @@
     "typecheck": "tsc --noEmit",
     "analyze": "node scripts/analyze.mjs",
     "audit:images": "node scripts/audit-images.mjs",
-    "verify": "npm run typecheck && npm test && npm run build"
+    "verify": "npm run typecheck && npm test && npm run build",
+    "prepare": "git config core.hooksPath .githooks || true"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.12.0",
-    "@types/dompurify": "^3.0.5",
-    "@types/leaflet": "^1.9.22",
     "axios": "^1.19.0",
     "client-only": "^0.0.1",
     "date-fns": "^4.4.0",
@@ -47,10 +46,12 @@
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.6",
+    "@types/leaflet": "^1.9.22",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^5.2.0",
+    "babel-plugin-react-compiler": "^1.0.0",
     "eslint": "^9",
     "eslint-config-next": "16.3.2",
     "jsdom": "^29.1.1",
