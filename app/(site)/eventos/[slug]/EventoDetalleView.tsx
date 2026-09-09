@@ -23,7 +23,6 @@ import { buildEventoSlug, type EventoResuelto } from "../../../../utils/eventoSl
 import LocalLoader from "../../../../components/LocalLoader";
 import { LuBadgeCheck } from "react-icons/lu";
 import ListaPreciosCategorias from "../../../../eventos/components/ListaPreciosCategorias";
-import SeccionesAccesibles from "../../../../eventos/components/SeccionesAccesibles";
 import { formatearDinero } from "../../../../eventos/helpers/formatearDinero";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
@@ -1872,14 +1871,6 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
             {eventoActivo ? (
               <>
                 {renderSVG()}
-                {/* Alternativa accesible al mapa (Req 16): misma acción que el clic sobre el SVG,
-                    navegable por teclado. Solo para recintos con mapa (no generales). */}
-                {!evento?.recinto?.esGeneral && (secciones?.length ?? 0) > 0 && (
-                  <SeccionesAccesibles
-                    secciones={secciones}
-                    onSeleccionarSeccion={seleccionarSeccion}
-                  />
-                )}
                 {descripcionAdicional && (
                   // descripcionExtra llega como HTML del editor del dashboard (puede traer enlaces).
                   <div
