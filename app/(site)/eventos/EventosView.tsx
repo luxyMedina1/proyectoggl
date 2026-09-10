@@ -34,7 +34,7 @@ import {
 } from "../../../utils/dateHelpers";
 import { consultaMaps } from "../../../utils/mapsHelpers";
 import { DireccionMapsLink } from "../../../components/DireccionMapsLink";
-import { rutaEvento, rutaEventoInformacion, rutaEventoPorBase, type EventoListaSlug } from "../../../utils/eventoSlug";
+import { rutaEvento, rutaEventoInformacion, rutaEventoPorBase } from "../../../utils/eventoSlug";
 import { LuCalendarClock, LuDoorOpen } from "react-icons/lu";
 
 // Imagen de respaldo cuando el evento no trae banner/promoción: evita pasarle a
@@ -107,31 +107,21 @@ interface Evento {
   finalEvento?: string | null;
 }
 
-export default function EventosView({
-  initialEventos = [],
-}: {
-  initialEventos?: EventoListaSlug[];
-}) {
+export default function EventosView() {
   return (
     <Suspense fallback={<LocalLoader />}>
-      <EventosContent initialEventos={initialEventos} />
+      <EventosContent />
     </Suspense>
   );
 }
 
 // useSearchParams() exige un boundary de Suspense para el prerender estatico de Next.js
 // (bailout de CSR) — el resto de la logica de HomePage.tsx (v2) queda igual dentro.
-function EventosContent({ initialEventos }: { initialEventos: EventoListaSlug[] }) {
-  // Lista pedida en el servidor (page.tsx, mismo endpoint `get_all_select`). Sembrar
-  // el estado con ella hace que el grid ya venga en el HTML: el footer nace en su
-  // sitio y no salta al terminar el fetch de cliente — era el 100% del CLS de
-  // /eventos. Si el back no respondió en build/revalidación llega vacía y aplica
-  // la mitigación `min-h-[...]` de más abajo. El fetch de cliente refresca igual.
-  const eventosIniciales = initialEventos as unknown as Evento[];
-  const [eventos, setEventos] = useState<Evento[]>(eventosIniciales);
-  const [eventosOriginales, setEventosOriginales] = useState<Evento[]>(eventosIniciales);
+function EventosContent() {
+  const [eventos, setEventos] = useState<Evento[]>([]);
+  const [eventosOriginales, setEventosOriginales] = useState<Evento[]>([]);
   const { getListaEventos } = useEventosStore();
-  const [activeEvent, setActiveEvent] = useState<Evento | null>(eventosIniciales[0] ?? null);
+  const [activeEvent, setActiveEvent] = useState<Evento | null>(null);
   interface Categoria {
     id: number;
     nombre: string;
@@ -423,7 +413,7 @@ function EventosContent({ initialEventos }: { initialEventos: EventoListaSlug[] 
         eventos.length === 0 ? "min-h-[200vh] lg:min-h-[130vh]" : "min-h-screen"
       }`}
     >
-      {cargando && eventos.length === 0 && <LocalLoader />}
+      {cargando && <LocalLoader />}
 
       {/* Slider principal */}
       <div className='container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 inherit-mob'>

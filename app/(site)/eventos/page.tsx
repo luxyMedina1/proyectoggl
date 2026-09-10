@@ -93,7 +93,7 @@ export default async function Page() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
         />
       )}
-      <EventosView initialEventos={eventos} />
+      <EventosView />
     </>
   );
 }
