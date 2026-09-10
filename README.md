@@ -161,8 +161,8 @@ Sharing Debugger de Facebook. Lo que falta es dejar de renderizar todo en el nav
 De las 23 páginas cliente, **20 lo son con razón**: perfil, auth y checkout son privadas y están
 excluidas en `robots.ts`, y la selección de asiento necesita disponibilidad en tiempo real, que no se
 debe cachear nunca. Las 3 que faltan por migrar son públicas y compartibles: las dos de CityPass y
-`/explorar`. El listado `/eventos` ya es cáscara de servidor (`generateMetadata` con imagen OG del
-evento destacado + `ItemList` JSON-LD), pero todavía trae la lista en el cliente: el SSR de los datos
+`/explorar`. El listado `/eventos` ya es cáscara de servidor (`generateMetadata` con OG de marca
+—título e imagen— + `ItemList` JSON-LD), pero todavía trae la lista en el cliente: el SSR de los datos
 para el LCP sigue pendiente (ver
 [`docs/commits-nuevos/05-rendimiento-lcp-next.md`](docs/commits-nuevos/05-rendimiento-lcp-next.md)).
 **"Todo SSR" no es la meta** — la meta es cáscara de servidor con islas de cliente.
@@ -184,9 +184,9 @@ Google, en blogs o de una IA va a estar desactualizado: el caché de `fetch` aho
 `revalidateTag(tag)` con un solo argumento está deprecado, y el prop `priority` de `next/image`
 también. La fuente buena es `node_modules/next/dist/docs/`, que es la doc de la versión instalada.
 
-**`npm run lint` sale rojo y es esperado.** 301 errores heredados del código legacy. Se muestra sin
-bloquear; cuando llegue a 0, hay que quitar el `continue-on-error` de los dos CI para que empiece a
-gatear. No lo "arregles" con un `--fix` masivo dentro de un PR de otra cosa.
+**`npm run lint` sale rojo y es esperado.** 236 errores + 157 warnings heredados del código legacy. Se
+muestra sin bloquear; cuando llegue a 0, hay que quitar el `continue-on-error` de los dos CI para que
+empiece a gatear. No lo "arregles" con un `--fix` masivo dentro de un PR de otra cosa.
 
 **La API key viaja al navegador.** `NEXT_PUBLIC_API_KEY` se lee con Ctrl+U. Es un hallazgo abierto de
 la auditoría, no un descuido: `api/apiApplication.ts` corre en el cliente y no tiene alternativa
@@ -221,8 +221,8 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 ---
 
-**Última revisión:** 2026-09-09, contra Next 16.3.2 y React 19.2.8.
+**Última revisión:** 2026-09-10, contra Next 16.3.2 y React 19.2.8.
 
-Los números de este archivo (34 páginas, 23 cliente, 111 `<img>`, 301 errores de lint, 135 pruebas,
+Los números de este archivo (34 páginas, 23 cliente, 111 `<img>`, 236 errores de lint, 135 pruebas,
 39 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
 actualiza.
