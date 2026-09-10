@@ -184,9 +184,11 @@ Google, en blogs o de una IA va a estar desactualizado: el caché de `fetch` aho
 `revalidateTag(tag)` con un solo argumento está deprecado, y el prop `priority` de `next/image`
 también. La fuente buena es `node_modules/next/dist/docs/`, que es la doc de la versión instalada.
 
-**`npm run lint` sale rojo y es esperado.** 236 errores + 157 warnings heredados del código legacy. Se
-muestra sin bloquear; cuando llegue a 0, hay que quitar el `continue-on-error` de los dos CI para que
-empiece a gatear. No lo "arregles" con un `--fix` masivo dentro de un PR de otra cosa.
+**`npm run lint` sale rojo y es esperado.** 217 errores + 156 warnings heredados del código legacy
+(de los errores, 183 son `@typescript-eslint/no-explicit-any`: se van tipando por lotes y por
+carpeta, no de una). Se muestra sin bloquear; cuando llegue a 0, hay que quitar el
+`continue-on-error` de los dos CI para que empiece a gatear. No lo "arregles" con un `--fix` masivo
+dentro de un PR de otra cosa.
 
 **La API key viaja al navegador.** `NEXT_PUBLIC_API_KEY` se lee con Ctrl+U. Es un hallazgo abierto de
 la auditoría, no un descuido: `api/apiApplication.ts` corre en el cliente y no tiene alternativa
@@ -223,6 +225,6 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 **Última revisión:** 2026-09-10, contra Next 16.3.2 y React 19.2.8.
 
-Los números de este archivo (34 páginas, 23 cliente, 111 `<img>`, 236 errores de lint, 135 pruebas,
+Los números de este archivo (34 páginas, 23 cliente, 111 `<img>`, 217 errores de lint, 135 pruebas,
 39 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
 actualiza.

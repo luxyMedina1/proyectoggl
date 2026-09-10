@@ -12,7 +12,7 @@ type SocialLink = {
 
 type Conferencia = {
   redes_sociales?: SocialLink[];
-  id: Number
+  id: number
 };
 
 type Props = {

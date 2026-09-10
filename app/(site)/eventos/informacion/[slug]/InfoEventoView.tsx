@@ -188,7 +188,6 @@ export default function InfoEventoPage() {
       }
     })();
     return () => { activo = false; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [esMultiFecha, evento?.id]);
 
   return (

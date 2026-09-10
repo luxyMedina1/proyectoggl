@@ -577,7 +577,7 @@ export const FormConferenciaPage = () => {
 
     try {
       setCargando(true);
-      let seccion_evento_id = seccion_id;
+      const seccion_evento_id = seccion_id;
 
       if (evento?.id) {
         const response = await reservarGeneral(boletos, evento?.id.toString(), seccion_evento_id);
@@ -1307,7 +1307,7 @@ export const FormConferenciaPage = () => {
   };
 
   const calcularTotal = () => {
-    let totalBase = boletos * precioBoletos - discountAmount;
+    const totalBase = boletos * precioBoletos - discountAmount;
     const totalUdt = totalBase * udt;
     const totalUds = totalBase * uds;
 

@@ -11,7 +11,7 @@ import { HiOutlineCalendarDateRange } from "react-icons/hi2";
 import { formatDate } from '../../../utils/dateHelpers';
 
 interface Conferencia {
-    id: Number;
+    id: number;
     nombre: string;
     fecha: string;
     descripcion: string;

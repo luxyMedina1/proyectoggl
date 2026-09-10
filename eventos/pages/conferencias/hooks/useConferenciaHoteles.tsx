@@ -4,7 +4,7 @@ import Swal from "sweetalert2";
 import apiApplication from "../../../../api/apiApplication";
 
 interface Conferencia {
-  id: Number;
+  id: number;
   nombre: string;
   fecha: string;
   descripcion: string;

@@ -887,7 +887,7 @@ function SeccionAsientoContent() {
           // ___________________________________________________
 
           if (response.esMesa) {
-            let asientos_seleccionados = [];
+            const asientos_seleccionados = [];
             let total = 0;
 
             for (const fila of response.filas) {

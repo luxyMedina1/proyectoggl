@@ -582,7 +582,7 @@ const AbonoSeccionAsientoContent = () => {
           // ___________________________________________________
 
           if (response.esMesa) {
-            let asientos_seleccionados = [];
+            const asientos_seleccionados = [];
             let total = 0;
 
             for (const fila of response.filas) {
@@ -1145,7 +1145,7 @@ const AbonoSeccionAsientoContent = () => {
       confirmButtonText: "Entendido",
     });
 
-    let nuevosAsientosPorFecha: Record<number, number[]> = {};
+    const nuevosAsientosPorFecha: Record<number, number[]> = {};
 
     if (modoSeleccion === "mismo_asiento") {
       funciones.forEach((f) => {
@@ -1286,7 +1286,7 @@ const AbonoSeccionAsientoContent = () => {
 
         // 📌 Sincronizar con el Builder global para obtener todas las fechas
         const builder = getAbonoBuilderState();
-        let seleccionesFormateadas: { funcionId: number; asientoId: number }[] = [];
+        const seleccionesFormateadas: { funcionId: number; asientoId: number }[] = [];
 
         if (modoSeleccion === "por_funcion") {
           // Unir la selección actual con las guardadas en el builder
@@ -2260,7 +2260,7 @@ const AbonoSeccionAsientoContent = () => {
       const partials = saved?.seleccionesParciales || [];
       const currentFId = funciones[currentFuncionIndex]?.id;
 
-      let asientosExtendidos: (Asiento & { badgeTexto?: string })[] = asientosSeleccionados.map(
+      const asientosExtendidos: (Asiento & { badgeTexto?: string })[] = asientosSeleccionados.map(
         (a) => ({
           ...a,
           badgeTexto: "Selección Actual",
