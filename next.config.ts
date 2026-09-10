@@ -80,7 +80,7 @@ const nextConfig: NextConfig = {
   // carga SDKs de terceros y `sweetalert2`/`next/script` requieren nonces, así que
   // aquí solo se fija `frame-ancestors 'self'` (anti-clickjacking del checkout).
   async headers() {
-    return [
+    const headers = [
       {
         source: "/:path*",
         headers: [
@@ -93,18 +93,28 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      {
-        // Assets con hash de contenido en la ruta (`/_next/static/...`): el nombre
-        // cambia si cambia el archivo, así que se pueden cachear para siempre.
-        // Next ya lo hace en su propio server; se declara explícito para que la
-        // regla también aplique detrás de un proxy/CDN que no herede ese default
-        // (oportunidad "tiempos de vida de caché eficientes" del doc 05).
+    ];
+
+    // Assets con hash de contenido en la ruta (`/_next/static/...`): el nombre
+    // cambia si cambia el archivo, así que se pueden cachear para siempre. Next
+    // ya lo hace en su propio server; se declara explícito para que la regla
+    // también aplique detrás de un proxy/CDN que no herede ese default
+    // (oportunidad "tiempos de vida de caché eficientes" del doc 05).
+    //
+    // SOLO en producción: en dev, Turbopack sirve los chunks por esta misma ruta
+    // con nombres que NO cambian aunque cambie el contenido, así que `immutable`
+    // deja al navegador con JS viejo → HMR roto y errores de hidratación. Next lo
+    // avisa: "Custom Cache-Control headers ... can break Next.js development".
+    if (process.env.NODE_ENV === "production") {
+      headers.push({
         source: "/_next/static/:path*",
         headers: [
           { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
         ],
-      },
-    ];
+      });
+    }
+
+    return headers;
   },
 };
 
