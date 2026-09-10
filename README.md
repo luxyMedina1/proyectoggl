@@ -148,8 +148,10 @@ bailan). Cifras de abajo son de PSI móvil salvo donde diga.
 - **Meta Pixel diferido.** `fbevents.js` (~139 KB, ~1 s de bloqueo de hilo — el mayor coste de
   rendimiento en PSI) se inyectaba en el `useEffect` de montaje de `ColorContext`. Ahora se difiere a
   `requestIdleCallback` (fallback `setTimeout` 2 s para Safari/iOS, que no lo soporta).
-- **SDK de login diferidos** a `lazyOnload` (Google `gsi/client` + Apple), ~0.5 s de hilo menos por
-  ruta. Hoy no los consume nada en v3.
+- **SDK de login Google/Apple quitados del layout raíz** (`3e12dee`): eran código muerto de V2
+  (~230 KB de JS de terceros, ~0.5 s de hilo) — nada en v3 consume `window.google` / `AppleID`, el
+  login es sólo OTP. Pendiente aparte: borrar el hook `useGoogleAuth` y los métodos oauth muertos de
+  `useAuthStore`.
 - **`/eventos` — CLS.** PSI señaló el `<footer>` como el 100 % del CLS (0.83 móvil / 0.34 escritorio):
   la página `"use client"` mide ~media pantalla hasta que llega el fetch de cliente y luego el grid la
   empuja. Mitigación interim: `EventosView` reserva `min-h-[200vh] lg:min-h-[130vh]` mientras
