@@ -1,4 +1,5 @@
 import { useEffect, useState, useRef } from "react";
+import type { MouseEvent as ReactMouseEvent, ChangeEvent as ReactChangeEvent } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 
@@ -22,6 +23,7 @@ import { toast } from "react-toastify";
 import { LuBadgeCheck } from "react-icons/lu";
 import { formatDate } from "../../utils/dateHelpers";
 import { validarNumeroTarjeta, validarCVC } from "../../utils/cardHelpers";
+import { cuerpoDeErrorApi, mensajeDeErrorApi } from "../../utils/apiError";
 import { formatearDinero } from "../helpers/formatearDinero";
 import {
   filtrarPromocionesAplicablesPorCategoria,
@@ -108,6 +110,9 @@ interface Secciones {
   nombreEspecial: string;
   uds: string;
   colorGeneral: string;
+  // Marca de "sección adicional" (0/null = no lo es). El detalle la trae aunque no
+  // esté en el resto de flujos.
+  seccionAdicional?: number | null;
 }
 interface Categorias {
   precios: [];
@@ -208,8 +213,8 @@ export const FormConferenciaPage = () => {
   const [promocion_id, setPromocionID] = useState(0);
   const [isCheckingCode, setIsCheckingCode] = useState(false);
   const [habilitaPromocion, setHabilitaPromocion] = useState(false);
-  const [promocionesAplicanDirecto, setPromocionesAplicanDirecto] = useState<any[]>([]);
-  const [promosAplicables, setPromosAplicables] = useState<any[]>([]);
+  const [promocionesAplicanDirecto, setPromocionesAplicanDirecto] = useState<Promocion[]>([]);
+  const [promosAplicables, setPromosAplicables] = useState<Promocion[]>([]);
   const [promocion, setPromocion] = useState<Promocion>({
     id: 0,
     nombre: "",
@@ -265,12 +270,13 @@ export const FormConferenciaPage = () => {
           setClaveAccesoEvento(response.clave_acceso);
 
           console.log(seccionId);
-        } catch (error: any) {
+        } catch (error) {
           console.error("Error al obtener el evento:", error);
           let mensajeError = "Error al obtener el evento.";
-          if (error.response && error.response.data && error.response.data.message) {
-            mensajeError = error.response.data.message;
-          } else if (error.message) {
+          const cuerpo = cuerpoDeErrorApi(error);
+          if (cuerpo?.message) {
+            mensajeError = cuerpo.message;
+          } else if (error instanceof Error) {
             mensajeError = error.message;
           }
           Swal.fire({ title: "Error", text: mensajeError, icon: "error", confirmButtonText: "OK" });
@@ -294,7 +300,7 @@ export const FormConferenciaPage = () => {
 
           // Filtrar solo las secciones que tienen un nombreEspecial válido
           const adicionalesConNombreEspecial = response.secciones.filter(
-            (seccion: any) => seccion.seccionAdicional != null && seccion.seccionAdicional !== 0,
+            (seccion: Secciones) => seccion.seccionAdicional != null && seccion.seccionAdicional !== 0,
           );
 
           setSeccionesAdicionales(adicionalesConNombreEspecial);
@@ -327,12 +333,13 @@ export const FormConferenciaPage = () => {
           //   });
 
           // setPreciosCategorias(categoriasOrdenadas);
-        } catch (error: any) {
+        } catch (error) {
           console.error("Error al obtener las secciones:", error);
           let mensajeError = "Error al obtener las secciones.";
-          if (error.response && error.response.data && error.response.data.message) {
-            mensajeError = error.response.data.message;
-          } else if (error.message) {
+          const cuerpo = cuerpoDeErrorApi(error);
+          if (cuerpo?.message) {
+            mensajeError = cuerpo.message;
+          } else if (error instanceof Error) {
             mensajeError = error.message;
           }
           const result = await Swal.fire({
@@ -401,7 +408,7 @@ export const FormConferenciaPage = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
-  const handleModalClose = (e: any) => {
+  const handleModalClose = (e: ReactMouseEvent) => {
     setIsModalOpen(false); // Cerrar el modal
     setBoletos(1);
     // Cancelar también
@@ -410,7 +417,7 @@ export const FormConferenciaPage = () => {
     setDiscountAmount(0);
   };
 
-  const handleBoletosChange = (e: any) => {
+  const handleBoletosChange = (e: ReactChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
     if (!isNaN(value) && value >= 1 && value <= limite) {
       setBoletos(value);
@@ -681,7 +688,7 @@ export const FormConferenciaPage = () => {
     }
   };
 
-  const handleClickSeccionAdicional = async (seccion: any) => {
+  const handleClickSeccionAdicional = async (seccion: Secciones) => {
     setPrecioBoletos(+seccion.precioSeccion);
     setIsModalOpen(true);
     setModalProps(seccion);
@@ -754,7 +761,7 @@ export const FormConferenciaPage = () => {
     }
   };
 
-  const handleCancelarCompra = async (e: any) => {
+  const handleCancelarCompra = async (e: ReactMouseEvent) => {
     e.preventDefault();
     try {
       if (evento?.id && reservaId) {
@@ -1115,17 +1122,17 @@ export const FormConferenciaPage = () => {
           `/terminar_compra_conferencia_gratis/${reservaId}/${true}/${data.invitadoId}/${promocion_id}`,
         );
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error procesando pago", error);
       setCargando(false);
       Swal.fire({
         title: "Error",
-        text: error?.response?.data?.message || "Ocurrió un error al procesar el pago.",
+        text: mensajeDeErrorApi(error, "Ocurrió un error al procesar el pago."),
         icon: "error",
         confirmButtonText: "OK",
       });
 
-      if (error?.response?.data?.isPromoError) {
+      if (cuerpoDeErrorApi(error)?.isPromoError) {
         setDiscountAmount(0);
         setPromocionID(0);
       }
@@ -1232,10 +1239,10 @@ export const FormConferenciaPage = () => {
 
     try {
       await procesarPago();
-    } catch (error: any) {
+    } catch (error) {
       Swal.fire({
         title: "Error",
-        text: error.message || "Ocurrió un error al comprar.",
+        text: error instanceof Error ? error.message : "Ocurrió un error al comprar.",
         icon: "error",
         confirmButtonText: "OK",
       });
