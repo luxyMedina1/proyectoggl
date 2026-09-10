@@ -340,8 +340,11 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             />
             <p className="text-sm font-light text-center">Descarga nuestras aplicaciones</p>
             <div className="flex items-center gap-x-2 mt-3 justify-center">
-              <img width={100} height={90} src="/app_store.png" alt="App Store" />
-              <img width={100} height={90} src="/google_play.png" alt="Google Play" />
+              {/* Relación real de los PNG: 192x64 (3.00) y 192x58 (3.31). Antes se
+                  declaraban 100x90 → salían aplastados y Lighthouse marcaba
+                  `image-aspect-ratio`. */}
+              <img width={120} height={40} src="/app_store.png" alt="App Store" />
+              <img width={120} height={36} src="/google_play.png" alt="Google Play" />
             </div>
           </div>
           {(config?.urlTwitter || config?.urlFacebook || config?.urlInstagram) && (
@@ -390,18 +393,18 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <div>
             <p className="text-2xl mb-5 text-center">Legal</p>
             <ul className="grid grid-cols-2 gap-3 text-sm font-light">
-              <Link href="/legales/aviso_de_privacidad" className="text-center">
-                Aviso de privacidad
-              </Link>
-              <Link href="/legales/nuestras_politicas" className="text-center">
-                Nuestras políticas
-              </Link>
-              <Link href="/legales/terminos_y_condiciones" className="col-span-2 text-center">
-                Términos y condiciones
-              </Link>
-              <Link href="/legales/eliminacion_de_cuenta" className="col-span-2 text-center">
-                Eliminar cuenta app
-              </Link>
+              <li className="text-center">
+                <Link href="/legales/aviso_de_privacidad">Aviso de privacidad</Link>
+              </li>
+              <li className="text-center">
+                <Link href="/legales/nuestras_politicas">Nuestras políticas</Link>
+              </li>
+              <li className="col-span-2 text-center">
+                <Link href="/legales/terminos_y_condiciones">Términos y condiciones</Link>
+              </li>
+              <li className="col-span-2 text-center">
+                <Link href="/legales/eliminacion_de_cuenta">Eliminar cuenta app</Link>
+              </li>
             </ul>
           </div>
           {(config?.direccionContacto || config?.emailContacto || config?.telefonoContacto) && (
@@ -453,8 +456,11 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             />
             <p className="text-sm font-light">Descarga nuestras aplicaciones</p>
             <div className="flex items-center gap-x-2 mt-3">
-              <img width={100} height={90} src="/app_store.png" alt="App Store" />
-              <img width={100} height={90} src="/google_play.png" alt="Google Play" />
+              {/* Relación real de los PNG: 192x64 (3.00) y 192x58 (3.31). Antes se
+                  declaraban 100x90 → salían aplastados y Lighthouse marcaba
+                  `image-aspect-ratio`. */}
+              <img width={120} height={40} src="/app_store.png" alt="App Store" />
+              <img width={120} height={36} src="/google_play.png" alt="Google Play" />
             </div>
           </div>
           <div className="col-span-4 md:col-span-1">
@@ -505,10 +511,10 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           <div className="col-span-4 md:col-span-1">
             <p className="text-2xl 2xl:text-3xl mb-5">Legal</p>
             <ul className="text-sm font-light grid gap-y-4">
-              <Link href="/legales/aviso_de_privacidad">Aviso de privacidad</Link>
-              <Link href="/legales/nuestras_politicas">Nuestras políticas</Link>
-              <Link href="/legales/terminos_y_condiciones">Términos y condiciones</Link>
-              <Link href="/legales/eliminacion_de_cuenta">Eliminar cuenta app</Link>
+              <li><Link href="/legales/aviso_de_privacidad">Aviso de privacidad</Link></li>
+              <li><Link href="/legales/nuestras_politicas">Nuestras políticas</Link></li>
+              <li><Link href="/legales/terminos_y_condiciones">Términos y condiciones</Link></li>
+              <li><Link href="/legales/eliminacion_de_cuenta">Eliminar cuenta app</Link></li>
             </ul>
           </div>
           <div className="col-span-4 md:col-span-1">

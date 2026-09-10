@@ -35,8 +35,17 @@ jobs:
           URL_BACKEND: https://example.invalid
           REVALIDATE_SECRET: ci-placeholder
 
-      - name: Lighthouse CI
+      - name: Lighthouse CI (escritorio)
         run: npx --yes @lhci/cli@0.15.x autorun
+        env:
+          NEXT_PUBLIC_SITE_URL: https://taquillavip.com
+          NEXT_PUBLIC_API_KEY: ci-placeholder
+          URL_BACKEND: https://example.invalid
+          REVALIDATE_SECRET: ci-placeholder
+
+      - name: Lighthouse CI (móvil)
+        if: ${{ !cancelled() }}
+        run: npx --yes @lhci/cli@0.15.x autorun --config=lighthouserc.mobile.json
         env:
           NEXT_PUBLIC_SITE_URL: https://taquillavip.com
           NEXT_PUBLIC_API_KEY: ci-placeholder

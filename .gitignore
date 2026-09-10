@@ -13,6 +13,9 @@
 # testing
 /coverage
 
+# lighthouse ci (artefactos de corridas locales)
+/.lighthouseci/
+
 # next.js
 /.next/
 /out/

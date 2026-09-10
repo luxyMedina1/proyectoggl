@@ -82,23 +82,30 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         {/* Abrir pronto la conexión (DNS + TLS) al bucket de S3: es el origen del
             LCP en las rutas de evento (imagen de promoción / portada). Ahorra
-            ~1 RTT antes de la primera descarga de imagen. */}
+            ~1 RTT antes de la primera descarga de imagen. SIN `crossOrigin`: las
+            imágenes de `next/image` se piden sin CORS, así que un preconnect con
+            crossorigin abría una segunda conexión y Lighthouse seguía marcando
+            "preconnect to required origins". */}
         <link
           rel="preconnect"
           href="https://taquilla-v2-files.s3.us-east-1.amazonaws.com"
-          crossOrigin=""
         />
-        {/* Los SDK de login (Google / Apple) cargan `afterInteractive`; resolver
-            su DNS por adelantado evita que el primer clic en "Iniciar sesión"
-            pague la latencia de resolución. */}
+        {/* Los SDK de login (Google / Apple) cargan `lazyOnload` (en idle del
+            navegador): hoy ningún componente montado consume `window.google` /
+            `AppleID` —el login social todavía no está recableado en v3— así que
+            cargarlos `afterInteractive` sólo sumaba ~0.5 s de bloqueo de hilo en
+            móvil en TODAS las rutas para nada. `useGoogleAuth` ya reintenta en
+            bucle hasta que el SDK aparece, así que el idle load no lo rompe.
+            Cuando el login social vuelva, moverlos a la ruta `/auth`.
+            El dns-prefetch se queda: deja la conexión tibia sin coste de hilo. */}
         <link rel="dns-prefetch" href="https://accounts.google.com" />
         <link rel="dns-prefetch" href="https://appleid.cdn-apple.com" />
       </head>
       <body className="min-h-full flex flex-col antialiased font-sans">
-        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
+        <Script src="https://accounts.google.com/gsi/client" strategy="lazyOnload" />
         <Script
           src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"
-          strategy="afterInteractive"
+          strategy="lazyOnload"
         />
         <Providers configInicial={config} coloresIniciales={colors}>
           <AppGate>{children}</AppGate>

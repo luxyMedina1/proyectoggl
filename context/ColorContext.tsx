@@ -52,10 +52,25 @@ export const ColorConfigProvider: React.FC<{
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
 
-    // Los pixels de Meta se activan en el navegador (inyectan el script). Se hace
-    // una vez al montar con la config que ya vino del servidor.
+    // Los pixels de Meta se activan en el navegador (inyectan `fbevents.js`, ~139 KB
+    // y ~1 s de bloqueo de hilo principal — el mayor coste de rendimiento según
+    // PageSpeed). Se difiere a un hueco de idle del navegador para sacarlo de la
+    // ventana crítica de hidratación; un PageView 1-2 s más tarde no afecta la
+    // analítica. `requestIdleCallback` no existe en Safari/iOS, de ahí el fallback
+    // con setTimeout.
     useEffect(() => {
-        activarPixelsGlobales(configInicial?.metaPixels);
+        const activar = () => activarPixelsGlobales(configInicial?.metaPixels);
+        const w = window as Window &
+            typeof globalThis & {
+                requestIdleCallback?: (cb: () => void, opts?: { timeout: number }) => number;
+                cancelIdleCallback?: (id: number) => void;
+            };
+        if (typeof w.requestIdleCallback === "function") {
+            const id = w.requestIdleCallback(activar, { timeout: 3000 });
+            return () => w.cancelIdleCallback?.(id);
+        }
+        const t = setTimeout(activar, 2000);
+        return () => clearTimeout(t);
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

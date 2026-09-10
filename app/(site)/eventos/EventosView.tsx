@@ -401,7 +401,18 @@ function EventosContent() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    // Mitigación de CLS (interim, hasta el SSR de la lista del doc 05): mientras la
+    // lista no llega del fetch de cliente, la página mide ~media pantalla y el
+    // footer arranca ahí arriba; al poblarse el grid el footer se va empujado
+    // ~2 pantallas → era el 100% del CLS (0.83 móvil / 0.34 escritorio en PSI).
+    // Reservar alto aproximado a lo que ocupa una home poblada acerca el footer a
+    // su posición final. No es exacto (depende de cuántos eventos), pero baja el
+    // salto de golpe. Se quita solo cuando `eventos` ya tiene datos.
+    <div
+      className={`bg-gray-50 ${
+        eventos.length === 0 ? "min-h-[200vh] lg:min-h-[130vh]" : "min-h-screen"
+      }`}
+    >
       {cargando && <LocalLoader />}
 
       {/* Slider principal */}
@@ -505,6 +516,7 @@ function EventosContent() {
             <select
               value={filtroFecha}
               onChange={(e) => setFiltroFecha(e.target.value)}
+              aria-label="Filtrar eventos por fecha"
               className="bg-neutral text-gray-600 w-full"
             >
               <option className="bg-neutral" value="">
@@ -598,8 +610,9 @@ function EventosContent() {
                           <Link
                             href={rutaEventoInformacion(evento)}
                             className="btn-hidden"
+                            aria-label={`Más información de ${evento.nombre}`}
                           >
-                            <FaRegEye className="text-neutral" />
+                            <FaRegEye className="text-neutral" aria-hidden />
                           </Link>
                         )}
                       </figure>

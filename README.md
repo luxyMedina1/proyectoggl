@@ -10,7 +10,7 @@ que sigue (ver [Estado de la migración](#estado-de-la-migración)).
 | | |
 |---|---|
 | **Repo** | `git.redgl.com/desarrollo/taquillavipfrontend-v3` (origin, GitLab) |
-| **Stack** | Next 16.3.2 · React 19.2.8 · TypeScript strict · Redux Toolkit · Tailwind 4 + Sass legacy |
+| **Stack** | Next 16.3.4 · React 19.2.7 · TypeScript strict · Redux Toolkit · Tailwind 4 + Sass legacy |
 | **Backend** | REST externo en `$NEXT_PUBLIC_URL_BACKEND/api/v1`, se autentica con `x-api-key` |
 | **Node** | 20 en CI (funciona en 22 local) |
 
@@ -137,8 +137,34 @@ GitLab; la de GitHub existe por el espejo del repo. **Si cambias una, cambia la 
 | `audit:images` | No |
 
 Además, `lighthouse.yml` corre los lunes 06:00 UTC —y a mano desde Actions— sobre un build real de
-`/eventos`, `/eventos/general` y `/explorar`. Los presupuestos de `lighthouserc.json` están todos en
-modo `warn`: registran el número, nunca rompen CI.
+`/eventos`, `/eventos/general` y `/explorar`, en **dos pasadas**: escritorio (`lighthouserc.json`) y
+móvil (`lighthouserc.mobile.json`). Los presupuestos son idénticos y todos en modo `warn`: registran
+el número, nunca rompen CI. La pasada móvil se añadió porque el performance en móvil iba bastante por
+debajo del de escritorio y el pipeline sólo medía escritorio.
+
+Medir en **PageSpeed Insights** contra un deploy/túnel (equipo local con poca RAM da números que
+bailan). Cifras de abajo son de PSI móvil salvo donde diga.
+
+- **Meta Pixel diferido.** `fbevents.js` (~139 KB, ~1 s de bloqueo de hilo — el mayor coste de
+  rendimiento en PSI) se inyectaba en el `useEffect` de montaje de `ColorContext`. Ahora se difiere a
+  `requestIdleCallback` (fallback `setTimeout` 2 s para Safari/iOS, que no lo soporta).
+- **SDK de login diferidos** a `lazyOnload` (Google `gsi/client` + Apple), ~0.5 s de hilo menos por
+  ruta. Hoy no los consume nada en v3.
+- **`/eventos` — CLS.** PSI señaló el `<footer>` como el 100 % del CLS (0.83 móvil / 0.34 escritorio):
+  la página `"use client"` mide ~media pantalla hasta que llega el fetch de cliente y luego el grid la
+  empuja. Mitigación interim: `EventosView` reserva `min-h-[200vh] lg:min-h-[130vh]` mientras
+  `eventos` está vacío, para que el footer arranque cerca de su sitio. El fix de raíz es el SSR de la
+  lista (doc 05). Lo que queda ahí: el `<img>` del carrusel es el LCP y no pinta hasta hidratar; el
+  bundle de `EventosView` (redux + `swiper` + `sweetalert2` en 33 archivos) mantiene el TBT alto.
+- **`/eventos/[slug]` (detalle)**: la imagen sembrada era un `<img>` crudo a 1920×1080 (~1.8 MB JPEG).
+  Pasada a `next/image` con caja `aspect-video` → AVIF al ancho real, **CLS ~0.63 → ~0.00**, las
+  oportunidades "next-gen formats" / "encode images" desaparecen. **Ojo:** ese bloque hoy sólo
+  renderiza en cliente (`useSearchParams()` dentro del `<Suspense>` desactiva el SSR del subárbol).
+- **`/explorar` móvil**: mismo patrón que `/eventos` (footer empujado por data tardía); pendiente.
+- **Accesibilidad** (`/eventos`, PSI 84): `<select>` de filtro sin nombre → `aria-label`; enlace de
+  ícono (ojo) sin texto → `aria-label` + `aria-hidden`; dos `<ul>` de "Legal" en el footer tenían
+  `<a>` como hijos directos → envueltos en `<li>`. Pendiente: contraste de los botones de categoría
+  (`text-neutral` sobre `bg-gray-400`) — es decisión de paleta.
 
 Pruebas: Vitest + jsdom + Testing Library. Hoy son **135 pruebas en 18 archivos**, la mayoría de
 propiedad (`fast-check`) sobre los helpers puros de `utils/` (promociones, slugs, JSON-LD, fechas).
@@ -155,7 +181,7 @@ Sharing Debugger de Facebook. Lo que falta es dejar de renderizar todo en el nav
 |---|---|
 | Páginas que abren con `'use client'` | 23 de 34 (2 de las otras son `redirect()` de una línea) |
 | Rutas con `generateMetadata` | 4 de contenido, más el layout raíz |
-| `<img>` nativos vs. `next/image` | 111 contra 2 archivos migrados (`/eventos` y el detalle de evento) |
+| `<img>` nativos vs. `next/image` | 109 contra 2 archivos migrados (`/eventos` y el detalle de evento) |
 | Perfil y "mis compras" en el servidor | Bloqueado por la sesión en `localStorage` |
 
 De las 23 páginas cliente, **20 lo son con razón**: perfil, auth y checkout son privadas y están
@@ -179,10 +205,17 @@ una cosa, que sea el doc 01, y dentro de él esta idea:
 
 ## Gotchas
 
-**Este Next no es el que conoces.** Es la 16.3.2 y trae cambios de ruptura. Mucho de lo que salga en
+**Este Next no es el que conoces.** Es la 16.3.4 y trae cambios de ruptura. Mucho de lo que salga en
 Google, en blogs o de una IA va a estar desactualizado: el caché de `fetch` ahora es *opt-in*,
 `revalidateTag(tag)` con un solo argumento está deprecado, y el prop `priority` de `next/image`
 también. La fuente buena es `node_modules/next/dist/docs/`, que es la doc de la versión instalada.
+
+**`next` y `react` están pineados exactos, por seguridad.** `16.3.2` tenía una vulnerabilidad
+CRÍTICA de RCE (GHSA-p293-qw3h-jr36 en servidores Windows y GHSA-2xp9-vwfh-vxw4 en la Image
+Optimization API con AVIF); el fix es `16.3.4`. `react`/`react-dom` van en `19.2.7` porque el
+`19.2.8` que pedía el repo no existe en npm y rompía `npm install`. `npm audit` sale limpio (0
+vulnerabilidades); si vuelve a marcar algo, no subas el pin a ciegas: corre `npm run verify` y
+prueba el pipeline de imágenes (`opengraph-image`, `next/image`) antes.
 
 **`npm run lint` sale rojo y es esperado.** 236 errores + 157 warnings heredados del código legacy. Se
 muestra sin bloquear; cuando llegue a 0, hay que quitar el `continue-on-error` de los dos CI para que
@@ -221,8 +254,8 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 ---
 
-**Última revisión:** 2026-09-10, contra Next 16.3.2 y React 19.2.8.
+**Última revisión:** 2026-09-10, contra Next 16.3.4 y React 19.2.7.
 
-Los números de este archivo (34 páginas, 23 cliente, 111 `<img>`, 236 errores de lint, 135 pruebas,
+Los números de este archivo (34 páginas, 23 cliente, 109 `<img>`, 236 errores de lint, 135 pruebas,
 39 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
 actualiza.

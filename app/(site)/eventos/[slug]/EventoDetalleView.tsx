@@ -1564,11 +1564,20 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
             </p>
           </div>
           <div className="mb-3">
-            <img
-              className="rounded-md w-full object-cover"
-              src={cabecera.imagenPromocion}
-              alt={cabecera.nombre}
-            />
+            {/* Imagen sembrada por el servidor: es el LCP de esta ruta. `next/image`
+                dentro de una caja 16/9 reservada (`aspect-video`) sirve AVIF/WebP al
+                ancho real —el promo original es 1920x1080 y ~1.8 MB en JPEG— y quita
+                el salto de layout que empujaba el footer (era el CLS de la página). */}
+            <div className="relative w-full aspect-video overflow-hidden rounded-md">
+              <Image
+                className="object-cover"
+                src={cabecera.imagenPromocion || "/event_default.webp"}
+                alt={cabecera.nombre}
+                fill
+                priority
+                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 66vw, 900px"
+              />
+            </div>
             <p className="font-semibold text-gray-700 mt-3">
               Recinto:{" "}
               <span className="font-normal text-gray-500">
@@ -1982,11 +1991,11 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
                         </p>
                       </div>
                       <div className="flex flex-col gap-y-2 col-span-3 lg:col-span-1">
-                        <img
+                        <Image
                           className="rounded-md ml-auto aspect-square object-cover"
                           width={75}
                           height={75}
-                          src={evento?.imagenPromocion}
+                          src={evento?.imagenPromocion || "/event_default.webp"}
                           alt=""
                         />
                         <p className="text-right text-sm">
