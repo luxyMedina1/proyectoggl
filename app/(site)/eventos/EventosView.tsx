@@ -133,6 +133,10 @@ function EventosContent() {
   >(null);
   const [filtroFecha, setFiltroFecha] = useState("");
   const [cargando, setCargando] = useState(false);
+  // Para la reserva de alto anti-CLS: sólo mientras esperamos la primera carga.
+  // Si termina sin eventos (catálogo vacío o back caído) NO se reserva, para no
+  // dejar dos pantallas en blanco sobre el mensaje de "sin eventos".
+  const [cargaFinalizada, setCargaFinalizada] = useState(false);
 
   const { status, isVerified } = useAuthStore();
   const searchParams = useSearchParams();
@@ -215,6 +219,7 @@ function EventosContent() {
         });
       } finally {
         setCargando(false);
+        setCargaFinalizada(true);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -406,11 +411,13 @@ function EventosContent() {
     // footer arranca ahí arriba; al poblarse el grid el footer se va empujado
     // ~2 pantallas → era el 100% del CLS (0.83 móvil / 0.34 escritorio en PSI).
     // Reservar alto aproximado a lo que ocupa una home poblada acerca el footer a
-    // su posición final. No es exacto (depende de cuántos eventos), pero baja el
-    // salto de golpe. Se quita solo cuando `eventos` ya tiene datos.
+    // su posición final. Sólo mientras se espera la primera carga: si termina sin
+    // eventos, se libera (no dejar 2 pantallas en blanco sobre "sin eventos").
     <div
       className={`bg-gray-50 ${
-        eventos.length === 0 ? "min-h-[200vh] lg:min-h-[130vh]" : "min-h-screen"
+        !cargaFinalizada && eventos.length === 0
+          ? "min-h-[200vh] lg:min-h-[130vh]"
+          : "min-h-screen"
       }`}
     >
       {cargando && <LocalLoader />}
