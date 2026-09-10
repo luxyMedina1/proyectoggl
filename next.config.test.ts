@@ -27,6 +27,21 @@ describe("next.config — cabeceras de seguridad (Req 7)", () => {
     expect(porClave["Cache-Control"]).toBe("public, max-age=31536000, immutable");
   });
 
+  it("NO declara la regla de /_next/static en `next dev` (rompe HMR / hidratación)", async () => {
+    const previo = process.env.NODE_ENV;
+    try {
+      // @ts-expect-error NODE_ENV es readonly en los tipos pero asignable en runtime
+      process.env.NODE_ENV = "development";
+      const reglas = await nextConfig.headers!();
+      expect(reglas.find((r) => r.source === "/_next/static/:path*")).toBeUndefined();
+      // Las cabeceras de seguridad siguen aplicándose en dev.
+      expect(reglas.find((r) => r.source === "/:path*")).toBeDefined();
+    } finally {
+      // @ts-expect-error idem
+      process.env.NODE_ENV = previo;
+    }
+  });
+
   it("declara los cuatro pares clave/valor de seguridad (Req 7.2–7.5)", async () => {
     const reglas = await nextConfig.headers!();
     const cabeceras = reglas.find((r) => r.source === "/:path*")!.headers;
