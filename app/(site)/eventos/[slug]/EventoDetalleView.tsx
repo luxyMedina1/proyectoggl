@@ -37,12 +37,6 @@ import "swiper/css/navigation";
 import { Autoplay, Navigation } from "swiper/modules";
 import { toast } from "react-toastify";
 
-declare global {
-  interface Window {
-    OpenPay: any;
-  }
-}
-
 interface Asiento {
   id: number;
   numero: string;

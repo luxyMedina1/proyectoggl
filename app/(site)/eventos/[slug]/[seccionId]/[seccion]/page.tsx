@@ -12,12 +12,6 @@ import { validarNumeroTarjeta, validarCVC } from "../../../../../../utils/cardHe
 import type { EventoResuelto } from "../../../../../../utils/eventoSlug";
 import LocalLoader from "../../../../../../components/LocalLoader";
 
-declare global {
-  interface Window {
-    OpenPay: any;
-  }
-}
-
 import { useMetaPixel, usePixelsDeEvento } from "../../../../../../hooks/useMetaPixel";
 import { useEventosStore } from "../../../../../../hooks/useEventosStore";
 import { useAuthStore } from "../../../../../../hooks/useAuthStore";

@@ -39,12 +39,6 @@ import ConferenciaFooter from "./conferencias/components/ConferenciaFooter";
 import "swiper/css";
 import "swiper/css/navigation";
 
-declare global {
-  interface Window {
-    OpenPay: any;
-  }
-}
-
 interface Asiento {
   id: number;
   numero: string;

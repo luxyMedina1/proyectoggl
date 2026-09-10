@@ -8,12 +8,6 @@ import Loader from "../../../../../../publicUi/components/Loader";
 import { toast } from "react-toastify";
 import { HiOutlineCalendarDateRange } from "react-icons/hi2";
 import { validarNumeroTarjeta, validarCVC } from "../../../../../../utils/cardHelpers";
-
-declare global {
-  interface Window {
-    OpenPay: any;
-  }
-}
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { EventoResuelto } from "../../../../../../utils/eventoSlug";
