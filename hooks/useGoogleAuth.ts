@@ -1,19 +1,47 @@
 import { useCallback, useEffect, useState } from 'react';
 import Swal from 'sweetalert2';
 
+// Tipos mínimos de Google Identity Services (el `<script>` de accounts.google.com).
+// GIS no publica tipos y su superficie es enorme: aquí solo lo que este hook toca.
+interface GisCredentialResponse {
+  credential?: string;
+  select_by?: string;
+}
+
+interface GisIdConfig {
+  client_id: string;
+  callback: (response: GisCredentialResponse) => void;
+  auto_select?: boolean;
+  use_fedcm_for_prompt?: boolean;
+  ux_mode?: "popup" | "redirect";
+  prompt_parent_id?: string;
+}
+
+interface GisPromptNotification {
+  isNotDisplayed: () => boolean;
+  isSkippedMoment: () => boolean;
+  isDismissedMoment: () => boolean;
+  // Campo interno no documentado de GIS que el flujo actual consulta
+  // (`=== "suppressed_by_user"`).
+  j?: string;
+}
+
 declare global {
   interface Window {
     google?: {
       accounts: {
         id: {
-          initialize: (config: any) => void;
-          prompt: (callback?: (notification: any) => void) => void;
-          renderButton: (element: HTMLElement, config: any) => void;
+          initialize: (config: GisIdConfig) => void;
+          prompt: (callback?: (notification: GisPromptNotification) => void) => void;
+          renderButton: (element: HTMLElement, config: Record<string, unknown>) => void;
           disableAutoSelect: () => void;
         };
         oauth2: {
-          initCodeClient: (config: any) => any;
-          hasGrantedAllScopes: (tokenResponse: any, ...scopes: string[]) => boolean;
+          initCodeClient: (config: Record<string, unknown>) => { requestCode: () => void };
+          hasGrantedAllScopes: (
+            tokenResponse: Record<string, unknown>,
+            ...scopes: string[]
+          ) => boolean;
         };
       };
     };
@@ -29,15 +57,15 @@ interface GoogleUser {
 
 interface UseGoogleAuthProps {
   clientId: string;
-  onSuccess: (tokenResponse: any, userInfo: GoogleUser) => void;
-  onError: (error: any) => void;
+  onSuccess: (tokenResponse: GisCredentialResponse, userInfo: GoogleUser) => void;
+  onError: (error: unknown) => void;
 }
 
 export const useGoogleAuth = ({ clientId, onSuccess, onError }: UseGoogleAuthProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialized, setIsInitialized] = useState(false);
 
-  const handleCredentialResponse = useCallback(async (response: any) => {
+  const handleCredentialResponse = useCallback(async (response: GisCredentialResponse) => {
     console.log('🔑 Respuesta de credencial de Google:', response);
 
     if (response.credential) {
@@ -162,7 +190,7 @@ export const useGoogleAuth = ({ clientId, onSuccess, onError }: UseGoogleAuthPro
 
 
       window.google!.accounts.id.disableAutoSelect();
-      window.google!.accounts.id.prompt((notification: any) => {
+      window.google!.accounts.id.prompt((notification: GisPromptNotification) => {
         clearTimeout(timeoutId);
         console.log('📢 Notificación de Google:', notification);
 

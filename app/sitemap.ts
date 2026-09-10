@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { buildEventoSlug } from "@/utils/eventoSlug";
+import { buildEventoSlug, type EventoListaSlug, type FuncionSlugInput } from "@/utils/eventoSlug";
 import { slugify } from "@/utils/slugify";
 import { apiBase } from "@/lib/config/apiBase";
 
@@ -26,10 +26,13 @@ const apiGet = async <T>(path: string, tags: string[]): Promise<T | null> => {
   }
 };
 
+// Evento del listado público, más el timestamp que el sitemap usa para `lastModified`.
+type EventoSitemap = EventoListaSlug & { actualizadoEn?: string | null };
+
 // Listado público de eventos. Si el backend no responde, el sitemap sale sólo
 // con las rutas estáticas en vez de romper el build.
-const getEventos = async (): Promise<any[]> => {
-  const data = await apiGet<{ eventosFiltrados?: any[] }>(
+const getEventos = async (): Promise<EventoSitemap[]> => {
+  const data = await apiGet<{ eventosFiltrados?: EventoSitemap[] }>(
     "/eventos/get_all_select?tipoDispositivo=web",
     ["eventos:lista"],
   );
@@ -120,13 +123,15 @@ const rutasCityPass = async (): Promise<MetadataRoute.Sitemap> => {
 };
 
 // Construye las rutas de evento (cascarón + informacion) a partir del listado.
-const construirRutasEventos = (eventos: any[]): MetadataRoute.Sitemap =>
+const construirRutasEventos = (eventos: EventoSitemap[]): MetadataRoute.Sitemap =>
   eventos.flatMap((evento) => {
     const lastModified = evento?.actualizadoEn ? new Date(evento.actualizadoEn) : undefined;
-    const funciones = evento?.funciones?.length ? evento.funciones : [null];
+    const funciones: (FuncionSlugInput | null)[] = evento?.funciones?.length
+      ? evento.funciones
+      : [null];
 
     return [
-      ...funciones.map((funcion: any) => ({
+      ...funciones.map((funcion) => ({
         url: `${SITE_URL}/eventos/${buildEventoSlug(evento, funcion)}`,
         lastModified,
         changeFrequency: "daily" as const,

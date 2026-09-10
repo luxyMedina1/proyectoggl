@@ -3,6 +3,7 @@ import Link from "next/link";
 import { useParams, useSearchParams } from "next/navigation";
 import Swal from "sweetalert2";
 import apiApplication from "../../../api/apiApplication"
+import { mensajeDeErrorApi } from "../../../utils/apiError";
 import Loader from '@/publicUi/components/Loader';
 import { LuBadgeCheck } from "react-icons/lu";
 import ConfettiCanvas from "./ConfettiCanvas";
@@ -66,11 +67,11 @@ const TerminarCompraConferencia = () => {
         } else {
           throw new Error(res_cargo.data?.message || "No se pudo confirmar el pago.");
         }
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error confirmando el pago", error);
         Swal.fire({
           title: "Error",
-          text: error?.response?.data?.message || "Hubo un problema al confirmar el pago.",
+          text: mensajeDeErrorApi(error, "Hubo un problema al confirmar el pago."),
           icon: "error",
           confirmButtonText: "OK",
         })
