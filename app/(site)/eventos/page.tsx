@@ -1,5 +1,5 @@
 import { cache } from "react";
-import type { Metadata } from "next";
+import type { Metadata, ResolvingMetadata } from "next";
 import EventosView from "./EventosView";
 import { getListaEventos } from "@/utils/ogEvento";
 import { construirItemListEventosJsonLd } from "@/utils/jsonLdEvento";
@@ -26,35 +26,35 @@ const getEventosHome = cache(async (): Promise<any[]> => {
   }
 });
 
-// Primera imagen utilizable del listado para la tarjeta al compartir `…/eventos`.
-// Devuelve una URL absoluta (las imágenes de evento ya lo son) o null → se hereda
-// la imagen OG de respaldo de `app/opengraph-image.tsx` (que dibuja el logo).
-const imagenOgDestacada = (eventos: any[]): string | null => {
-  for (const e of eventos) {
-    const img: unknown = e?.imagenBanner || e?.imagenPromocion;
-    if (typeof img === "string" && /^https?:\/\//.test(img)) return img;
-  }
-  return null;
-};
-
 // Cascarón de servidor de la home. La UI la sigue renderizando EventosView
 // ("use client") con su propio fetch; aquí SOLO se añaden las <meta> propias de
 // /eventos (antes heredaba las globales del layout) y el ItemList JSON-LD para
 // crawlers. No se pasa data al cliente: el render y el flujo de datos no cambian
 // (el SSR de la lista para el LCP sigue pendiente, ver doc 05).
-export async function generateMetadata(): Promise<Metadata> {
+export async function generateMetadata(
+  _props: unknown,
+  parent: ResolvingMetadata,
+): Promise<Metadata> {
   const { config } = await getSiteConfig();
   const siteName = config?.nombreMarca?.trim() || TITLE_APP;
-  const title = "Eventos";
   const url = `${SITE_URL}/eventos`;
 
-  const imagen = imagenOgDestacada(await getEventosHome());
-  // Sin `images` la ruta hereda `app/opengraph-image.tsx`; con imagen destacada
-  // se declara explícita (más `twitter.images` para la tarjeta grande).
-  const imagenes = imagen ? [{ url: imagen, alt: `Eventos en ${siteName}` }] : undefined;
+  // El <title> del documento sigue siendo "Eventos" (+ plantilla "%s | Marca" del
+  // layout): describe la página y aporta la keyword para buscadores y pestaña.
+  // Pero la tarjeta al compartir (og:/twitter:) muestra la MARCA, no "Eventos":
+  // es el índice del sitio, y un título de sección suelto se lee peor que el
+  // nombre de marca en un chat.
+  //
+  // La imagen es la OG de respaldo de marca (`app/opengraph-image.tsx`: logo sobre
+  // el degradado). Antes se usaba el banner del primer evento del listado, pero
+  // eso ataba la portada compartida a un evento cualquiera y, si la lista venía
+  // vacía, salía sin imagen. Hay que heredarla explícitamente de `parent`: al
+  // declarar un bloque `openGraph`/`twitter` propio sin `images`, Next NO reinyecta
+  // la imagen de archivo del segmento raíz (se probó: quedaba sin `og:image`).
+  const heredadas = (await parent).openGraph?.images ?? [];
 
   return {
-    title,
+    title: "Eventos",
     description: DESCRIPCION_HOME,
     alternates: { canonical: url },
     openGraph: {
@@ -62,15 +62,15 @@ export async function generateMetadata(): Promise<Metadata> {
       url,
       siteName,
       locale: "es_MX",
-      title,
+      title: siteName,
       description: DESCRIPCION_HOME,
-      images: imagenes,
+      images: heredadas,
     },
     twitter: {
       card: "summary_large_image",
-      title,
+      title: siteName,
       description: DESCRIPCION_HOME,
-      images: imagen ? [imagen] : undefined,
+      images: heredadas,
     },
   };
 }
