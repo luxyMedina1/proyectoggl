@@ -2,37 +2,11 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Swal from "sweetalert2";
 import apiApplication from "../../../../api/apiApplication";
-
-interface Conferencia {
-  id: number;
-  nombre: string;
-  fecha: string;
-  descripcion: string;
-  ubicacion: string;
-  patrocinadores: any[];
-  contactos: any[];
-  redes_sociales: any[];
-  imagenBanner: string;
-  imagenLogo: string;
-  programa: Programa[];
-  imagenMapa: string;
-  beneficios: any[];
-}
-interface Programa {
-  fecha: string;
-  sesiones: Sesion[];
-}
-interface Sesion {
-  id: number;
-  hora: string;
-  titulo: string;
-  descripcion: string;
-  expositores: any[];
-}
+import type { ConferenciaDetalle } from "../../../../types/Conferencia";
 
 export const useConferencia = () => {
   const { eventoId } = useParams<{ eventoId: string }>();
-  const [conferencia, setConferencia] = useState<Conferencia | null>(null);
+  const [conferencia, setConferencia] = useState<ConferenciaDetalle | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
