@@ -8,12 +8,7 @@ import Loader from "../../../../../../publicUi/components/Loader";
 import { toast } from "react-toastify";
 import { HiOutlineCalendarDateRange } from "react-icons/hi2";
 import { validarNumeroTarjeta, validarCVC } from "../../../../../../utils/cardHelpers";
-
-declare global {
-  interface Window {
-    OpenPay: any;
-  }
-}
+import { cuerpoDeErrorApi, mensajeDeErrorApi } from "../../../../../../utils/apiError";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { EventoResuelto } from "../../../../../../utils/eventoSlug";
@@ -35,6 +30,8 @@ import {
   calcularDescuentoPorCategoriaDeAsientos,
   normalizarPromocionesAplicaDirecto,
   type Asiento as AsientoPromo,
+  type Promocion,
+  type PromoCategoria,
 } from "../../../../../../utils/promociones";
 import { useAuthStore } from "../../../../../../hooks/useAuthStore";
 import { useAuthModal } from "../../../../../../context/AuthModalContext";
@@ -51,6 +48,56 @@ interface Asiento {
   fila: string;
   categoria: string;
   color: string;
+}
+
+// Fila del mapa (getFilasSeccion). udt/uds/iva llegan como string y se parsean.
+interface Fila {
+  id: number | string;
+  nombre: string;
+  asientos: Asiento[];
+  esMesa?: boolean;
+  udt?: string;
+  uds?: string;
+  iva?: string;
+}
+
+// Función de un abono multifecha (solo id/fecha que esta vista lee).
+interface Funcion {
+  id: number;
+  nombre?: string | null;
+  fecha: string;
+}
+
+// `promocionesAplicaDirecto` del back: Promocion + banderas de paquete y el
+// porcentaje original que usa el recálculo de pareja/familia.
+type PromoAplicaDirecto = Promocion & {
+  promocionPaquetes?: boolean;
+  promocionPareja?: boolean;
+  promocionFamilia?: boolean;
+  porcentaje_original?: number | string;
+};
+
+// Una selección parcial guardada del builder de abono (localStorage).
+interface SeleccionParcialAbono {
+  funcionId: number;
+  asientoId?: number;
+  seccionId?: number;
+  asientosObj?: Asiento[];
+}
+
+// Asiento que el back reporta como no disponible en una función concreta.
+interface AsientoNoDisponible {
+  funcionId: number | string;
+  asientoId: number | string;
+}
+
+// Estado del builder de abono que se serializa a localStorage.
+interface AbonoBuilderState {
+  abonoId?: number;
+  modo?: string;
+  seleccionesParciales?: SeleccionParcialAbono[];
+  asientosPorFecha?: Record<number, number[]>;
+  [clave: string]: unknown;
 }
 
 interface TarjetaGuardada {
@@ -142,11 +189,11 @@ const AbonoSeccionAsientoContent = () => {
   const [modoSeleccion, setModoSeleccion] = useState<"mismo_asiento" | "por_funcion">(
     "mismo_asiento",
   );
-  const [funciones, setFunciones] = useState<any[]>([]);
+  const [funciones, setFunciones] = useState<Funcion[]>([]);
   const [currentFuncionIndex, setCurrentFuncionIndex] = useState(0);
   const [asientosPorFecha, setAsientosPorFecha] = useState<Record<number, number[]>>({});
 
-  const [filas, setFilas] = useState<any[]>([]);
+  const [filas, setFilas] = useState<Fila[]>([]);
   const [subtotal, setSubotal] = useState<number>(0);
   const [totalBoletos, setTotalBoletos] = useState<number>(0);
   const [tiempoRestante, setTiempoRestante] = useState<number | null>(null);
@@ -204,13 +251,13 @@ const AbonoSeccionAsientoContent = () => {
   }>({ cantidadCompra: 0, cantidadPaga: 0 });
   const [aplicaTodoEvento, setAplicaTodoEvento] = useState<boolean>(false);
   const [categoriasPromo, setCategoriasPromo] = useState<{ categoria: { nombre: string } }[]>([]);
-  const [promocionesAplicanDirecto, setPromocionesAplicanDirecto] = useState<any[]>([]);
+  const [promocionesAplicanDirecto, setPromocionesAplicanDirecto] = useState<PromoAplicaDirecto[]>([]);
   const [promoNombre, setPromoNombre] = useState<string>("");
 
   // [INVITADO DESHABILITADO] setFormValuesInvitado retirado del destructure; el formulario de invitado está comentado.
   const [formValuesInvitado] = useState({ nombre_invitado: "", correo_invitado: "" });
   const currentAbonoId = Number(searchParams.get("abonoId"));
-  const [builderBackup, setBuilderBackup] = useState<any>(null);
+  const [builderBackup, setBuilderBackup] = useState<AbonoBuilderState | null>(null);
   // Mesa
   const [isMesa, setEsMesa] = useState(false);
 
@@ -254,7 +301,7 @@ const AbonoSeccionAsientoContent = () => {
   }, []);
 
   const calcularTotal = () => {
-    const truncar = (valor: any) => Math.trunc(valor * 1000) / 1000;
+    const truncar = (valor: number) => Math.trunc(valor * 1000) / 1000;
 
     const totalBase = truncar(subtotal);
     const totalUdt = truncar(subtotal * udt);
@@ -402,17 +449,17 @@ const AbonoSeccionAsientoContent = () => {
         setCargando(false);
         setCompraExitosa(true);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error procesando pago", error);
       setCargando(false);
       Swal.fire({
         title: "Error",
-        text: error?.response?.data?.message || "Ocurrió un error al procesar el pago.",
+        text: mensajeDeErrorApi(error, "Ocurrió un error al procesar el pago."),
         icon: "error",
         confirmButtonText: "OK",
       });
 
-      if (error?.response?.data?.isPromoError) {
+      if (cuerpoDeErrorApi(error)?.isPromoError) {
         // Revertir la promoción aplicada
         setDiscountAmount(0);
         setDiscountPorcent(0);
@@ -501,18 +548,19 @@ const AbonoSeccionAsientoContent = () => {
             // Si venimos con un funcionId específico, buscar su index
             if (targetFuncionId && response.funciones) {
               const idx = response.funciones.findIndex(
-                (f: any) => f.id === Number(targetFuncionId),
+                (f: Funcion) => f.id === Number(targetFuncionId),
               );
               if (idx !== -1) setCurrentFuncionIndex(idx);
             }
           }
-        } catch (error: any) {
+        } catch (error) {
           console.error("Error al obtener el abono:", error);
           let mensajeError = "Error al obtener el abono.";
 
-          if (error.response && error.response.data && error.response.data.message) {
-            mensajeError = error.response.data.message;
-          } else if (error.message) {
+          const cuerpo = cuerpoDeErrorApi(error);
+          if (cuerpo?.message) {
+            mensajeError = cuerpo.message;
+          } else if (error instanceof Error) {
             mensajeError = error.message;
           }
           Swal.fire({ title: "Error", text: mensajeError, icon: "error", confirmButtonText: "OK" });
@@ -562,7 +610,7 @@ const AbonoSeccionAsientoContent = () => {
                 if (savedIds.includes(asiento.id)) {
                   restored.push(asiento);
                   const precioAbonoEncontrado = preciosAbonos.find(
-                    (p: any) =>
+                    (p: PrecioAbono) =>
                       p.categoria.trim().toLowerCase() === asiento.categoria.trim().toLowerCase(),
                   );
                   total += Number(precioAbonoEncontrado?.precio || asiento.precio);
@@ -582,14 +630,14 @@ const AbonoSeccionAsientoContent = () => {
           // ___________________________________________________
 
           if (response.esMesa) {
-            let asientos_seleccionados = [];
+            const asientos_seleccionados = [];
             let total = 0;
 
             for (const fila of response.filas) {
               for (const asiento of fila.asientos) {
                 asientos_seleccionados.push(asiento);
                 const precioAbonoEncontrado = preciosAbonos.find(
-                  (p: any) =>
+                  (p: PrecioAbono) =>
                     p.categoria.trim().toLowerCase() === asiento.categoria.trim().toLowerCase(),
                 );
                 const precioFinal = Number(precioAbonoEncontrado?.precio || asiento.precio);
@@ -633,7 +681,7 @@ const AbonoSeccionAsientoContent = () => {
       if (!aplicaTodoEvento) {
         const categoriasSeleccionadas = Object.keys(asientosAgrupados);
         const categoriasValidas = categoriasPromo.map(
-          (c: { categoria: { nombre: any } }) => c.categoria.nombre,
+          (c: PromoCategoria) => c.categoria?.nombre,
         );
         categoriasAplicables = categoriasSeleccionadas.filter((cat) =>
           categoriasValidas.includes(cat),
@@ -742,13 +790,13 @@ const AbonoSeccionAsientoContent = () => {
           );
           const categoriasSeleccionadas = Object.keys(asientosAgrupados);
           const categoriasValidas = promo.categorias
-            .map((c: { categoria: { nombre: any } }) => c.categoria?.nombre)
+            .map((c: PromoCategoria) => c.categoria?.nombre)
             .filter((cat: string) => cat !== null && cat !== undefined);
           categoriasAplicables = categoriasSeleccionadas.filter((cat) =>
             categoriasValidas.includes(cat),
           );
           const categoriasGenerales = promo.categorias
-            .map((c: { categoriaGeneral: { nombre: any } }) => c.categoriaGeneral?.nombre)
+            .map((c: PromoCategoria) => c.categoriaGeneral?.nombre)
             .filter((cat: string) => cat !== null && cat !== undefined);
 
           if (categoriasAplicables.length === 0) {
@@ -823,7 +871,7 @@ const AbonoSeccionAsientoContent = () => {
     }
   };
 
-  const validarDescuento = async (num_asientos: any[]) => {
+  const validarDescuento = async (num_asientos: Asiento[]) => {
     if (!discountCode.trim()) {
       return;
     }
@@ -866,7 +914,7 @@ const AbonoSeccionAsientoContent = () => {
           );
           const categoriasSeleccionadas = Object.keys(asientosAgrupados);
           const categoriasValidas = promo.categorias
-            .map((c: { categoria: { nombre: any } }) => c.categoria?.nombre)
+            .map((c: PromoCategoria) => c.categoria?.nombre)
             .filter((cat: string) => cat !== null && cat !== undefined);
           categoriasAplicables = categoriasSeleccionadas.filter((cat) =>
             categoriasValidas.includes(cat),
@@ -986,9 +1034,9 @@ const AbonoSeccionAsientoContent = () => {
         // categoría. Si se hiciera sobre el subtotal sin descontar, el cliente pagaría de
         // más en el cargo por servicio.
         const categoriasSel = Object.keys(subtotalesPorCategoria);
-        const categoriasValidas = (mejorPromocion.categorias as any[])
-          .map((c: any) => c?.categoria?.nombre)
-          .filter((n: any) => n != null);
+        const categoriasValidas = (mejorPromocion.categorias as PromoCategoria[])
+          .map((c) => c?.categoria?.nombre)
+          .filter((n) => n != null);
         const categoriasAplicables = mejorPromocion.aplicaTodoEvento
           ? categoriasSel
           : categoriasSel.filter((c) => categoriasValidas.includes(c));
@@ -1134,7 +1182,7 @@ const AbonoSeccionAsientoContent = () => {
   };
 
   const handleAsientosNoDisponibles = (
-    noDisponibles: any[],
+    noDisponibles: AsientoNoDisponible[],
     idsAsientos: number[],
     seleccionesPrevias: { funcionId: number; asientoId: number }[],
   ) => {
@@ -1145,7 +1193,7 @@ const AbonoSeccionAsientoContent = () => {
       confirmButtonText: "Entendido",
     });
 
-    let nuevosAsientosPorFecha: Record<number, number[]> = {};
+    const nuevosAsientosPorFecha: Record<number, number[]> = {};
 
     if (modoSeleccion === "mismo_asiento") {
       funciones.forEach((f) => {
@@ -1196,7 +1244,7 @@ const AbonoSeccionAsientoContent = () => {
     try {
       setCargando(true);
 
-      let resdata: any;
+      let resdata: unknown;
       try {
         const { data } = await apiApplication.post(`/eventos/${evento?.id}/gratis`, {
           esInvitado: usuarioInvitado,
@@ -1206,14 +1254,15 @@ const AbonoSeccionAsientoContent = () => {
           nombre: usuarioInvitado ? formValuesInvitado.nombre_invitado : user?.fullName,
         });
         resdata = data;
-      } catch (error: any) {
+      } catch (error) {
         setCargando(false);
         console.error("Error al completar la compra gratuita:", error);
         Swal.fire({
           title: "Error",
-          text:
-            error.response?.data?.message ||
+          text: mensajeDeErrorApi(
+            error,
             "Ocurrió un error al completar la compra gratuita. Por favor, intenta nuevamente.",
+          ),
           icon: "error",
           confirmButtonText: "OK",
         });
@@ -1241,7 +1290,7 @@ const AbonoSeccionAsientoContent = () => {
     }
   };
 
-  const handleReservarAsientos = async (e: any) => {
+  const handleReservarAsientos = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (asientosSeleccionados.length === 0) {
       return;
@@ -1286,7 +1335,7 @@ const AbonoSeccionAsientoContent = () => {
 
         // 📌 Sincronizar con el Builder global para obtener todas las fechas
         const builder = getAbonoBuilderState();
-        let seleccionesFormateadas: { funcionId: number; asientoId: number }[] = [];
+        const seleccionesFormateadas: { funcionId: number; asientoId: number }[] = [];
 
         if (modoSeleccion === "por_funcion") {
           // Unir la selección actual con las guardadas en el builder
@@ -1486,7 +1535,7 @@ const AbonoSeccionAsientoContent = () => {
   useEffect(() => {
     if (reservaPendiente && user) {
       setReservaPendiente(false);
-      handleReservarAsientos({ preventDefault: () => {} } as any);
+      handleReservarAsientos({ preventDefault: () => {} });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservaPendiente, user]);
@@ -1583,11 +1632,11 @@ const AbonoSeccionAsientoContent = () => {
     try {
       // 📌 Intentar procesar el pago
       await procesarPago();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error al procesar la compra:", error);
       Swal.fire({
         title: "Error",
-        text: error.message || "Ocurrió un error al comprar.",
+        text: error instanceof Error ? error.message : "Ocurrió un error al comprar.",
         icon: "error",
         confirmButtonText: "OK",
       });
@@ -1735,7 +1784,10 @@ const AbonoSeccionAsientoContent = () => {
       setTotalBoletos((prev) => prev - precio);
     } else {
       if (asiento.estado === "disponible") {
-        const limite = evento?.limiteDeAsientos || (evento as any)?.evento?.limiteDeAsientos;
+        const limite =
+          evento?.limiteDeAsientos ||
+          (evento as { evento?: { limiteDeAsientos?: number | null } } | null)?.evento
+            ?.limiteDeAsientos;
 
         if (limite && asientosSeleccionados.length >= limite) {
           Swal.fire({
@@ -1783,7 +1835,7 @@ const AbonoSeccionAsientoContent = () => {
         } else if (p.promocionFamilia && nuevosAsientos.length >= 4) {
           porcentaje = 15;
         } else {
-          porcentaje = p.porcentaje_original;
+          porcentaje = p.porcentaje_original ?? p.porcentaje;
         }
       }
 
@@ -2253,21 +2305,21 @@ const AbonoSeccionAsientoContent = () => {
 
   const renderCalculadora = () => {
     // Agrupar todos los asientos seleccionados si estamos en modo 'por_funcion'
-    let asientosARenderizar = [...asientosSeleccionados];
+    let asientosARenderizar: (Asiento & { badgeTexto?: string })[] = [...asientosSeleccionados];
 
     if (modoSeleccion === "por_funcion") {
       const saved = builderBackup || getAbonoBuilderState();
       const partials = saved?.seleccionesParciales || [];
       const currentFId = funciones[currentFuncionIndex]?.id;
 
-      let asientosExtendidos: (Asiento & { badgeTexto?: string })[] = asientosSeleccionados.map(
+      const asientosExtendidos: (Asiento & { badgeTexto?: string })[] = asientosSeleccionados.map(
         (a) => ({
           ...a,
           badgeTexto: "Selección Actual",
         }),
       );
 
-      partials.forEach((p: any) => {
+      partials.forEach((p: SeleccionParcialAbono) => {
         if (p.funcionId !== currentFId && p.asientosObj) {
           // Buscamos la fecha para ponerla como texto
           const funcionData = funciones.find((f) => f.id === p.funcionId);
@@ -2331,7 +2383,7 @@ const AbonoSeccionAsientoContent = () => {
             Total asientos seleccionados: <span>{asientosARenderizar.length}</span>
           </h3>
           <div className="lg:max-h-[300px] lg:max-w-96 overflow-y-auto rounded-lg pr-2">
-            {asientosARenderizar.map((asiento: any, idx) => (
+            {asientosARenderizar.map((asiento, idx) => (
               <div
                 key={`${asiento.id}-${idx}`}
                 className="flex flex-col gap-y-1 border-t-4 border-blue-700 bg-blue-50/30 rounded-lg px-4 py-3 shadow-sm mb-3 relative overflow-hidden"
@@ -2516,7 +2568,7 @@ const AbonoSeccionAsientoContent = () => {
 
                       const newSeleccionesParciales = [
                         ...(saved.seleccionesParciales || []).filter(
-                          (s: any) => s.funcionId !== currentFId,
+                          (s: SeleccionParcialAbono) => s.funcionId !== currentFId,
                         ),
                         {
                           funcionId: currentFId,

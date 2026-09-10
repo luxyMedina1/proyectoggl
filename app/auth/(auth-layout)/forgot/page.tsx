@@ -5,6 +5,7 @@ import Link from "next/link";
 import Swal from "sweetalert2";
 import { FaRegCircle } from "react-icons/fa";
 import apiApplication from "../../../../api/apiApplication";
+import { mensajeDeErrorApi } from "../../../../utils/apiError";
 
 export default function ForgotPasswordPage() {
     const [email, setEmail] = useState("");
@@ -28,9 +29,9 @@ export default function ForgotPasswordPage() {
             } else {
                 throw new Error("No se pudo enviar el correo de recuperación.");
             }
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error al recuperar contraseña:", error);
-            Swal.fire("Error", error.response?.data?.message ?? "No se pudo enviar el correo.", "error");
+            Swal.fire("Error", mensajeDeErrorApi(error, "No se pudo enviar el correo."), "error");
         } finally {
             setCargando(false);
         }

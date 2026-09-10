@@ -1,6 +1,7 @@
 import type { AxiosRequestConfig } from "axios";
 import apiApplication from "../api/apiApplication";
 import { idNumericoDeSlug, resolverSlugEnLista, type EventoResuelto } from "../utils/eventoSlug";
+import { cuerpoDeErrorApi, mensajeDeErrorApi } from "../utils/apiError";
 import type { CargoAbonoBody, ReservarAbonoBody } from "../types/Abono";
 
 // Config que fuerza frescura en las peticiones de DISPONIBILIDAD de asientos (Req 26.3).
@@ -22,7 +23,7 @@ export const useEventosStore = () => {
         try {
             const { data } = await apiApplication.get('/eventos/get_all_select?tipoDispositivo=web');
             return data;
-        } catch (error) {
+        } catch {
             throw new Error('Error al obtener la lista de eventos');
         }
     }
@@ -32,7 +33,7 @@ export const useEventosStore = () => {
             const url = `/eventos/${idEvento}/${idSeccion}/filas_por_seccion${funcionId ? `/${funcionId}` : ''}`;
             const { data } = await apiApplication.get(url);
             return data;
-        } catch (error) {
+        } catch {
             throw new Error('Error al obtener la lista de eventos');
         }
     }
@@ -66,7 +67,7 @@ export const useEventosStore = () => {
         try {
             const { data } = await apiApplication.get(`/eventos/${id}/detalle`, config);
             return data;
-        } catch (error) {
+        } catch {
             throw new Error('Error al obtener la lista de eventos');
         }
     }
@@ -74,7 +75,11 @@ export const useEventosStore = () => {
     // El detalle por sección trae `secciones[].asientosDisponibles`: es la disponibilidad de
     // asientos que ve el comprador. Debe pedirse siempre fresca (Req 26.3), de ahí el `config`
     // con SIN_CACHE_DISPONIBILIDAD que le pasa la vista al montar.
-    const getDetalleEventoSecciones = async (id: string, funcion?: any, config?: AxiosRequestConfig) => {
+    const getDetalleEventoSecciones = async (
+        id: string,
+        funcion?: string | number | null,
+        config?: AxiosRequestConfig,
+    ) => {
         try {
             const { data } = await apiApplication.get(`/eventos/${id}/detalle_seccion/false/web/${funcion}`, config);
             return data;
@@ -87,7 +92,7 @@ export const useEventosStore = () => {
         try {
             const { data } = await apiApplication.get(`/abonos/${id}`);
             return data;
-        } catch (error) {
+        } catch {
             throw new Error('Error al obtener la lista de abonos');
         }
     }
@@ -96,12 +101,12 @@ export const useEventosStore = () => {
         try {
             const { data } = await apiApplication.post(`/abonos/${abonoId}/reservar`, payload);
             return data;
-        } catch (error: any) {
-            if (error?.response?.data?.noDisponibles || error?.response?.data?.completo === false) {
-                return error.response.data;
+        } catch (error) {
+            const cuerpo = cuerpoDeErrorApi(error);
+            if (cuerpo?.noDisponibles || cuerpo?.completo === false) {
+                return cuerpo;
             }
-            const mensaje = error?.response?.data?.message || 'Error al reservar el evento';
-            throw new Error(mensaje);
+            throw new Error(mensajeDeErrorApi(error, 'Error al reservar el evento'));
         }
     }
 
@@ -109,7 +114,7 @@ export const useEventosStore = () => {
         try {
                 const { data } = await apiApplication.post(`/pagos/make/cargo_abono`, payload);
                 return data;
-            } catch (error) {
+            } catch {
                 throw new Error('Error al procesar el abono');
             }
     }
@@ -118,7 +123,7 @@ export const useEventosStore = () => {
         try {
             const { data } = await apiApplication.post(`/pagos/check/cargo_abono/${transaccionId}`);
             return data;
-        } catch (error) {
+        } catch {
             throw new Error('Error al verificar el cargo del abono');
         }
     }
@@ -133,9 +138,8 @@ export const useEventosStore = () => {
                 }
             );
             return data;
-        } catch (error: any) {
-            const mensaje = error?.response?.data?.message || 'Error al reservar el evento';
-            throw new Error(mensaje);
+        } catch (error) {
+            throw new Error(mensajeDeErrorApi(error, 'Error al reservar el evento'));
         }
     }
 
@@ -143,8 +147,8 @@ export const useEventosStore = () => {
         try {
                 const { data } = await apiApplication.post(`/eventos/${eventoId}/reservarInvitado`, {asientosReserva:asientos, nombre, correo, funcion} );
                 return data;
-            } catch (error: any) {
-                throw new Error(error?.response?.data?.message || 'Error al reservar el evento');
+            } catch (error) {
+                throw new Error(mensajeDeErrorApi(error, 'Error al reservar el evento'));
             }
     }
 
@@ -152,8 +156,8 @@ export const useEventosStore = () => {
         try {
                 const { data } = await apiApplication.post(`/eventos/${eventoId}/reservar_generales`, { cantidadAsientos:asientos , seccionId:seccionId } );
                 return data;
-            } catch (error: any) {
-                throw new Error(error?.response?.data?.message || 'Error al reservar el evento');
+            } catch (error) {
+                throw new Error(mensajeDeErrorApi(error, 'Error al reservar el evento'));
             }
     }
 
@@ -161,7 +165,7 @@ export const useEventosStore = () => {
         try {
                 const { data } = await apiApplication.post(`/eventos/${eventoId}/cancelar`, {reservaId, esGeneral});
                 return data;
-            } catch (error) {
+            } catch {
                 throw new Error('Error al reservar el evento');
             }
     }
@@ -170,7 +174,7 @@ export const useEventosStore = () => {
         try {
                 const { data } = await apiApplication.post(`/eventos/${eventoId}/vender`, {reservaId, metodoPago});
                 return data;
-            } catch (error) {
+            } catch {
                 throw new Error('Error al reservar el evento');
             }
     }
@@ -179,7 +183,7 @@ export const useEventosStore = () => {
         try {
             const { data } = await apiApplication.get('/eventos/mis_eventos');
             return data;
-        } catch (error) {
+        } catch {
             throw new Error('Error al obtener la lista de eventos');
         }
     }
@@ -190,7 +194,7 @@ export const useEventosStore = () => {
                 params: funcionId != null ? { funcionId } : undefined,
             });
             return data;
-        } catch (error) {
+        } catch {
             throw new Error('Error al obtener la lista de boletos');
         }
     }
@@ -201,7 +205,7 @@ export const useEventosStore = () => {
         return state ? JSON.parse(state) : null;
     }
 
-    const setAbonoBuilderState = (state: any) => {
+    const setAbonoBuilderState = (state: unknown) => {
         localStorage.setItem('abonoBuilder', JSON.stringify(state));
     }
 

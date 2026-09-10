@@ -2,6 +2,7 @@ import apiApplication from "../../../api/apiApplication";
 import Sidebar from "./components/Sidebar";
 import { useState } from "react";
 import Swal from "sweetalert2";
+import { mensajeDeErrorApi } from "../../../utils/apiError";
 
 function CambiarPassword() {
   const [actualPassword, setActualPassword] = useState("");
@@ -41,8 +42,8 @@ function CambiarPassword() {
       setActualPassword("");
       setNewPassword("");
       setNewPasswordConfirm("");
-    } catch (error:any) {
-        Swal.fire("Error", error.response.data.message || "Hubo un problema al actualizar la contraseña", "error");
+    } catch (error) {
+        Swal.fire("Error", mensajeDeErrorApi(error, "Hubo un problema al actualizar la contraseña"), "error");
       console.log(error);
     }
   };

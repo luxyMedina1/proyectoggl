@@ -9,14 +9,9 @@ import Tooltip from "../../../../../../publicUi/components/TooltipComponent";
 import Loader from "../../../../../../publicUi/components/Loader";
 import { toast } from "react-toastify";
 import { validarNumeroTarjeta, validarCVC } from "../../../../../../utils/cardHelpers";
+import { cuerpoDeErrorApi, mensajeDeErrorApi } from "../../../../../../utils/apiError";
 import type { EventoResuelto } from "../../../../../../utils/eventoSlug";
 import LocalLoader from "../../../../../../components/LocalLoader";
-
-declare global {
-  interface Window {
-    OpenPay: any;
-  }
-}
 
 import { useMetaPixel, usePixelsDeEvento } from "../../../../../../hooks/useMetaPixel";
 import { useEventosStore } from "../../../../../../hooks/useEventosStore";
@@ -40,6 +35,8 @@ import {
   calcularDescuentoPorCategoriaDeAsientos,
   normalizarPromocionesAplicaDirecto,
   type Asiento as AsientoPromo,
+  type Promocion,
+  type PromoCategoria,
 } from "../../../../../../utils/promociones";
 
 interface Asiento {
@@ -51,6 +48,34 @@ interface Asiento {
   categoria: string;
   color: string;
 }
+
+// Fila del mapa de una sección numerada (getFilasSeccion). udt/uds/iva llegan como
+// string y se parsean; el resto de campos numéricos del back no se usan aquí.
+interface Fila {
+  id: number | string;
+  nombre: string;
+  asientos: Asiento[];
+  udt?: string;
+  uds?: string;
+  iva?: string;
+}
+
+// Función de un evento multifecha (solo el id/fecha que esta vista lee).
+interface Funcion {
+  id: number | string;
+  nombre?: string | null;
+  fecha: string;
+}
+
+// `promocionesAplicaDirecto` del back: además de los campos de Promocion trae las
+// banderas de paquete (pareja/familia) y, cuando se normaliza con
+// `conPorcentajeOriginal=true`, el porcentaje original para el recálculo.
+type PromoAplicaDirecto = Promocion & {
+  promocionPaquetes?: boolean;
+  promocionPareja?: boolean;
+  promocionFamilia?: boolean;
+  porcentaje_original?: number | string;
+};
 
 interface TarjetaGuardada {
   id: number;
@@ -126,7 +151,7 @@ function SeccionAsientoContent() {
     resuelto?.funcionId ?? searchParams.get("funcionId") ?? searchParams.get("funcion");
 
   //variables de estado
-  const [filas, setFilas] = useState<any[]>([]);
+  const [filas, setFilas] = useState<Fila[]>([]);
   const [subtotal, setSubotal] = useState<number>(0);
   const [totalBoletos, setTotalBoletos] = useState<number>(0);
   const [tiempoRestante, setTiempoRestante] = useState<number | null>(null);
@@ -184,7 +209,9 @@ function SeccionAsientoContent() {
   }>({ cantidadCompra: 0, cantidadPaga: 0 });
   const [aplicaTodoEvento, setAplicaTodoEvento] = useState<boolean>(false);
   const [categoriasPromo, setCategoriasPromo] = useState<{ categoria: { nombre: string } }[]>([]);
-  const [promocionesAplicanDirecto, setPromocionesAplicanDirecto] = useState<any[]>([]);
+  const [promocionesAplicanDirecto, setPromocionesAplicanDirecto] = useState<PromoAplicaDirecto[]>(
+    [],
+  );
   const [promoNombre, setPromoNombre] = useState<string>("");
 
   // [INVITADO DESHABILITADO] setFormValuesInvitado retirado del destructure; el formulario de invitado está comentado.
@@ -237,7 +264,7 @@ function SeccionAsientoContent() {
   // (sin cambios de lógica) para eliminar los errores react-hooks/immutability
   // "Cannot access variable before it is declared".
   const calcularTotal = () => {
-    const truncar = (valor: any) => Math.trunc(valor * 1000) / 1000;
+    const truncar = (valor: number) => Math.trunc(valor * 1000) / 1000;
 
     const totalBase = truncar(subtotal);
     const totalUdt = truncar(subtotal * udt);
@@ -253,7 +280,7 @@ function SeccionAsientoContent() {
     return parseFloat(totalFinal.toFixed(2));
   };
 
-  const validarDescuento = async (num_asientos: any[]) => {
+  const validarDescuento = async (num_asientos: Asiento[]) => {
     if (!discountCode.trim()) {
       return;
     }
@@ -297,7 +324,7 @@ function SeccionAsientoContent() {
         if (!promo.aplicaTodoEvento) {
           const categoriasSeleccionadas = Object.keys(asientosPorCategoriaPrecio);
           const categoriasValidas = promo.categorias
-            .map((c: { categoria: { nombre: any } }) => c.categoria?.nombre)
+            .map((c: PromoCategoria) => c.categoria?.nombre)
             .filter((cat: string) => cat !== null && cat !== undefined);
           categoriasAplicables = categoriasSeleccionadas.filter((cat) =>
             categoriasValidas.includes(cat),
@@ -376,7 +403,7 @@ function SeccionAsientoContent() {
     try {
       setCargando(true);
 
-      let resdata: any;
+      let resdata: unknown;
       try {
         const { data } = await apiApplication.post(`/eventos/${evento?.id}/gratis`, {
           esInvitado: usuarioInvitado,
@@ -386,14 +413,15 @@ function SeccionAsientoContent() {
           nombre: usuarioInvitado ? formValuesInvitado.nombre_invitado : user?.fullName,
         });
         resdata = data;
-      } catch (error: any) {
+      } catch (error) {
         setCargando(false);
         console.error("Error al completar la compra gratuita:", error);
         Swal.fire({
           title: "Error",
-          text:
-            error.response?.data?.message ||
+          text: mensajeDeErrorApi(
+            error,
             "Ocurrió un error al completar la compra gratuita. Por favor, intenta nuevamente.",
+          ),
           icon: "error",
           confirmButtonText: "OK",
         });
@@ -421,7 +449,7 @@ function SeccionAsientoContent() {
     }
   };
 
-  const handleReservarAsientos = async (e: any) => {
+  const handleReservarAsientos = async (e: { preventDefault: () => void }) => {
     e.preventDefault();
     if (asientosSeleccionados.length === 0) {
       return;
@@ -602,12 +630,12 @@ function SeccionAsientoContent() {
       //     window.location.href = '/auth/login';
       //   });
       // }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error en la reserva:", error);
 
       const mensaje =
-        error?.response?.data?.message ||
-        error?.message ||
+        cuerpoDeErrorApi(error)?.message ||
+        (error instanceof Error ? error.message : undefined) ||
         "Ocurrió un error al reservar. Por favor, intenta nuevamente.";
 
       Swal.fire({
@@ -658,7 +686,7 @@ function SeccionAsientoContent() {
       }
 
       // Construcción del payload del pago
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         reservaId,
         esGeneral: false,
         tipoDispositivo: "web",
@@ -778,17 +806,17 @@ function SeccionAsientoContent() {
         setCargando(false);
         setCompraExitosa(true);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error procesando pago", error);
       setCargando(false);
       Swal.fire({
         title: "Error",
-        text: error?.response?.data?.message || "Ocurrió un error al procesar el pago.",
+        text: mensajeDeErrorApi(error, "Ocurrió un error al procesar el pago."),
         icon: "error",
         confirmButtonText: "OK",
       });
 
-      if (error?.response?.data?.isPromoError) {
+      if (cuerpoDeErrorApi(error)?.isPromoError) {
         // Revertir la promoción aplicada
         setDiscountAmount(0);
         setDiscountPorcent(0);
@@ -838,7 +866,9 @@ function SeccionAsientoContent() {
           habilitarpromocion(eventoId);
           const response = await getDetalleEventos(eventoId);
           if (funcionId && response.funciones) {
-            const funcion = response.funciones.find((f: any) => f.id.toString() === funcionId);
+            const funcion = response.funciones.find(
+              (f: Funcion) => f.id.toString() === funcionId,
+            );
             if (funcion) {
               response.fecha = funcion.fecha;
             }
@@ -846,13 +876,14 @@ function SeccionAsientoContent() {
           // console.log(response.preciosCategorias);
           // setIva(parseFloat(response.ivaRate));
           setEvento(response);
-        } catch (error: any) {
+        } catch (error) {
           console.error("Error al obtener el evento:", error);
           let mensajeError = "Error al obtener el evento.";
 
-          if (error.response && error.response.data && error.response.data.message) {
-            mensajeError = error.response.data.message;
-          } else if (error.message) {
+          const cuerpo = cuerpoDeErrorApi(error);
+          if (cuerpo?.message) {
+            mensajeError = cuerpo.message;
+          } else if (error instanceof Error) {
             mensajeError = error.message;
           }
           Swal.fire({ title: "Error", text: mensajeError, icon: "error", confirmButtonText: "OK" });
@@ -887,7 +918,7 @@ function SeccionAsientoContent() {
           // ___________________________________________________
 
           if (response.esMesa) {
-            let asientos_seleccionados = [];
+            const asientos_seleccionados = [];
             let total = 0;
 
             for (const fila of response.filas) {
@@ -933,7 +964,7 @@ function SeccionAsientoContent() {
       if (!aplicaTodoEvento) {
         const categoriasSeleccionadas = Object.keys(asientosAgrupados);
         const categoriasValidas = categoriasPromo.map(
-          (c: { categoria: { nombre: any } }) => c.categoria.nombre,
+          (c: PromoCategoria) => c.categoria?.nombre,
         );
         categoriasAplicables = categoriasSeleccionadas.filter((cat) =>
           categoriasValidas.includes(cat),
@@ -1041,9 +1072,9 @@ function SeccionAsientoContent() {
         // categoría. Si se hiciera sobre el subtotal sin descontar, el cliente pagaría de
         // más en el cargo por servicio.
         const categoriasSel = Object.keys(subtotalesPorCategoria);
-        const categoriasValidas = (mejorPromocion.categorias as any[])
-          .map((c: any) => c?.categoria?.nombre)
-          .filter((n: any) => n != null);
+        const categoriasValidas = (mejorPromocion.categorias as PromoCategoria[])
+          .map((c) => c?.categoria?.nombre)
+          .filter((n) => n != null);
         const categoriasAplicables = mejorPromocion.aplicaTodoEvento
           ? categoriasSel
           : categoriasSel.filter((c) => categoriasValidas.includes(c));
@@ -1148,13 +1179,13 @@ function SeccionAsientoContent() {
         if (!promo.aplicaTodoEvento) {
           const categoriasSeleccionadas = Object.keys(asientosPorCategoriaPrecio);
           const categoriasValidas = promo.categorias
-            .map((c: { categoria: { nombre: any } }) => c.categoria?.nombre)
+            .map((c: PromoCategoria) => c.categoria?.nombre)
             .filter((cat: string) => cat !== null && cat !== undefined);
           categoriasAplicables = categoriasSeleccionadas.filter((cat) =>
             categoriasValidas.includes(cat),
           );
           const categoriasGenerales = promo.categorias
-            .map((c: { categoriaGeneral: { nombre: any } }) => c.categoriaGeneral?.nombre)
+            .map((c: PromoCategoria) => c.categoriaGeneral?.nombre)
             .filter((cat: string) => cat !== null && cat !== undefined);
 
           if (categoriasAplicables.length === 0) {
@@ -1313,7 +1344,7 @@ function SeccionAsientoContent() {
   useEffect(() => {
     if (reservaPendiente && user) {
       setReservaPendiente(false);
-      handleReservarAsientos({ preventDefault: () => {} } as any);
+      handleReservarAsientos({ preventDefault: () => {} });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reservaPendiente, user]);
@@ -1410,11 +1441,11 @@ function SeccionAsientoContent() {
     try {
       // 📌 Intentar procesar el pago
       await procesarPago();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error al procesar la compra:", error);
       Swal.fire({
         title: "Error",
-        text: error.message || "Ocurrió un error al comprar.",
+        text: error instanceof Error ? error.message : "Ocurrió un error al comprar.",
         icon: "error",
         confirmButtonText: "OK",
       });
@@ -1588,7 +1619,7 @@ function SeccionAsientoContent() {
         } else if (p.promocionFamilia && nuevosAsientos.length >= 4) {
           porcentaje = 15;
         } else {
-          porcentaje = p.porcentaje_original;
+          porcentaje = p.porcentaje_original ?? p.porcentaje;
         }
       }
 

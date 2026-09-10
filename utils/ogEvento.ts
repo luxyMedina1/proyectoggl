@@ -5,11 +5,49 @@ import {
   rutaEvento,
   rutaEventoInformacion,
   type EventoResuelto,
+  type EventoListaSlug,
   type FuncionSlugInput,
 } from "./eventoSlug";
+import type { Recinto, Ciudad } from "@/app/(site)/eventos/[slug]/cabeceraEvento";
 import { formatDate } from "./dateHelpers";
 import { textoPlano } from "./sanitizeHtml";
 import { getSiteConfig } from "@/lib/config/getSiteConfig";
+
+// --- Formas de las respuestas del backend ------------------------------------------
+// Tipadas a partir de lo que este módulo (y sus consumidores) leen de verdad, no del
+// DTO completo del backend —que no tiene tipo fuerte en el servidor—. Lo que no se
+// consume aquí queda en el index signature de `EventoDetalle`.
+
+// GET /eventos/slug/:slug — resolución de un slug a ids.
+interface RespuestaSlugEvento {
+  eventoId?: string | number | null;
+  funcionId?: string | number | null;
+}
+
+// GET /eventos/get_all_select — listado público de eventos.
+interface RespuestaListaEventos {
+  eventosFiltrados?: EventoListaSlug[] | null;
+}
+
+// GET /eventos/:id/detalle, acotado a lo que consumen las <meta> y el cascarón de la
+// página de evento (`construirEventosJsonLd`, `proyectarCabeceraEvento`). El backend
+// manda más claves —entre ellas `secciones[].asientosDisponibles`, cacheado ~5 min—:
+// van en el index signature y las recorta `proyectarCabeceraEvento` antes del cliente.
+export interface EventoDetalle {
+  id: number | string;
+  nombre: string;
+  fecha: string;
+  imagenPromocion: string;
+  descripcion: string;
+  recinto: Recinto;
+  ciudad: Ciudad;
+  funciones?: FuncionSlugInput[] | null;
+  artista?: { nombre?: string | null } | null;
+  slug?: string | null;
+  precioBase?: string | number | null;
+  imagenBanner?: string | null;
+  [clave: string]: unknown;
+}
 
 // --- Open Graph de las paginas de evento (server-side) -----------------------------
 //
@@ -33,7 +71,7 @@ const apiBase = (): string => {
 // Timeout corto: si el back no responde no se debe demorar el render de la pagina
 // (el catch de buildMetadataEvento cae a las <meta> globales del layout).
 // tags: el backend los invalida vía POST /api/revalidate cuando el evento cambia.
-const apiGet = async (path: string, tags: string[] = []): Promise<any> => {
+const apiGet = async <T = unknown>(path: string, tags: string[] = []): Promise<T> => {
   const res = await fetch(`${apiBase()}${path}`, {
     headers: { "x-api-key": process.env.NEXT_PUBLIC_API_KEY ?? "" },
     cache: "force-cache",
@@ -41,7 +79,7 @@ const apiGet = async (path: string, tags: string[] = []): Promise<any> => {
     signal: AbortSignal.timeout(4000),
   });
   if (!res.ok) throw new Error(`GET ${path} -> ${res.status}`);
-  return res.json();
+  return (await res.json()) as T;
 };
 
 // Mismo orden de resolucion que `useEventosStore.resolverSlugEvento`:
@@ -51,7 +89,9 @@ const resolverSlug = async (slug: string): Promise<EventoResuelto | null> => {
   if (idNumerico) return { eventoId: idNumerico, funcionId: null };
 
   try {
-    const data = await apiGet(`/eventos/slug/${encodeURIComponent(slug)}`, [`evento:${slug}`]);
+    const data = await apiGet<RespuestaSlugEvento>(`/eventos/slug/${encodeURIComponent(slug)}`, [
+      `evento:${slug}`,
+    ]);
     if (data?.eventoId == null) throw new Error("respuesta sin eventoId");
     return {
       eventoId: String(data.eventoId),
@@ -59,7 +99,10 @@ const resolverSlug = async (slug: string): Promise<EventoResuelto | null> => {
     };
   } catch {
     try {
-      const lista = await apiGet("/eventos/get_all_select?tipoDispositivo=web", ["eventos:lista"]);
+      const lista = await apiGet<RespuestaListaEventos>(
+        "/eventos/get_all_select?tipoDispositivo=web",
+        ["eventos:lista"],
+      );
       return resolverSlugEnLista(slug, lista?.eventosFiltrados ?? []);
     } catch {
       return null;
@@ -76,12 +119,12 @@ type Variante = "detalle" | "informacion";
 // `notFound()` (404 real) ante slugs inválidos, cerrando la fuga de soft 404. Comparte
 // la misma resolución (`resolverSlug`) y el mismo fetch cacheado que las <meta> de
 // `buildMetadataEvento`, así que no golpea el back una segunda vez por request.
-export const getEvento = async (slug: string): Promise<any | null> => {
+export const getEvento = async (slug: string): Promise<EventoDetalle | null> => {
   try {
     const resuelto = await resolverSlug(slug);
     if (!resuelto) return null;
 
-    const evento = await apiGet(`/eventos/${resuelto.eventoId}/detalle`, [
+    const evento = await apiGet<EventoDetalle>(`/eventos/${resuelto.eventoId}/detalle`, [
       "eventos:lista",
       `evento:${slug}`,
     ]);
@@ -95,8 +138,10 @@ export const getEvento = async (slug: string): Promise<any | null> => {
 // Fetch directo, no la instancia axios (sus interceptores leen window/localStorage).
 // `apiGet` lanza si el back no responde; quien llama decide como manejarlo
 // (generateStaticParams lo captura y cae a [] para no romper el build, Req 3.2).
-export const getListaEventos = async (): Promise<any[]> => {
-  const data = await apiGet("/eventos/get_all_select?tipoDispositivo=web", ["eventos:lista"]);
+export const getListaEventos = async (): Promise<EventoListaSlug[]> => {
+  const data = await apiGet<RespuestaListaEventos>("/eventos/get_all_select?tipoDispositivo=web", [
+    "eventos:lista",
+  ]);
   return data?.eventosFiltrados ?? [];
 };
 
@@ -108,7 +153,7 @@ export const buildMetadataEvento = async (
     const resuelto = await resolverSlug(slug);
     if (!resuelto) return {};
 
-    const evento = await apiGet(`/eventos/${resuelto.eventoId}/detalle`, [
+    const evento = await apiGet<EventoDetalle>(`/eventos/${resuelto.eventoId}/detalle`, [
       "eventos:lista",
       `evento:${slug}`,
     ]);

@@ -4,6 +4,7 @@ import { validarNumeroTarjeta, validarCVC } from "../../../utils/cardHelpers";
 import Sidebar from "./components/Sidebar";
 import Swal from "sweetalert2";
 import Loader from "@/publicUi/components/Loader";
+import { cuerpoDeErrorApi } from "../../../utils/apiError";
 import { CiCreditCard2 } from "react-icons/ci";
 import { FaCcMastercard, FaCcVisa, FaTrashCan, FaPlus } from "react-icons/fa6";
 import { RiSecurePaymentLine } from "react-icons/ri";
@@ -30,12 +31,13 @@ function MisFormasDePago() {
         const { data } = await apiApplication.get("/pagos/get/mi_perfil");
         setOpenId(data.idOpenpay);
         setTarjetas(data.tarjetas);
-      } catch (error: any) {
+      } catch (error) {
         console.error("Error al obtener las tarjetas:", error);
         let mensajeError = "Error al obtener las tarjetas.";
-        if (error.response && error.response.data && error.response.data.message) {
-          mensajeError = error.response.data.message;
-        } else if (error.message) {
+        const cuerpo = cuerpoDeErrorApi(error);
+        if (cuerpo?.message) {
+          mensajeError = cuerpo.message;
+        } else if (error instanceof Error) {
           mensajeError = error.message;
         }
         Swal.fire({

@@ -18,8 +18,10 @@ import Swal from "sweetalert2";
 import apiApplication from "../../../../api/apiApplication";
 import { formatDate, formatFechaConRango, formatHoraRelativa } from "../../../../utils/dateHelpers";
 import { validarNumeroTarjeta, validarCVC } from "../../../../utils/cardHelpers";
+import { cuerpoDeErrorApi, mensajeDeErrorApi } from "../../../../utils/apiError";
 import { sanitizeRichText } from "../../../../utils/sanitizeHtml";
 import { buildEventoSlug, type EventoResuelto } from "../../../../utils/eventoSlug";
+import type { SeleccionAsientoFuncion } from "../../../../types/Abono";
 import {
   filtrarPromocionesAplicablesPorCategoria,
   obtenerMejorPromocionPorBoletos,
@@ -36,12 +38,6 @@ import "swiper/css";
 import "swiper/css/navigation";
 import { Autoplay, Navigation } from "swiper/modules";
 import { toast } from "react-toastify";
-
-declare global {
-  interface Window {
-    OpenPay: any;
-  }
-}
 
 interface Asiento {
   id: number;
@@ -70,6 +66,14 @@ interface Recinto {
   direccion: string;
   esGeneral?: boolean;
 }
+// Función de un evento multifecha (solo lo que esta vista lee del detalle).
+interface Funcion {
+  id: number | string;
+  nombre?: string | null;
+  fecha: string;
+  aperturaPuertas?: string | null;
+  finalEvento?: string | null;
+}
 interface Evento {
   id: number;
   slug?: string | null;
@@ -77,7 +81,7 @@ interface Evento {
   fecha: string;
   aperturaPuertas?: string | null;
   finalEvento?: string | null;
-  funciones?: any[];
+  funciones?: Funcion[];
   precioBase: string;
   recinto: Recinto;
   secciones: Seccion[];
@@ -120,9 +124,10 @@ interface Secciones {
   nombreEspecial: string;
   uds: string;
   colorGeneral: string;
+  seccionAdicional?: number | null;
 }
 interface Categorias {
-  precios: [];
+  precios: number[];
   categoria: string;
   color: string;
 }
@@ -187,10 +192,10 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
   const funcionId = resuelto?.funcionId ?? searchParams.get("funcion");
   const { verContenido } = useMetaPixel();
   const [evento, setEvento] = useState<Evento | null>(null);
-  const [funciones, setFunciones] = useState<any[]>([]);
+  const [funciones, setFunciones] = useState<Funcion[]>([]);
   const [modoAbono, setModoAbono] = useState<"mismo_asiento" | "por_funcion">("mismo_asiento");
   const [currentFuncionIndex, setCurrentFuncionIndex] = useState(0);
-  const [seleccionesAbono, setSeleccionesAbono] = useState<any[]>([]);
+  const [seleccionesAbono, setSeleccionesAbono] = useState<SeleccionAsientoFuncion[]>([]);
   const [secciones, setSecciones] = useState<Secciones[] | null>(null);
   const [seccionesOcultas, setSeccionesOcultas] = useState<Secciones[] | null>(null);
   const [seccionesAdicionales, setSeccionesAdicionales] = useState<Secciones[] | null>(null);
@@ -246,8 +251,8 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
   const [promocion_id, setPromocionID] = useState(0);
   const [isCheckingCode, setIsCheckingCode] = useState(false);
   const [habilitaPromocion, setHabilitaPromocion] = useState(false);
-  const [promocionesAplicanDirecto, setPromocionesAplicanDirecto] = useState<any[]>([]);
-  const [promosAplicables, setPromosAplicables] = useState<any[]>([]);
+  const [promocionesAplicanDirecto, setPromocionesAplicanDirecto] = useState<Promocion[]>([]);
+  const [promosAplicables, setPromosAplicables] = useState<Promocion[]>([]);
   const [promocion, setPromocion] = useState<Promocion>({
     id: 0,
     nombre: "",
@@ -366,7 +371,8 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
               // Auto-moverse a la siguiente fecha pendiente
               if (saved.modo === "por_funcion" && abonoRes.funciones) {
                 const pendingIndex = abonoRes.funciones.findIndex(
-                  (f: any) => !partials.some((s: any) => s.funcionId === f.id),
+                  (f: Funcion) =>
+                    !partials.some((s: SeleccionAsientoFuncion) => s.funcionId === f.id),
                 );
                 if (pendingIndex !== -1) setCurrentFuncionIndex(pendingIndex);
               }
@@ -386,7 +392,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
             // En vez de eso se manda a la página de información, que lista fechas y abonos.
             if (!funcionId && response.esMultiFuncion) {
               const diasDistintos = new Set(
-                (response.funciones ?? []).map((f: any) => formatDate(f.fecha, "yyyy-MM-dd")),
+                (response.funciones ?? []).map((f: Funcion) => formatDate(f.fecha, "yyyy-MM-dd")),
               ).size;
               if (diasDistintos > 1) {
                 const destino = buildEventoSlug(response) || slug;
@@ -396,7 +402,9 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
             }
 
             if (funcionId && response.funciones) {
-              const funcion = response.funciones.find((f: any) => f.id.toString() === funcionId);
+              const funcion = response.funciones.find(
+                (f: Funcion) => f.id.toString() === funcionId,
+              );
               if (funcion) {
                 // La funcion elegida manda: su horario pisa el del evento.
                 response.fecha = funcion.fecha;
@@ -424,12 +432,13 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           setEvento(response);
           setLimite(response.limiteDeAsientos);
           setDescripcionAdicional(response.descripcionExtra);
-        } catch (error: any) {
+        } catch (error) {
           console.error("Error al obtener el evento:", error);
           let mensajeError = "Error al obtener el evento.";
-          if (error.response && error.response.data && error.response.data.message) {
-            mensajeError = error.response.data.message;
-          } else if (error.message) {
+          const cuerpo = cuerpoDeErrorApi(error);
+          if (cuerpo?.message) {
+            mensajeError = cuerpo.message;
+          } else if (error instanceof Error) {
             mensajeError = error.message;
           }
           Swal.fire({ title: "Error", text: mensajeError, icon: "error", confirmButtonText: "OK" });
@@ -445,7 +454,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
   // Funcion activa: su nombre y su dia entran al slug para que cada fecha de un evento
   // multifecha tenga su propia URL al compartirla.
   const funcionActiva =
-    (funcionId && evento?.funciones?.find((f: any) => String(f.id) === funcionId)) || null;
+    (funcionId && evento?.funciones?.find((f: Funcion) => String(f.id) === funcionId)) || null;
 
   const funcionSecciones: string | number | null = isAbono
     ? ((
@@ -497,20 +506,19 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
 
           // Filtrar solo las secciones que tienen un nombreEspecial válido
           const adicionalesConNombreEspecial = response.secciones.filter(
-            (seccion: any) => seccion.seccionAdicional != null && seccion.seccionAdicional !== 0,
+            (seccion: Secciones) =>
+              seccion.seccionAdicional != null && seccion.seccionAdicional !== 0,
           );
           setSeccionesAdicionales(adicionalesConNombreEspecial);
 
           // Ordenar las categorías por nombre ASC, pero dejando siempre al final las que
           // sean DAYPASS (sin importar el nombre).
-          const categoriasOrdenadas = (response.preciosCategorias ?? [])
-            .map((categoria: any) => ({
+          const categoriasOrdenadas = ((response.preciosCategorias ?? []) as Categorias[])
+            .map((categoria) => ({
               ...categoria,
-              precios: (categoria.precios ?? [])
-                .filter((p: number) => p > 0)
-                .sort((a: number, b: number) => b - a),
+              precios: (categoria.precios ?? []).filter((p) => p > 0).sort((a, b) => b - a),
             }))
-            .sort((a: any, b: any) => {
+            .sort((a, b) => {
               const nombreA = (a.categoria ?? "").toLowerCase();
               const nombreB = (b.categoria ?? "").toLowerCase();
 
@@ -526,12 +534,13 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
               return nombreA.localeCompare(nombreB);
             });
           setPreciosCategorias(categoriasOrdenadas);
-        } catch (error: any) {
+        } catch (error) {
           console.error("Error al obtener las secciones:", error);
           let mensajeError = "Error al obtener las secciones.";
-          if (error.response && error.response.data && error.response.data.message) {
-            mensajeError = error.response.data.message;
-          } else if (error.message) {
+          const cuerpo = cuerpoDeErrorApi(error);
+          if (cuerpo?.message) {
+            mensajeError = cuerpo.message;
+          } else if (error instanceof Error) {
             mensajeError = error.message;
           }
           const result = await Swal.fire({
@@ -757,7 +766,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     checkAuthToken();
   }
 
-  const handleModalClose = (e: any) => {
+  const handleModalClose = (e: React.MouseEvent) => {
     setIsModalOpen(false); // Cerrar el modal
     setBoletos(1);
     // Cancelar también
@@ -766,7 +775,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     setDiscountAmount(0);
   };
 
-  const handleBoletosChange = (e: any) => {
+  const handleBoletosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = parseInt(e.target.value, 10);
     if (!isNaN(value) && value >= 1 && value <= limite) {
       setBoletos(value);
@@ -905,7 +914,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     try {
       setCargando(true);
 
-      let resdata: any;
+      let resdata: unknown;
       try {
         const { data } = await apiApplication.post(`/eventos/${evento?.id}/gratis`, {
           esInvitado: usuarioInvitado,
@@ -915,14 +924,15 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           nombre: usuarioInvitado ? formValues.nombre_invitado : user?.fullName,
         });
         resdata = data;
-      } catch (error: any) {
+      } catch (error) {
         setCargando(false);
         console.error("Error al completar la compra gratuita:", error);
         Swal.fire({
           title: "Error",
-          text:
-            error.response?.data?.message ||
+          text: mensajeDeErrorApi(
+            error,
             "Ocurrió un error al completar la compra gratuita. Por favor, intenta nuevamente.",
+          ),
           icon: "error",
           confirmButtonText: "OK",
         });
@@ -1036,13 +1046,16 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           return false;
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       setCargando(false);
       setIsModalOpen(false);
       console.error("Error en la reserva:", error);
       Swal.fire({
         title: "Atención!",
-        text: error.message || "Ocurrió un error al reservar. Por favor, intenta nuevamente.",
+        text:
+          error instanceof Error
+            ? error.message
+            : "Ocurrió un error al reservar. Por favor, intenta nuevamente.",
         icon: "error",
         confirmButtonText: "OK",
       });
@@ -1105,7 +1118,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     }
   };
 
-  const handleCancelarCompra = async (e: any) => {
+  const handleCancelarCompra = async (e: React.MouseEvent) => {
     e.preventDefault();
     try {
       if (evento?.id && reservaId) {
@@ -1159,7 +1172,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       }
 
       // Construcción del payload del pago
-      const payload: any = {
+      const payload: Record<string, unknown> = {
         reservaId: reservaId,
         esGeneral: true,
         tipoDispositivo: "web",
@@ -1257,17 +1270,17 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
         setStep(1);
         setIsModalOpen(false);
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error procesando pago", error);
       setCargando(false);
       Swal.fire({
         title: "Error",
-        text: error?.response?.data?.message || "Ocurrió un error al procesar el pago.",
+        text: mensajeDeErrorApi(error, "Ocurrió un error al procesar el pago."),
         icon: "error",
         confirmButtonText: "OK",
       });
 
-      if (error?.response?.data?.isPromoError) {
+      if (cuerpoDeErrorApi(error)?.isPromoError) {
         setDiscountAmount(0);
         setPromocionID(0);
       }
@@ -1342,11 +1355,11 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     try {
       // 📌 Intentar procesar el pago
       await procesarPago();
-    } catch (error: any) {
+    } catch (error) {
       console.error("Error al procesar la compra:", error);
       Swal.fire({
         title: "Error",
-        text: error.message || "Ocurrió un error al comprar.",
+        text: error instanceof Error ? error.message : "Ocurrió un error al comprar.",
         icon: "error",
         confirmButtonText: "OK",
       });
@@ -1419,7 +1432,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
   };
 
   const calcularTotal = () => {
-    let totalBase = boletos * precioBoletos - discountAmount;
+    const totalBase = boletos * precioBoletos - discountAmount;
     const totalUdt = totalBase * udt;
     const totalUds = totalBase * uds;
 
@@ -1443,7 +1456,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     );
   const decrement = () => setBoletos((prev) => (prev > 1 ? prev - 1 : 1));
 
-  const handleClickSeccionAdicional = (seccion: any) => {
+  const handleClickSeccionAdicional = (seccion: Secciones) => {
     setPrecioBoletos(+seccion.precioSeccion);
     setIsModalOpen(true);
     setModalProps(seccion);

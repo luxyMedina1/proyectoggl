@@ -9,23 +9,13 @@ import { FaArrowLeftLong } from "react-icons/fa6";
 import { IoLocationOutline } from "react-icons/io5";
 import { HiOutlineCalendarDateRange } from "react-icons/hi2";
 import { formatDate } from '../../../utils/dateHelpers';
-
-interface Conferencia {
-    id: Number;
-    nombre: string;
-    fecha: string;
-    descripcion: string;
-    ubicacion: string;
-    patrocinadores: any[];
-    contactos: any[];
-    redes_sociales: any[];
-    imagenBanner: string;
-}
+import type { ConferenciaDetalle } from '../../../types/Conferencia';
+import { cuerpoDeErrorApi } from '../../../utils/apiError';
 
 function RegistroConferencia() {
     const { eventoId } = useParams<{ eventoId: string }>();
 
-    const [conferencia, setConferencia] = useState<Conferencia | null>(null);
+    const [conferencia, setConferencia] = useState<ConferenciaDetalle | null>(null);
     const [error, setError] = useState<string | null>(null);
 
     useEffect(() => {
@@ -38,10 +28,11 @@ function RegistroConferencia() {
                 const { data } = await apiApplication.get(`/eventos/conferencia/${eventoId}`);
                 setConferencia(data);
                 console.log("🚀 ~ getConferenciaDetalle ~ data:", data)
-            } catch (error: any) {
+            } catch (error) {
                 console.error('Error al obtener los datos:', error);
-                if (error.response && error.response.data) {
-                    const errorMessage = error.response.data.message || 'Ha ocurrido un error al obtener los datos.';
+                const cuerpo = cuerpoDeErrorApi(error);
+                if (cuerpo) {
+                    const errorMessage = cuerpo.message || 'Ha ocurrido un error al obtener los datos.';
                     setError(errorMessage);
                     Swal.fire("Error", errorMessage, "error");
                 } else {

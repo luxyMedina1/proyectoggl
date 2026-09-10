@@ -2,6 +2,7 @@ import { cache } from "react";
 import type { Metadata, ResolvingMetadata } from "next";
 import EventosView from "./EventosView";
 import { getListaEventos } from "@/utils/ogEvento";
+import type { EventoListaSlug } from "@/utils/eventoSlug";
 import { construirItemListEventosJsonLd } from "@/utils/jsonLdEvento";
 import { getSiteConfig } from "@/lib/config/getSiteConfig";
 
@@ -18,7 +19,7 @@ const DESCRIPCION_HOME =
 // ItemList). `cache()` de React la ejecuta una sola vez por render y comparte el
 // resultado; además nunca lanza (cae a []), así que un back caído no rompe la
 // página ni el build.
-const getEventosHome = cache(async (): Promise<any[]> => {
+const getEventosHome = cache(async (): Promise<EventoListaSlug[]> => {
   try {
     return await getListaEventos();
   } catch {

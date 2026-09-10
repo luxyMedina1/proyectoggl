@@ -4,6 +4,7 @@ import Sidebar from './components/Sidebar';
 import Loader from '@/publicUi/components/Loader';
 import UserAvatar from "../../../components/UserAvatar";
 import Swal from "sweetalert2";
+import { cuerpoDeErrorApi } from "../../../utils/apiError";
 
 function MiPerfil() {
 
@@ -20,12 +21,13 @@ function MiPerfil() {
             setCargando(true);
             const { data } = await apiApplication.get('/usuarios/mi_perfil');
             setPerfil(data);
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error al obtener el perfil:", error);
             let mensajeError = "Error al obtener el perfil.";
-            if (error.response && error.response.data && error.response.data.message) {
-                mensajeError = error.response.data.message;
-            } else if (error.message) {
+            const cuerpo = cuerpoDeErrorApi(error);
+            if (cuerpo?.message) {
+                mensajeError = cuerpo.message;
+            } else if (error instanceof Error) {
                 mensajeError = error.message;
             }
             Swal.fire({
@@ -80,12 +82,13 @@ function MiPerfil() {
                 },
             });
             await cargarMiPerfil();
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error al actualizar la foto de perfil:", error);
             let mensajeError = "Error al actualizar la foto de perfil.";
-            if (error.response && error.response.data && error.response.data.message) {
-                mensajeError = error.response.data.message;
-            } else if (error.message) {
+            const cuerpo = cuerpoDeErrorApi(error);
+            if (cuerpo?.message) {
+                mensajeError = cuerpo.message;
+            } else if (error instanceof Error) {
                 mensajeError = error.message;
             }
             Swal.fire({
@@ -138,12 +141,13 @@ function MiPerfil() {
                 icon: "success",
                 confirmButtonText: "OK",
             });
-        } catch (error: any) {
+        } catch (error) {
             console.error("Error al actualizar el perfil:", error);
             let mensajeError = "Error al actualizar el perfil.";
-            if (error.response && error.response.data && error.response.data.message) {
-                mensajeError = error.response.data.message;
-            } else if (error.message) {
+            const cuerpo = cuerpoDeErrorApi(error);
+            if (cuerpo?.message) {
+                mensajeError = cuerpo.message;
+            } else if (error instanceof Error) {
                 mensajeError = error.message;
             }
             Swal.fire({

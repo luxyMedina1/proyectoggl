@@ -217,9 +217,13 @@ Optimization API con AVIF); el fix es `16.3.4`. `react`/`react-dom` van en `19.2
 vulnerabilidades); si vuelve a marcar algo, no subas el pin a ciegas: corre `npm run verify` y
 prueba el pipeline de imágenes (`opengraph-image`, `next/image`) antes.
 
-**`npm run lint` sale rojo y es esperado.** 236 errores + 157 warnings heredados del código legacy. Se
-muestra sin bloquear; cuando llegue a 0, hay que quitar el `continue-on-error` de los dos CI para que
-empiece a gatear. No lo "arregles" con un `--fix` masivo dentro de un PR de otra cosa.
+**`npm run lint` sale rojo y es esperado.** 68 errores + 146 warnings heredados del código legacy
+(de los errores, 34 son `@typescript-eslint/no-explicit-any`, lo que resta del barrido por carpeta;
+los 4 flujos de checkout, `useEventosStore`, `sitemap`, los hooks de conferencia y `useGoogleAuth`
+ya están limpios — ver los tipos compartidos `utils/apiError.ts`, `types/Conferencia.ts`,
+`types/openpay.d.ts`). Se muestra sin bloquear; cuando llegue a 0, hay que quitar el
+`continue-on-error` de los dos CI para que empiece a gatear. No lo "arregles" con un `--fix` masivo
+dentro de un PR de otra cosa.
 
 **La API key viaja al navegador.** `NEXT_PUBLIC_API_KEY` se lee con Ctrl+U. Es un hallazgo abierto de
 la auditoría, no un descuido: `api/apiApplication.ts` corre en el cliente y no tiene alternativa
@@ -256,6 +260,6 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 **Última revisión:** 2026-09-10, contra Next 16.3.4 y React 19.2.7.
 
-Los números de este archivo (34 páginas, 23 cliente, 109 `<img>`, 236 errores de lint, 135 pruebas,
+Los números de este archivo (34 páginas, 23 cliente, 109 `<img>`, 68 errores de lint, 135 pruebas,
 39 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
 actualiza.
