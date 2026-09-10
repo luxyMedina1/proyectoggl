@@ -109,7 +109,24 @@ interface Evento {
 
 export default function EventosView() {
   return (
-    <Suspense fallback={<LocalLoader />}>
+    // El fallback es lo UNICO de esta vista que entra en el HTML prerenderizado:
+    // EventosContent usa useSearchParams() y hace bailout de CSR, asi que hasta
+    // que hidrata no hay contenido. Con LocalLoader suelto (position:fixed, 0 de
+    // alto) el footer nacia pegado al header y saltaba ~2000px al montar el grid
+    // (era el 100% del CLS de /eventos). Este spacer reserva un alto parecido al
+    // de una home poblada para que el footer nazca cerca de su sitio; el mismo
+    // `min-h-[200vh] lg:min-h-[130vh]` que EventosContent mantiene mientras
+    // `eventos` esta vacio, para que no haya salto en el relevo fallback -> contenido.
+    <Suspense
+      fallback={
+        <div
+          className="min-h-[200vh] lg:min-h-[130vh] bg-gray-50"
+          aria-hidden="true"
+        >
+          <LocalLoader />
+        </div>
+      }
+    >
       <EventosContent />
     </Suspense>
   );
