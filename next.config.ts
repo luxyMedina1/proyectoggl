@@ -101,11 +101,11 @@ const nextConfig: NextConfig = {
     // también aplique detrás de un proxy/CDN que no herede ese default
     // (oportunidad "tiempos de vida de caché eficientes" del doc 05).
     //
-    // SOLO en producción: en dev, Turbopack sirve los chunks por esta misma ruta
-    // con nombres que NO cambian aunque cambie el contenido, así que `immutable`
-    // deja al navegador con JS viejo → HMR roto y errores de hidratación. Next lo
+    // Salvo en `next dev`: Turbopack sirve los chunks por esta misma ruta con
+    // nombres que NO cambian aunque cambie el contenido, así que `immutable` deja
+    // al navegador con JS viejo → HMR roto y errores de hidratación. Next lo
     // avisa: "Custom Cache-Control headers ... can break Next.js development".
-    if (process.env.NODE_ENV === "production") {
+    if (process.env.NODE_ENV !== "development") {
       headers.push({
         source: "/_next/static/:path*",
         headers: [
