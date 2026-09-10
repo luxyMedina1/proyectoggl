@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import type { CSSProperties } from "react";
-import Script from "next/script";
 import { Poppins } from "next/font/google";
 import "./globals.css";
 import "../styles/legacy.scss";
@@ -88,18 +87,8 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           href="https://taquilla-v2-files.s3.us-east-1.amazonaws.com"
           crossOrigin=""
         />
-        {/* Los SDK de login (Google / Apple) cargan `afterInteractive`; resolver
-            su DNS por adelantado evita que el primer clic en "Iniciar sesión"
-            pague la latencia de resolución. */}
-        <link rel="dns-prefetch" href="https://accounts.google.com" />
-        <link rel="dns-prefetch" href="https://appleid.cdn-apple.com" />
       </head>
       <body className="min-h-full flex flex-col antialiased font-sans">
-        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
-        <Script
-          src="https://appleid.cdn-apple.com/appleauth/static/jsapi/appleid/1/en_US/appleid.auth.js"
-          strategy="afterInteractive"
-        />
         <Providers configInicial={config} coloresIniciales={colors}>
           <AppGate>{children}</AppGate>
         </Providers>
