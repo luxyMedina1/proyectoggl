@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, ResolvingMetadata } from "next";
 import { getCiudades, getLandingCityPass, getPaquetesCityPass } from "@/lib/citypass/getCityPass";
 import { construirProductJsonLd } from "@/utils/jsonLdCityPass";
 import { slugify, deslugify } from "@/utils/slugify";
@@ -17,7 +17,10 @@ const SITE_NAME_FALLBACK = process.env.NEXT_PUBLIC_TITLE_APP || "TaquillaVip";
 // raíz. Reutiliza los mismos helpers CACHEADOS que el cascarón (`getCiudades`,
 // `getLandingCityPass`, TTL 1 h + tag `citypass:<slug>`), así que no duplica fetch al
 // backend: React `cache()` dedupea por los mismos argumentos dentro del request.
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata(
+  { params }: Props,
+  parent: ResolvingMetadata,
+): Promise<Metadata> {
   const { slug } = await params;
   const url = `${SITE_URL}/citypass/${slug}`;
 
@@ -31,10 +34,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { config } = await getSiteConfig();
   const siteName = config?.nombreMarca?.trim() || SITE_NAME_FALLBACK;
 
+  // Imagen de marca del layout raíz (logo sobre el degradado, `app/opengraph-image.tsx`),
+  // para las ramas de abajo que no tienen imagen propia que anunciar. Hay que heredarla
+  // explícitamente de `parent`: al declarar un bloque `openGraph`/`twitter` propio, Next
+  // NO reinyecta la imagen de archivo del segmento raíz (mismo fix que `/eventos`,
+  // probado ahí: sin esto quedaba sin `og:image`).
+  const heredadas = (await parent).openGraph?.images ?? [];
+
   // Ciudad sin CityPass configurado (landing `configurada: false`, o el back no
-  // respondió): mismo título en las dos ramas, pero la descripción y la imagen NO
-  // prometen paquetes que no existen — coherente con el estado vacío que pinta
-  // `CityPassPage` para este mismo caso.
+  // respondió): mismo título en las dos ramas, pero la descripción NO promete
+  // paquetes que no existen — coherente con el estado vacío que pinta
+  // `CityPassPage` para este mismo caso. La imagen SÍ se anuncia (la de marca):
+  // sin esto la tarjeta al compartir salía sin imagen (se verificó contra el
+  // backend real — hoy Durango, la única ciudad, está en este caso).
   if (!landing || landing.configurada === false) {
     const titulo = `CityPass ${ciudad.nombre}`;
     const descripcion =
@@ -53,17 +65,20 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
         locale: "es_MX",
         title: titulo,
         description: descripcion,
+        images: heredadas,
       },
       twitter: {
         card: "summary_large_image",
         title: titulo,
         description: descripcion,
+        images: heredadas,
       },
     };
   }
 
   // Ciudad con CityPass a la venta: título/descripción/imagen reales del hero,
-  // igual que pinta `CityPassHero`.
+  // igual que pinta `CityPassHero`. Si el hero no trae imagen, cae a la de marca
+  // (misma razón que arriba) en vez de quedarse sin ninguna.
   const titulo = landing.hero.titulo || `CityPass ${ciudad.nombre}`;
   const descripcion =
     textoPlano(landing.hero.descripcion) ||
@@ -81,13 +96,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       locale: "es_MX",
       title: titulo,
       description: descripcion,
-      images: imagen ? [{ url: imagen, alt: titulo }] : undefined,
+      images: imagen ? [{ url: imagen, alt: titulo }] : heredadas,
     },
     twitter: {
       card: "summary_large_image",
       title: titulo,
       description: descripcion,
-      images: imagen ? [imagen] : undefined,
+      images: imagen ? [imagen] : heredadas,
     },
   };
 }

@@ -18,9 +18,19 @@ vi.mock("@/lib/config/getSiteConfig", () => ({
 // Isla de cliente: no aporta a este test y arrastra Redux/next-navigation.
 vi.mock("@/publicUi/pages/CityPassPage", () => ({ default: () => null }));
 
+import type { ResolvingMetadata } from "next";
 import { generateMetadata } from "./page";
 
 const CIUDAD = { id: 7, nombre: "Torreón" };
+
+// `parent`: lo que `generateMetadata` hereda del layout raíz (imagen de marca de
+// `app/opengraph-image.tsx`). Las ramas sin imagen propia deben reinyectarla —
+// declarar un bloque `openGraph` propio sin `images` pisa la del padre (mismo fix
+// que `/eventos`), así que sin esto la tarjeta al compartir sale sin imagen.
+const IMAGEN_MARCA = [{ url: "https://taquillavip.com/opengraph-image", alt: "TaquillaVip" }];
+const PARENT = Promise.resolve({
+  openGraph: { images: IMAGEN_MARCA },
+}) as unknown as ResolvingMetadata;
 
 describe("generateMetadata — CityPass por ciudad", () => {
   beforeEach(() => {
@@ -31,9 +41,10 @@ describe("generateMetadata — CityPass por ciudad", () => {
   it("hereda el OG genérico del layout cuando el slug no resuelve ninguna ciudad", async () => {
     getCiudades.mockResolvedValue([CIUDAD]);
 
-    const metadata = await generateMetadata({
-      params: Promise.resolve({ slug: "ciudad-inexistente" }),
-    });
+    const metadata = await generateMetadata(
+      { params: Promise.resolve({ slug: "ciudad-inexistente" }) },
+      PARENT,
+    );
 
     expect(metadata).toEqual({});
     expect(getLandingCityPass).not.toHaveBeenCalled();
@@ -48,7 +59,10 @@ describe("generateMetadata — CityPass por ciudad", () => {
       paquetes: [{ id: 1 }, { id: 2 }],
     });
 
-    const metadata = await generateMetadata({ params: Promise.resolve({ slug: "torreon" }) });
+    const metadata = await generateMetadata(
+      { params: Promise.resolve({ slug: "torreon" }) },
+      PARENT,
+    );
 
     expect(metadata.title).toBe("CityPass Torreón");
     expect(metadata.description).toBe("Vive la ciudad");
@@ -58,7 +72,7 @@ describe("generateMetadata — CityPass por ciudad", () => {
     expect(metadata.twitter?.images).toEqual(["https://cdn/hero.jpg"]);
   });
 
-  it("cuando la ciudad NO tiene CityPass configurado: mensaje real del backend, sin imagen", async () => {
+  it("cuando la ciudad NO tiene CityPass configurado: mensaje real del backend, imagen de marca heredada", async () => {
     getCiudades.mockResolvedValue([CIUDAD]);
     getLandingCityPass.mockResolvedValue({
       configurada: false,
@@ -66,24 +80,48 @@ describe("generateMetadata — CityPass por ciudad", () => {
       mensaje: "Aún no tenemos CityPass en Torreón.",
     });
 
-    const metadata = await generateMetadata({ params: Promise.resolve({ slug: "torreon" }) });
+    const metadata = await generateMetadata(
+      { params: Promise.resolve({ slug: "torreon" }) },
+      PARENT,
+    );
 
     expect(metadata.title).toBe("CityPass Torreón");
     expect(metadata.description).toBe("Aún no tenemos CityPass en Torreón.");
-    expect(metadata.openGraph?.images).toBeUndefined();
-    expect(metadata.twitter?.images).toBeUndefined();
+    expect(metadata.openGraph?.images).toEqual(IMAGEN_MARCA);
+    expect(metadata.twitter?.images).toEqual(IMAGEN_MARCA);
   });
 
-  it("cuando el backend de landing no responde: mensaje genérico de 'próximamente', sin imagen", async () => {
+  it("cuando el backend de landing no responde: mensaje genérico de 'próximamente', imagen de marca heredada", async () => {
     getCiudades.mockResolvedValue([CIUDAD]);
     getLandingCityPass.mockResolvedValue(null);
 
-    const metadata = await generateMetadata({ params: Promise.resolve({ slug: "torreon" }) });
+    const metadata = await generateMetadata(
+      { params: Promise.resolve({ slug: "torreon" }) },
+      PARENT,
+    );
 
     expect(metadata.title).toBe("CityPass Torreón");
     expect(metadata.description).toBe(
       "Estamos preparando el CityPass de Torreón. Muy pronto podrás verlo aquí.",
     );
-    expect(metadata.openGraph?.images).toBeUndefined();
+    expect(metadata.openGraph?.images).toEqual(IMAGEN_MARCA);
+  });
+
+  it("cuando la ciudad tiene CityPass pero el hero no trae imagen: cae a la imagen de marca heredada", async () => {
+    getCiudades.mockResolvedValue([CIUDAD]);
+    getLandingCityPass.mockResolvedValue({
+      configurada: true,
+      ciudad: CIUDAD,
+      hero: { titulo: "CityPass Torreón", descripcion: "<p>Vive la ciudad</p>", imagen: null },
+      paquetes: [{ id: 1 }],
+    });
+
+    const metadata = await generateMetadata(
+      { params: Promise.resolve({ slug: "torreon" }) },
+      PARENT,
+    );
+
+    expect(metadata.openGraph?.images).toEqual(IMAGEN_MARCA);
+    expect(metadata.twitter?.images).toEqual(IMAGEN_MARCA);
   });
 });
