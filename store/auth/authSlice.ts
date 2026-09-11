@@ -30,7 +30,7 @@ export const authSlice = createSlice({
             state.isVerified = undefined;
             state.errorMessage = undefined;
         },
-        onLogin: (state, action: PayloadAction<{ user: UserAuthDTO; token: string; isVerified?: boolean }>) => {
+        onLogin: (state, action: PayloadAction<{ user: UserAuthDTO | undefined; token: string; isVerified?: boolean }>) => {
             state.status = 'authenticated';
             state.user = action.payload.user;
             state.token = action.payload.token;

@@ -309,7 +309,20 @@ export const useAuthStore = () => {
         } catch (error) {
             console.error("Error en checkAuthToken:", error);
 
-            if ((error as ApiError).message === "Usuario no verificado") {
+            const err = error as ApiError;
+            const httpStatus = err?.response?.status;
+            const noVerificado = err?.message === "Usuario no verificado";
+            // Solo cerramos sesión ante un rechazo de auth real: 401/403 del
+            // backend o cuenta sin verificar. Un fallo de red / CORS / timeout /
+            // 5xx NO debe desloguear — el token puede seguir siendo válido y el
+            // usuario quizá acaba de entrar. Antes cualquier fallo de
+            // `/auth/check-status` en una recarga rebotaba al login ("entra pero
+            // rebota"). Si el token está muerto de verdad, el interceptor de
+            // apiApplication lo detecta en el primer request (401 -> refresh ->
+            // redirect a /auth/login), así que esto no deja sesiones zombie.
+            const esRechazoDeAuth = noVerificado || httpStatus === 401 || httpStatus === 403;
+
+            if (noVerificado) {
                 Swal.fire({
                     icon: "warning",
                     title: "Verificación requerida",
@@ -318,11 +331,21 @@ export const useAuthStore = () => {
                 });
             }
 
-            authStorage.clearAuth();
-
-            dispatch(onLogout('Se ha cerrado la sesión'));
-
-            setTimeout(() => dispatch(clearErrorMessage()), 10);
+            if (esRechazoDeAuth) {
+                authStorage.clearAuth();
+                dispatch(onLogout('Se ha cerrado la sesión'));
+                setTimeout(() => dispatch(clearErrorMessage()), 10);
+            } else {
+                // Fallo transitorio: conservar la sesión. Se marca `authenticated`
+                // de forma optimista con el token que ya había para que `status`
+                // salga de 'checking' (si no, los guards se quedan en el loader).
+                const persistToken = authStorage.get('token');
+                if (persistToken) {
+                    dispatch(onLogin({ user, token: persistToken, isVerified: true }));
+                } else {
+                    dispatch(onLogout(undefined));
+                }
+            }
         } finally {
             dispatch(onChangeLoaderStatus(false));
         }
