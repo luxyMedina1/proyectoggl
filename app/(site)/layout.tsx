@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../../hooks/useAuthStore";
 import { useAmigosStore } from "../../hooks/useAmigosStore";
 import { useTransferenciasStore } from "../../hooks/useTransferenciasStore";
 import { useCiudadesStore } from "../../hooks/useCiudadesStore";
+import { useCityPassStore } from "../../hooks/useCityPassStore";
 import { BsTwitterX, BsFacebook, BsInstagram } from "react-icons/bs";
 import { IoChevronDownOutline } from "react-icons/io5";
 import { TbLogout } from "react-icons/tb";
@@ -14,6 +15,7 @@ import { LuUserRound } from "react-icons/lu";
 import { MdOutlineEmail, MdPhone, MdLocationOn, MdExplore } from "react-icons/md";
 import { HiMenu } from "react-icons/hi";
 import { useColorConfig } from "../../context/ColorContext";
+import { useAuthModal } from "../../context/AuthModalContext";
 import { HeaderBuscador } from "../../components/HeaderBuscador";
 import { onNotifRefresh } from "../../utils/notifEvents";
 import { slugify } from "../../utils/slugify";
@@ -26,24 +28,54 @@ const NOTIF_POLL_MS = 60_000;
 // useAmigosStore, useTransferenciasStore) con polling de notificaciones cada NOTIF_POLL_MS.
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const { config } = useColorConfig();
   const { checkAuthToken, startLogout, user, status } = useAuthStore();
   const { getSolicitudesRecibidas } = useAmigosStore();
   const { getPendientesRecibidas } = useTransferenciasStore();
   const { getAllCiudades } = useCiudadesStore();
+  const { getLanding } = useCityPassStore();
+  const { requestLogin } = useAuthModal();
   const [menuVisible, setMenuVisible] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
   const [ciudades, setCiudades] = useState<Ciudad[]>([]);
   const [ciudadId, setCiudadId] = useState("");
+  const [landingCiudad, setLandingCiudad] = useState<{ ciudadId: string; disponible: boolean } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
-  // Placeholder hasta la Fase 4 (useCiudadesStore + citypass): con ciudades vacio
-  // el boton queda deshabilitado (cityPassDisponible=false) y nunca se dispara.
-  const irCityPass = () => {
+  const destinoCityPass = ciudades.find((c) => String(c.id) === ciudadId) ?? ciudades[0];
+  // Solo cuenta el resultado si es de la ciudad actualmente elegida: evita mostrar
+  // habilitado el botón con el resultado (ya obsoleto) de la ciudad anterior mientras
+  // se resuelve la nueva.
+  const cityPassDisponible =
+    !!destinoCityPass &&
+    landingCiudad?.ciudadId === String(destinoCityPass.id) &&
+    landingCiudad.disponible;
+
+  // Sin sesión, pide login antes de entrar (modal, sin navegar a otra página);
+  // ya logueado, entra directo. Mismo patrón que "comprar" en CityPassPaquetePage.
+  const irCityPass = async () => {
     const destino = ciudades.find((c) => String(c.id) === ciudadId) ?? ciudades[0];
     if (!destino) return;
+    if (status !== "authenticated") {
+      const ok = await requestLogin();
+      if (!ok) return;
+    }
     router.push(`/citypass/${slugify(destino.nombre)}`);
+  };
+
+  // Cambiar la ciudad en el buscador, estando ya en /eventos, filtra la lista al
+  // instante (?ciudad=<id>): si el backend agrega ciudades sin eventos, el listado
+  // debe reflejarlo (vacío) en vez de seguir mostrando el catálogo completo.
+  const onCiudadChange = (id: string) => {
+    setCiudadId(id);
+    if (pathname !== "/eventos" || typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (id) params.set("ciudad", id);
+    else params.delete("ciudad");
+    const query = params.toString();
+    router.push(query ? `/eventos?${query}` : "/eventos");
   };
 
   useEffect(() => {
@@ -58,6 +90,28 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Disponibilidad real del CityPass de la ciudad seleccionada (o la primera, si
+  // aún no se elige ninguna): antes el botón solo miraba si había ciudades
+  // cargadas, así que quedaba habilitado aunque la ciudad elegida no tuviera
+  // CityPass configurado.
+  useEffect(() => {
+    if (!destinoCityPass) return;
+    let activo = true;
+    const destinoId = String(destinoCityPass.id);
+    getLanding(destinoCityPass.id)
+      .then((landing) => {
+        if (activo) setLandingCiudad({ ciudadId: destinoId, disponible: landing?.configurada === true });
+      })
+      .catch((error) => {
+        console.error("Error verificando CityPass:", error);
+        if (activo) setLandingCiudad({ ciudadId: destinoId, disponible: false });
+      });
+    return () => {
+      activo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [destinoCityPass]);
 
   useEffect(() => {
     if (status === "checking") {
@@ -139,9 +193,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
               className="w-full max-w-lg"
               ciudades={ciudades}
               ciudadId={ciudadId}
-              onCiudadChange={setCiudadId}
+              onCiudadChange={onCiudadChange}
               onCityPass={irCityPass}
-              cityPassDisponible={ciudades.length > 0}
+              cityPassDisponible={cityPassDisponible}
             />
           </div>
           {status === "unauthenticated" ? (
@@ -319,9 +373,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             className="w-full"
             ciudades={ciudades}
             ciudadId={ciudadId}
-            onCiudadChange={setCiudadId}
+            onCiudadChange={onCiudadChange}
             onCityPass={irCityPass}
-            cityPassDisponible={ciudades.length > 0}
+            cityPassDisponible={cityPassDisponible}
           />
         </div>
       </header>

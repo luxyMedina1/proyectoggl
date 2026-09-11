@@ -28,11 +28,16 @@ export const HeaderBuscador = ({
     const router = useRouter();
     const [texto, setTexto] = useState('');
 
-    // El input filtra eventos en el home vía ?buscar=.
+    // El input filtra eventos en el home vía ?buscar=; conserva la ciudad elegida
+    // (?ciudad=) para no perder ese filtro al buscar por texto.
     const buscarEventos = (e: React.FormEvent) => {
         e.preventDefault();
         const q = texto.trim();
-        router.push(q ? `/eventos?buscar=${encodeURIComponent(q)}` : '/eventos');
+        const params = new URLSearchParams();
+        if (q) params.set('buscar', q);
+        if (ciudadId) params.set('ciudad', ciudadId);
+        const query = params.toString();
+        router.push(query ? `/eventos?${query}` : '/eventos');
     };
 
     return (

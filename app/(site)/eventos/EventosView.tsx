@@ -158,6 +158,9 @@ function EventosContent() {
   const { status, isVerified } = useAuthStore();
   const searchParams = useSearchParams();
   const buscar = normalizarTexto(searchParams.get("buscar") ?? "");
+  // Ciudad elegida en el buscador del header (?ciudad=<id>): filtra la lista a los
+  // eventos de esa ciudad. Sin ciudad en la URL, no filtra (comportamiento actual).
+  const ciudadFiltro = searchParams.get("ciudad");
   const [modalFuncionOpen, setModalFuncionOpen] = useState(false);
   const [eventoSeleccionado, setEventoSeleccionado] = useState<Evento | null>(null);
 
@@ -272,7 +275,8 @@ function EventosContent() {
       ? normalizarTexto(evento.nombre ?? "").includes(buscar) ||
         normalizarTexto(evento.artista?.nombre ?? "").includes(buscar)
       : true;
-    return cumpleCategoria && cumpleFecha && cumpleBusqueda;
+    const cumpleCiudad = ciudadFiltro ? String(evento.ciudad?.id ?? "") === ciudadFiltro : true;
+    return cumpleCategoria && cumpleFecha && cumpleBusqueda && cumpleCiudad;
   });
 
   const iconosCategorias: { [key: string]: React.ReactElement } = {
@@ -592,7 +596,15 @@ function EventosContent() {
 
       {/* Eventos */}
       <section className="container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 mt-2 lg:mt-8 mb-5">
-        {Object.entries(eventosPorTipo).map(([tipo, eventos]) => {
+        {/* Con eventosPorTipo vacío el .map de abajo no renderiza nada: sin este mensaje,
+            una ciudad sin eventos (o cualquier otro filtro sin resultados) dejaba la
+            sección en blanco, sin avisar que sí se buscó y no hay nada que mostrar. */}
+        {cargaFinalizada && eventosFiltrados.length === 0 ? (
+          <p className="text-gray-500 text-2xl text-center py-10">
+            No hay eventos disponibles{ciudadFiltro ? " en esta ciudad" : ""}.
+          </p>
+        ) : (
+          Object.entries(eventosPorTipo).map(([tipo, eventos]) => {
           const config = configPorTipo[tipo as keyof typeof configPorTipo];
 
           return (
@@ -739,7 +751,8 @@ function EventosContent() {
               )}
             </div>
           );
-        })}
+        })
+        )}
       </section>
 
       {/* Modal Multi Función / Abonos */}
