@@ -1,8 +1,8 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useRef } from "react";
 import { Provider } from "react-redux";
-import { store } from "../store/store";
+import { makeStore, type AppStore } from "../store/store";
 import { ColorConfigProvider } from "../context/ColorContext";
 import type { ConfigResponse } from "../context/ColorContext";
 import type { BrandColors } from "@/lib/config/getSiteConfig";
@@ -17,8 +17,15 @@ export const Providers = ({
   configInicial: ConfigResponse | null;
   coloresIniciales: BrandColors;
 }) => {
+  // Una instancia por montaje (server: por request; client: por carga de página), no un
+  // singleton de módulo — ver el comentario en store/store.ts.
+  const storeRef = useRef<AppStore | null>(null);
+  if (!storeRef.current) {
+    storeRef.current = makeStore();
+  }
+
   return (
-    <Provider store={store}>
+    <Provider store={storeRef.current}>
       <ColorConfigProvider
         configInicial={configInicial}
         coloresIniciales={coloresIniciales}
