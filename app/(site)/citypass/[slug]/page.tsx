@@ -1,12 +1,96 @@
-import { getCiudades, getPaquetesCityPass } from "@/lib/citypass/getCityPass";
+import type { Metadata } from "next";
+import { getCiudades, getLandingCityPass, getPaquetesCityPass } from "@/lib/citypass/getCityPass";
 import { construirProductJsonLd } from "@/utils/jsonLdCityPass";
-import { slugify } from "@/utils/slugify";
+import { slugify, deslugify } from "@/utils/slugify";
+import { textoPlano } from "@/utils/sanitizeHtml";
+import { getSiteConfig } from "@/lib/config/getSiteConfig";
 import CityPassPage from "@/publicUi/pages/CityPassPage";
 
 type Props = { params: Promise<{ slug: string }> };
 
 // Mismo origen que las <meta> Open Graph, para que el JSON-LD declare la misma URL absoluta.
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://taquillavip.com";
+const SITE_NAME_FALLBACK = process.env.NEXT_PUBLIC_TITLE_APP || "TaquillaVip";
+
+// Las tarjetas de WhatsApp/Facebook/X no ejecutan JS: sin esto, compartir el link de
+// CUALQUIER ciudad —tenga o no CityPass a la venta— mostraba el OG genérico del layout
+// raíz. Reutiliza los mismos helpers CACHEADOS que el cascarón (`getCiudades`,
+// `getLandingCityPass`, TTL 1 h + tag `citypass:<slug>`), así que no duplica fetch al
+// backend: React `cache()` dedupea por los mismos argumentos dentro del request.
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const { slug } = await params;
+  const url = `${SITE_URL}/citypass/${slug}`;
+
+  const ciudades = await getCiudades();
+  const ciudad = ciudades.find((c) => slugify(c.nombre) === slug);
+  // Slug que no corresponde a ninguna ciudad: sin datos reales que anunciar, se
+  // hereda el OG genérico del layout raíz en vez de inventar un título.
+  if (!ciudad) return {};
+
+  const landing = await getLandingCityPass(ciudad.id, slug);
+  const { config } = await getSiteConfig();
+  const siteName = config?.nombreMarca?.trim() || SITE_NAME_FALLBACK;
+
+  // Ciudad sin CityPass configurado (landing `configurada: false`, o el back no
+  // respondió): mismo título en las dos ramas, pero la descripción y la imagen NO
+  // prometen paquetes que no existen — coherente con el estado vacío que pinta
+  // `CityPassPage` para este mismo caso.
+  if (!landing || landing.configurada === false) {
+    const titulo = `CityPass ${ciudad.nombre}`;
+    const descripcion =
+      landing?.configurada === false
+        ? landing.mensaje
+        : `Estamos preparando el CityPass de ${ciudad.nombre || deslugify(slug)}. Muy pronto podrás verlo aquí.`;
+
+    return {
+      title: titulo,
+      description: descripcion,
+      alternates: { canonical: url },
+      openGraph: {
+        type: "website",
+        url,
+        siteName,
+        locale: "es_MX",
+        title: titulo,
+        description: descripcion,
+      },
+      twitter: {
+        card: "summary_large_image",
+        title: titulo,
+        description: descripcion,
+      },
+    };
+  }
+
+  // Ciudad con CityPass a la venta: título/descripción/imagen reales del hero,
+  // igual que pinta `CityPassHero`.
+  const titulo = landing.hero.titulo || `CityPass ${ciudad.nombre}`;
+  const descripcion =
+    textoPlano(landing.hero.descripcion) ||
+    `Descubre el CityPass de ${ciudad.nombre}: ${landing.paquetes.length} paquete${landing.paquetes.length === 1 ? "" : "s"} disponible${landing.paquetes.length === 1 ? "" : "s"}.`;
+  const imagen = landing.hero.imagen || undefined;
+
+  return {
+    title: titulo,
+    description: descripcion,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      url,
+      siteName,
+      locale: "es_MX",
+      title: titulo,
+      description: descripcion,
+      images: imagen ? [{ url: imagen, alt: titulo }] : undefined,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: titulo,
+      description: descripcion,
+      images: imagen ? [imagen] : undefined,
+    },
+  };
+}
 
 // Cascarón de servidor de la landing de CityPass de una ciudad. Resuelve los paquetes
 // vendibles con los helpers CACHEADOS (`getPaquetesCityPass`, TTL 1 h + tag
