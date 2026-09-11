@@ -91,6 +91,21 @@ const nextConfig: NextConfig = {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",
           },
+          // HSTS: fuerza HTTPS en el navegador. Sin `preload` (ese requiere
+          // someter el dominio a la lista de precarga de los navegadores, y es
+          // efectivamente irreversible) — 6 meses es suficiente para la mayoría
+          // de los visitantes recurrentes sin ese compromiso permanente. El
+          // navegador ignora esta cabecera si la respuesta no llega por HTTPS,
+          // así que no afecta a `next dev` en HTTP plano.
+          {
+            key: "Strict-Transport-Security",
+            value: "max-age=15552000; includeSubDomains",
+          },
+          // COOP: aísla esta ventana de otras del mismo grupo de navegación
+          // (mitiga ataques tipo Spectre entre pestañas). Verificado que no rompe
+          // nada: los `window.open(...)` del repo (wallet, compartir, mapas) son
+          // de un solo sentido, ninguno depende de `window.opener` de vuelta.
+          { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
         ],
       },
     ];

@@ -8,7 +8,7 @@ import Loader from "../../../../../../publicUi/components/Loader";
 import { toast } from "react-toastify";
 import { HiOutlineCalendarDateRange } from "react-icons/hi2";
 import { validarNumeroTarjeta, validarCVC } from "../../../../../../utils/cardHelpers";
-import { cuerpoDeErrorApi, mensajeDeErrorApi } from "../../../../../../utils/apiError";
+import { cuerpoDeErrorApi, mensajeDeErrorApi, statusDeErrorApi } from "../../../../../../utils/apiError";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import type { EventoResuelto } from "../../../../../../utils/eventoSlug";
@@ -1394,15 +1394,32 @@ const AbonoSeccionAsientoContent = () => {
             }, 300);
             try {
               const has_user = await apiApplication.get("/pagos/get/mi_perfil");
-              console.log(has_user);
-
               setOpenId(has_user.data.idOpenpay);
               setTarjetas(has_user.data.tarjetas);
             } catch (error) {
-              console.log("No tiene open id crearlo...");
-              const resp = await apiApplication.post("/pagos/save/usuario");
-              setOpenId(resp.data.idOpenpay);
-              console.error("Error al obtener/crear OpenPay ID", error);
+              // 404 = el usuario todavía no tiene cliente de OpenPay -> se registra
+              // ahora. Cualquier otro error (red, 500, timeout) NO se trata como
+              // "hay que registrar": antes se intentaba crear el cliente sobre
+              // CUALQUIER falla, y si ese POST también fallaba no había try/catch
+              // propio -> la excepción escapaba sin controlar y el abono (ya
+              // reservado arriba) quedaba bloqueado sin forma de pago -> se perdía
+              // el flujo.
+              if (statusDeErrorApi(error) === 404) {
+                try {
+                  const resp = await apiApplication.post("/pagos/save/usuario");
+                  setOpenId(resp.data.idOpenpay);
+                } catch (registroError) {
+                  console.error("No se pudo registrar el cliente de pago:", registroError);
+                  Swal.fire({
+                    title: "Atención",
+                    text: "Tu reserva ya está hecha, pero no pudimos preparar tu método de pago. Intenta de nuevo en unos segundos.",
+                    icon: "warning",
+                    confirmButtonText: "OK",
+                  });
+                }
+              } else {
+                console.error("Error al obtener el perfil de pagos:", error);
+              }
             }
 
             // Obtener la fecha de expiración

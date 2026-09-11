@@ -23,7 +23,7 @@ import { toast } from "react-toastify";
 import { LuBadgeCheck } from "react-icons/lu";
 import { formatDate } from "../../utils/dateHelpers";
 import { validarNumeroTarjeta, validarCVC } from "../../utils/cardHelpers";
-import { cuerpoDeErrorApi, mensajeDeErrorApi } from "../../utils/apiError";
+import { cuerpoDeErrorApi, mensajeDeErrorApi, statusDeErrorApi } from "../../utils/apiError";
 import { formatearDinero } from "../helpers/formatearDinero";
 import {
   filtrarPromocionesAplicablesPorCategoria,
@@ -594,12 +594,32 @@ export const FormConferenciaPage = () => {
               const has_user = await apiApplication.get("/pagos/get/mi_perfil");
               setOpenId(has_user.data.idOpenpay);
               setTarjetas(has_user.data.tarjetas);
-              setCargando(false);
             } catch (error) {
-              const resp = await apiApplication.post("/pagos/save/usuario");
-              setOpenId(resp.data.idOpenpay);
+              // 404 = el usuario todavía no tiene cliente de OpenPay -> se registra
+              // ahora. Cualquier otro error (red, 500, timeout) NO se trata como
+              // "hay que registrar": antes se intentaba crear el cliente sobre
+              // CUALQUIER falla, y si ese POST también fallaba no había try/catch
+              // propio -> la excepción escapaba sin controlar y la reserva (ya
+              // hecha arriba) quedaba bloqueada sin forma de pago -> se perdía el
+              // flujo.
+              if (statusDeErrorApi(error) === 404) {
+                try {
+                  const resp = await apiApplication.post("/pagos/save/usuario");
+                  setOpenId(resp.data.idOpenpay);
+                } catch (registroError) {
+                  console.error("No se pudo registrar el cliente de pago:", registroError);
+                  Swal.fire({
+                    title: "Atención",
+                    text: "Tu reserva ya está hecha, pero no pudimos preparar tu método de pago. Intenta de nuevo en unos segundos.",
+                    icon: "warning",
+                    confirmButtonText: "OK",
+                  });
+                }
+              } else {
+                console.error("Error al obtener el perfil de pagos:", error);
+              }
+            } finally {
               setCargando(false);
-              console.error("Error al obtener/crear OpenPay ID", error);
             }
           } /* [INVITADO DESHABILITADO] else {
             setUsuarioInvitado(true);
