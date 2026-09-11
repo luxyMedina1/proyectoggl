@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../../hooks/useAuthStore";
@@ -223,9 +224,16 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 </button>
                 <button
                   onClick={() => setMenuVisible(!menuVisible)}
+                  aria-label="Abrir menú de mi cuenta"
+                  aria-haspopup="true"
+                  aria-expanded={menuVisible}
                   className="relative bg-emphasis text-neutral px-4 inline-flex items-center gap-x-2 py-2 rounded-md transition-colors"
                 >
-                  <IoChevronDownOutline /> {user?.fullName}
+                  {/* Si `user?.fullName` aún no llega (carga inicial), el botón se
+                      quedaba solo con el ícono -> sin nombre accesible (PSI:
+                      "Buttons must have discernible text"). El aria-label lo
+                      garantiza siempre, tenga o no texto visible. */}
+                  <IoChevronDownOutline aria-hidden /> {user?.fullName}
                 </button>
                 {menuVisible && (
                   <div
@@ -342,9 +350,10 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <div className="flex items-center gap-x-2 mt-3 justify-center">
               {/* Relación real de los PNG: 192x64 (3.00) y 192x58 (3.31). Antes se
                   declaraban 100x90 → salían aplastados y Lighthouse marcaba
-                  `image-aspect-ratio`. */}
-              <img width={120} height={40} src="/app_store.png" alt="App Store" />
-              <img width={120} height={36} src="/google_play.png" alt="Google Play" />
+                  `image-aspect-ratio`. `next/image`: sirve WebP/AVIF y el tamaño
+                  real de 120x40/120x36 en vez de la fuente completa de 192px. */}
+              <Image width={120} height={40} src="/app_store.png" alt="App Store" />
+              <Image width={120} height={36} src="/google_play.png" alt="Google Play" />
             </div>
           </div>
           {(config?.urlTwitter || config?.urlFacebook || config?.urlInstagram) && (
@@ -458,9 +467,10 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <div className="flex items-center gap-x-2 mt-3">
               {/* Relación real de los PNG: 192x64 (3.00) y 192x58 (3.31). Antes se
                   declaraban 100x90 → salían aplastados y Lighthouse marcaba
-                  `image-aspect-ratio`. */}
-              <img width={120} height={40} src="/app_store.png" alt="App Store" />
-              <img width={120} height={36} src="/google_play.png" alt="Google Play" />
+                  `image-aspect-ratio`. `next/image`: sirve WebP/AVIF y el tamaño
+                  real de 120x40/120x36 en vez de la fuente completa de 192px. */}
+              <Image width={120} height={40} src="/app_store.png" alt="App Store" />
+              <Image width={120} height={36} src="/google_play.png" alt="Google Play" />
             </div>
           </div>
           <div className="col-span-4 md:col-span-1">

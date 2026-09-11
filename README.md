@@ -168,7 +168,7 @@ bailan). Cifras de abajo son de PSI móvil salvo donde diga.
   `<a>` como hijos directos → envueltos en `<li>`. Pendiente: contraste de los botones de categoría
   (`text-neutral` sobre `bg-gray-400`) — es decisión de paleta.
 
-Pruebas: Vitest + jsdom + Testing Library. Hoy son **135 pruebas en 18 archivos**, la mayoría de
+Pruebas: Vitest + jsdom + Testing Library. Hoy son **136 pruebas en 18 archivos**, la mayoría de
 propiedad (`fast-check`) sobre los helpers puros de `utils/` (promociones, slugs, JSON-LD, fechas).
 Cualquier `*.test.ts(x)` o `*.spec.ts(x)` en cualquier carpeta se recoge solo.
 
@@ -183,7 +183,7 @@ Sharing Debugger de Facebook. Lo que falta es dejar de renderizar todo en el nav
 |---|---|
 | Páginas que abren con `'use client'` | 23 de 34 (2 de las otras son `redirect()` de una línea) |
 | Rutas con `generateMetadata` | 4 de contenido, más el layout raíz |
-| `<img>` nativos vs. `next/image` | 109 contra 2 archivos migrados (`/eventos` y el detalle de evento) |
+| `<img>` nativos vs. `next/image` | 105 contra 2 archivos migrados (`/eventos` y el detalle de evento) |
 | Perfil y "mis compras" en el servidor | Bloqueado por la sesión en `localStorage` |
 
 De las 23 páginas cliente, **20 lo son con razón**: perfil, auth y checkout son privadas y están
@@ -262,6 +262,6 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 **Última revisión:** 2026-09-10, contra Next 16.3.4 y React 19.2.7.
 
-Los números de este archivo (34 páginas, 23 cliente, 109 `<img>`, 68 errores de lint, 135 pruebas,
+Los números de este archivo (34 páginas, 23 cliente, 105 `<img>`, 68 errores de lint, 136 pruebas,
 39 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
 actualiza.
