@@ -4,7 +4,7 @@ import { validarNumeroTarjeta, validarCVC } from "../../../utils/cardHelpers";
 import Sidebar from "./components/Sidebar";
 import Swal from "sweetalert2";
 import Loader from "@/publicUi/components/Loader";
-import { cuerpoDeErrorApi } from "../../../utils/apiError";
+import { cuerpoDeErrorApi, statusDeErrorApi } from "../../../utils/apiError";
 import { CiCreditCard2 } from "react-icons/ci";
 import { FaCcMastercard, FaCcVisa, FaTrashCan, FaPlus } from "react-icons/fa6";
 import { RiSecurePaymentLine } from "react-icons/ri";
@@ -32,6 +32,15 @@ function MisFormasDePago() {
         setOpenId(data.idOpenpay);
         setTarjetas(data.tarjetas);
       } catch (error) {
+        // 404 = el usuario todavia no tiene cliente de OpenPay (nunca guardo/proceso
+        // un pago con esta cuenta). No es un error real: es el mismo "0 tarjetas
+        // guardadas" que ya se muestra cuando SI hay cliente pero viene vacio
+        // (abajo, `tarjetas?.length === 0`). Sin esto, un usuario nuevo veia un
+        // popup de "Error" solo por no haber comprado nada todavia.
+        if (statusDeErrorApi(error) === 404) {
+          setTarjetas([]);
+          return;
+        }
         console.error("Error al obtener las tarjetas:", error);
         let mensajeError = "Error al obtener las tarjetas.";
         const cuerpo = cuerpoDeErrorApi(error);

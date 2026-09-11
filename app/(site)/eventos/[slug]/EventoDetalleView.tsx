@@ -18,7 +18,7 @@ import Swal from "sweetalert2";
 import apiApplication from "../../../../api/apiApplication";
 import { formatDate, formatFechaConRango, formatHoraRelativa } from "../../../../utils/dateHelpers";
 import { validarNumeroTarjeta, validarCVC } from "../../../../utils/cardHelpers";
-import { cuerpoDeErrorApi, mensajeDeErrorApi } from "../../../../utils/apiError";
+import { cuerpoDeErrorApi, mensajeDeErrorApi, statusDeErrorApi } from "../../../../utils/apiError";
 import { sanitizeRichText } from "../../../../utils/sanitizeHtml";
 import { buildEventoSlug, type EventoResuelto } from "../../../../utils/eventoSlug";
 import type { SeleccionAsientoFuncion } from "../../../../types/Abono";
@@ -984,12 +984,32 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
               setOpenId(has_user.data.idOpenpay);
               setTarjetas(has_user.data.tarjetas);
               setEmailUsuario(has_user.data.usuario.email);
-              setCargando(false);
             } catch (error) {
-              const resp = await apiApplication.post("/pagos/save/usuario");
-              setOpenId(resp.data.idOpenpay);
+              // 404 = el usuario todavía no tiene cliente de OpenPay -> se registra
+              // ahora. Cualquier otro error (red, 500, timeout) NO se trata como
+              // "hay que registrar": antes se intentaba crear el cliente sobre
+              // CUALQUIER falla, y si ese POST también fallaba no había try/catch
+              // propio -> la excepción escapaba sin controlar, y el asiento (que
+              // arriba YA se reservó con éxito) quedaba bloqueado sin que el
+              // usuario tuviera forma de pagar -> se perdía el flujo.
+              if (statusDeErrorApi(error) === 404) {
+                try {
+                  const resp = await apiApplication.post("/pagos/save/usuario");
+                  setOpenId(resp.data.idOpenpay);
+                } catch (registroError) {
+                  console.error("No se pudo registrar el cliente de pago:", registroError);
+                  Swal.fire({
+                    title: "Atención",
+                    text: "Tu asiento ya está reservado, pero no pudimos preparar tu método de pago. Intenta de nuevo en unos segundos.",
+                    icon: "warning",
+                    confirmButtonText: "OK",
+                  });
+                }
+              } else {
+                console.error("Error al obtener el perfil de pagos:", error);
+              }
+            } finally {
               setCargando(false);
-              console.error("Error al obtener/crear OpenPay ID", error);
             }
           }
 

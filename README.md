@@ -183,7 +183,7 @@ Sharing Debugger de Facebook. Lo que falta es dejar de renderizar todo en el nav
 |---|---|
 | Páginas que abren con `'use client'` | 23 de 34 (2 de las otras son `redirect()` de una línea) |
 | Rutas con `generateMetadata` | 5 de contenido, más el layout raíz |
-| `<img>` nativos vs. `next/image` | 109 contra 2 archivos migrados (`/eventos` y el detalle de evento) |
+| `<img>` nativos vs. `next/image` | 105 contra 2 archivos migrados (`/eventos` y el detalle de evento) |
 | Perfil y "mis compras" en el servidor | Bloqueado por la sesión en `localStorage` |
 
 De las 23 páginas cliente, **20 lo son con razón**: perfil, auth y checkout son privadas y están
@@ -219,7 +219,7 @@ Optimization API con AVIF); el fix es `16.3.4`. `react`/`react-dom` van en `19.2
 vulnerabilidades); si vuelve a marcar algo, no subas el pin a ciegas: corre `npm run verify` y
 prueba el pipeline de imágenes (`opengraph-image`, `next/image`) antes.
 
-**`npm run lint` sale rojo y es esperado.** 68 errores + 146 warnings heredados del código legacy
+**`npm run lint` sale rojo y es esperado.** 70 errores + 140 warnings heredados del código legacy
 (de los errores, 34 son `@typescript-eslint/no-explicit-any`, lo que resta del barrido por carpeta;
 los 4 flujos de checkout, `useEventosStore`, `sitemap`, los hooks de conferencia y `useGoogleAuth`
 ya están limpios — ver los tipos compartidos `utils/apiError.ts`, `types/Conferencia.ts`,
@@ -262,6 +262,6 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 **Última revisión:** 2026-09-11, contra Next 16.3.4 y React 19.2.7.
 
-Los números de este archivo (34 páginas, 23 cliente, 109 `<img>`, 68 errores de lint, 152 pruebas,
+Los números de este archivo (34 páginas, 23 cliente, 105 `<img>`, 70 errores de lint, 152 pruebas,
 39 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
 actualiza.

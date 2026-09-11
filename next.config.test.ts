@@ -60,9 +60,15 @@ describe("next.config — cabeceras de seguridad (Req 7)", () => {
     expect(porClave["Permissions-Policy"]).toBe(
       "camera=(), microphone=(), geolocation=()",
     );
+    // HSTS: fuerza HTTPS, sin `preload` (irreversible una vez sometido).
+    expect(porClave["Strict-Transport-Security"]).toBe(
+      "max-age=15552000; includeSubDomains",
+    );
+    // COOP: aísla la ventana de otras del mismo grupo de navegación.
+    expect(porClave["Cross-Origin-Opener-Policy"]).toBe("same-origin");
 
-    // Exactamente cuatro cabeceras, ninguna directiva CSP adicional (Req 7.6).
-    expect(cabeceras).toHaveLength(4);
+    // Exactamente seis cabeceras, ninguna directiva CSP adicional (Req 7.6).
+    expect(cabeceras).toHaveLength(6);
   });
 });
 
