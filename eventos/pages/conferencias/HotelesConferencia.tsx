@@ -9,8 +9,6 @@ import HotelCard from "./components/HotelCard";
 
 function HotelesConferencia() {
     const { conferencia, error, loading } = useConferencia();
-    console.log("🚀 ~ HotelesConferencia ~ conferencia:", conferencia)
-
 
     if (loading) return <Loader />;
     if (error) return <ErrorPage />;

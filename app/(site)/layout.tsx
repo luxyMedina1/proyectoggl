@@ -16,7 +16,6 @@ import { LuUserRound } from "react-icons/lu";
 import { MdOutlineEmail, MdPhone, MdLocationOn, MdExplore } from "react-icons/md";
 import { HiMenu } from "react-icons/hi";
 import { useColorConfig } from "../../context/ColorContext";
-import { useAuthModal } from "../../context/AuthModalContext";
 import { HeaderBuscador } from "../../components/HeaderBuscador";
 import { onNotifRefresh } from "../../utils/notifEvents";
 import { slugify } from "../../utils/slugify";
@@ -36,7 +35,6 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
   const { getPendientesRecibidas } = useTransferenciasStore();
   const { getAllCiudades } = useCiudadesStore();
   const { getLanding } = useCityPassStore();
-  const { requestLogin } = useAuthModal();
   const [menuVisible, setMenuVisible] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifCount, setNotifCount] = useState(0);
@@ -54,15 +52,12 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     landingCiudad?.ciudadId === String(destinoCityPass.id) &&
     landingCiudad.disponible;
 
-  // Sin sesión, pide login antes de entrar (modal, sin navegar a otra página);
-  // ya logueado, entra directo. Mismo patrón que "comprar" en CityPassPaquetePage.
-  const irCityPass = async () => {
+  // La landing de CityPass es pública: navega directo, sin pedir sesión. El login
+  // se pide más adelante, al momento de comprar (mismo patrón que "comprar" en
+  // CityPassPaquetePage/CityPassCheckoutPage), no para solo mirar el catálogo.
+  const irCityPass = () => {
     const destino = ciudades.find((c) => String(c.id) === ciudadId) ?? ciudades[0];
     if (!destino) return;
-    if (status !== "authenticated") {
-      const ok = await requestLogin();
-      if (!ok) return;
-    }
     router.push(`/citypass/${slugify(destino.nombre)}`);
   };
 
