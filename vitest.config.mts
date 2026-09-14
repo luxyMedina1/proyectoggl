@@ -25,5 +25,12 @@ export default defineConfig({
     css: false,
     // Reporter compacto; usa `--reporter=verbose` cuando quieras el detalle.
     reporters: 'default',
+    // Pool 'forks' (el default) lanza un proceso de Node completo por worker -- caro en RAM.
+    // Sin tope, Vitest usa un worker por nucleo; en maquinas con poca RAM libre eso hace OOM a
+    // mitad de corrida ("Worker exited unexpectedly" / crash nativo), visto en un pre-push
+    // real. 'threads' comparte el proceso (mucho mas liviano) y maxWorkers baja el techo de
+    // paralelismo; ninguno de los dos le cuesta nada a CI (la suite ya corre en <1 min).
+    pool: 'threads',
+    maxWorkers: 4,
   },
 })
