@@ -21,15 +21,15 @@
 
 | Tarea | Estado |
 |---|---|
-| Bajar y revisar los cambios de Lucy del día (CityPass sin login forzado, like sin navegar, perfil inline) | ✅ integrados, verificados junto con el resto |
+| Navegación de CityPass y `/explorar` sin login forzado, perfil incompleto resuelto dentro del modal | ✅ integrados, verificados junto con el resto |
 | Medir rendimiento real (no el de `next dev`, que engaña) | ✅ hecho contra build de producción — el sitio ya rinde bien |
 | CLS de CityPass (landing, paquete, checkout): el footer saltaba al cargar | ✅ arreglado — CLS 0.318 → 0.087 |
 | El modal de "completar perfil" quedaba encimado con la página de fondo y cortaba la compra a medio camino | ✅ arreglado |
-| Un merge viejo que apareció en el fork de Lucy en GitHub | ⚠️ revisado y **descartado a propósito** — habría revertido el fix de CLS sin traer nada nuevo |
+| Un merge viejo que apareció en un fork externo del repo | ⚠️ revisado y **descartado a propósito** — habría revertido el fix de CLS sin traer nada nuevo |
 
 ---
 
-## 2. Cambios de Lucy del día, bajados e integrados
+## 2. Cambios recientes de CityPass y login integrados
 
 Cuatro commits, todos en la misma línea de trabajo — sacar el login forzado de la navegación y
 dejarlo solo donde de verdad hace falta (comprar, reservar, dar like):
@@ -39,7 +39,7 @@ dejarlo solo donde de verdad hace falta (comprar, reservar, dar like):
 | `defbf59` | El botón CityPass del header navegaba directo a `/citypass/[ciudad]` sin pedir login — antes exigía sesión solo para *mirar* el catálogo público |
 | `9a035a3` | Actualiza los tests de `SiteLayout` al nuevo flujo sin login previo |
 | `4717877` | El botón de "like" en `/explorar` abre el modal de login en vez de navegar a `/auth/login` (mismo patrón que comprar) |
-| `acc153b` | Si el perfil queda incompleto justo después de loguearse *desde el modal*, ahora pide los datos que faltan **dentro del mismo modal**, sin navegar — para no perder la página (compra, selección de asientos) donde estaba el usuario |
+| `acc153b` | Si el perfil queda incompleto justo después de loguearse *desde el modal*, ahora pide los datos que faltan **dentro del mismo modal**, sin navegar — para no perder la página (compra, selección de asientos) en la que se estaba |
 
 Verificado que las 4 compilan y pasan tests junto con el resto del código antes de seguir.
 
@@ -61,8 +61,8 @@ next start`), medido con Lighthouse:
 
 **Conclusión:** el sitio ya rinde bien en producción. Lo único real que había para arreglar era el
 CLS de CityPass (§4). El resto del hallazgo de "48/100" era un artefacto de medir el entorno
-equivocado — se le explicó al usuario y se le dieron túneles de Cloudflare apuntando a una build de
-producción real para que pudiera volver a medir y confirmarlo él mismo.
+equivocado — se armaron túneles de Cloudflare apuntando a una build de producción real para volver a
+medir y confirmarlo.
 
 ---
 
@@ -79,7 +79,7 @@ if (loading) return <Loader />;
 
 Mientras tanto, la página es efectivamente header + footer pegados (el loader no ocupa espacio). Al
 resolver los datos, el contenido real (`min-h-screen`) empuja el footer de golpe ~600px hacia abajo.
-Es **el mismo bug** que Lucy ya había diagnosticado y arreglado en `/eventos` el 10 de septiembre
+Es **el mismo bug** que ya se había diagnosticado y arreglado en `/eventos` el 10 de septiembre
 (`8f96427`), sin portar a estas tres páginas:
 
 - `publicUi/pages/CityPassPage.tsx`
@@ -114,8 +114,8 @@ reemplazo de todo el árbol, así que el contenedor exterior nunca colapsa a 0.
 
 ### El bug
 
-El fix de Lucy de esta mañana (`acc153b`, §2) hizo que el modal de login complete el perfil *dentro
-de sí mismo*, sin navegar, precisamente para no perder la página de compra donde estaba el usuario.
+El fix de `acc153b` (§2) hizo que el modal de login complete el perfil *dentro de sí mismo*, sin
+navegar, precisamente para no perder la página de compra en la que se estaba.
 Pero `components/AppGate.tsx` tiene su **propio** `useEffect`, completamente aparte, que redirige a
 `/auth/completar_perfil` en cuanto detecta `perfilCompleto === false` — sin saber que el modal ya lo
 estaba resolviendo:
@@ -129,9 +129,9 @@ useEffect(() => {
 }, [status, user, pathname, router]);
 ```
 
-Resultado, capturado en pantalla por el usuario: el modal se abre bien (paso "Completa tu perfil"),
+Resultado, confirmado con una captura de pantalla: el modal se abre bien (paso "Completa tu perfil"),
 y **al mismo tiempo** AppGate manda la página de fondo a `/auth/completar_perfil` — las dos pantallas
-encimadas. Y aunque el usuario completara el paso del modal, la navegación de fondo ya había ocurrido
+encimadas. Y aunque se completara el paso del modal, la navegación de fondo ya había ocurrido
 y la página de compra original (evento, selección de asientos) quedaba perdida de todos modos — el
 problema que `acc153b` se proponía resolver seguía sin resolverse del todo.
 
@@ -157,15 +157,15 @@ pero se verificó leyendo el trazado completo de estado entre `AuthModalContext`
 
 ---
 
-## 6. Un merge viejo en el fork de Lucy — revisado y descartado
+## 6. Un merge viejo en un fork externo — revisado y descartado
 
-Al bajar cambios de nuevo más tarde, `proyectoggl/migracion-v2-v3` mostraba varias docenas de
-commits "nuevos". Antes de integrarlos a ciegas se comparó el árbol de archivos final contra el de
-esta rama: **eran idénticos salvo 4 archivos**, y en esos 4 la versión de Lucy era la **anterior** al
-fix de CLS del §4 (README + las 3 páginas de CityPass). Es decir, esos commits no traían nada nuevo —
-era un merge de su lado con una rama vieja (`origin/main`, historial del 28-30 de agosto) hecho
-*antes* de que su fork bajara el último push a GitLab. Mergearlo habría revertido el fix de CLS sin
-aportar nada a cambio.
+Al bajar cambios de nuevo más tarde, un remoto externo del repo (`proyectoggl/migracion-v2-v3`)
+mostraba varias docenas de commits "nuevos". Antes de integrarlos a ciegas se comparó el árbol de
+archivos final contra el de esta rama: **eran idénticos salvo 4 archivos**, y en esos 4 la versión de
+ese remoto era la **anterior** al fix de CLS del §4 (README + las 3 páginas de CityPass). Es decir,
+esos commits no traían nada nuevo — era un merge hecho del otro lado con una rama vieja (historial
+del 28-30 de agosto) *antes* de bajar el último push a GitLab. Mergearlo habría revertido el fix de
+CLS sin aportar nada a cambio.
 
 **Decisión:** no se integró. No hay nada pendiente de "extraer" de ahí — es ruido de historial, no
 trabajo nuevo.
@@ -190,5 +190,5 @@ trabajo nuevo.
   código OTP real (SMS/WhatsApp) que este entorno no puede generar.
 - La auditoría de imágenes (informativa, no gatea) sigue marcando 46 `<img>` sin dimensiones en 27
   archivos — deuda ya documentada en el doc 06, sin cambios hoy.
-- Si Lucy pushea de nuevo *después* de haber bajado el estado actual de GitLab, ahí sí puede traer
-  trabajo nuevo real para integrar.
+- Si ese remoto externo vuelve a pushear *después* de haber bajado el estado actual de GitLab, ahí sí
+  puede traer trabajo nuevo real para integrar.
