@@ -162,10 +162,20 @@ describe("SiteLayout — cambiar de ciudad filtra /eventos", () => {
     window.history.pushState(null, "", "/eventos");
   });
 
+  // `findAllByRole("combobox", ...)` resuelve apenas el <select> existe en el DOM, con solo
+  // la opción placeholder ("Ciudad") — no espera a que el mock de getAllCiudades() resuelva y
+  // puebla las opciones reales. Sin este `waitFor`, `selectOptions` corre en carrera contra esa
+  // promesa: pasa la mayoria de las veces (la promesa ya resolvio para cuando corre), pero
+  // intermitentemente falla con "Value ... not found in options". Se espera la opcion real
+  // antes de seleccionarla.
+  const esperarOpcionCiudad = async (select: HTMLElement, ciudad: { id: number }) =>
+    waitFor(() => expect(select.querySelector(`option[value="${ciudad.id}"]`)).not.toBeNull());
+
   it("estando en /eventos: elegir otra ciudad navega con ?ciudad=<id>", async () => {
     render(<SiteLayout>contenido</SiteLayout>);
 
     const selects = await screen.findAllByRole("combobox", { name: "Selecciona una ciudad" });
+    await esperarOpcionCiudad(selects[0], REYNOSA);
     await userEvent.selectOptions(selects[0], String(REYNOSA.id));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/eventos?ciudad=2"));
@@ -177,6 +187,7 @@ describe("SiteLayout — cambiar de ciudad filtra /eventos", () => {
     render(<SiteLayout>contenido</SiteLayout>);
 
     const selects = await screen.findAllByRole("combobox", { name: "Selecciona una ciudad" });
+    await esperarOpcionCiudad(selects[0], REYNOSA);
     await userEvent.selectOptions(selects[0], String(REYNOSA.id));
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/eventos?buscar=rock&ciudad=2"));
@@ -188,6 +199,7 @@ describe("SiteLayout — cambiar de ciudad filtra /eventos", () => {
     render(<SiteLayout>contenido</SiteLayout>);
 
     const selects = await screen.findAllByRole("combobox", { name: "Selecciona una ciudad" });
+    await esperarOpcionCiudad(selects[0], REYNOSA);
     await userEvent.selectOptions(selects[0], String(REYNOSA.id));
 
     await waitFor(() => expect(getLanding).toHaveBeenCalledWith(REYNOSA.id));
