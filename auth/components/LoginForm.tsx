@@ -8,7 +8,7 @@ import { useAuthStore, OtpChannel, OtpMetodosActivos } from '../../hooks/useAuth
 import { CountryCodeSelect } from './CountryCodeSelect';
 import { CountryCode, DEFAULT_COUNTRY } from '../../data/countryCodes';
 
-type Step = 'phone' | 'otp';
+type Step = 'phone' | 'otp' | 'perfil';
 type Metodo = 'telefono' | 'email';
 
 const CODE_LENGTH = 6;
@@ -27,10 +27,12 @@ interface Props {
 export const LoginForm = ({ onAuthenticated }: Props) => {
     const router = useRouter();
     const {
+        user,
         getOtpMetodosActivos,
         startSendOtp,
         startResendOtp,
         startValidateOtp,
+        completarPerfilOTP,
     } = useAuthStore();
 
     const [step, setStep] = useState<Step>('phone');
@@ -48,6 +50,8 @@ export const LoginForm = ({ onAuthenticated }: Props) => {
     const [validating, setValidating] = useState(false);
     const [metodos, setMetodos] = useState<OtpMetodosActivos>({ wh: false, sms: false, email: false });
     const [metodo, setMetodo] = useState<Metodo>('telefono');
+    const [fullName, setFullName] = useState('');
+    const [savingPerfil, setSavingPerfil] = useState(false);
 
     const otpRefs = useRef<Array<HTMLInputElement | null>>([]);
 
@@ -55,6 +59,10 @@ export const LoginForm = ({ onAuthenticated }: Props) => {
     const phoneValid = onlyDigits(phone).length >= 7;
     const emailValid = EMAIL_REGEX.test(email.trim());
     const codeFilled = code.every((c) => c !== '');
+    // Si ya tiene teléfono (se logueó con él) falta el correo, y viceversa.
+    const perfilPideTelefono = !user?.telefono;
+    const canSubmitPerfil =
+        fullName.trim().length > 0 && (perfilPideTelefono ? phoneValid : emailValid) && !savingPerfil;
     const formattedPhoneDisplay = useMemo(() => {
         const digits = onlyDigits(phone);
         if (digits.length <= 3) return digits;
@@ -129,10 +137,27 @@ export const LoginForm = ({ onAuthenticated }: Props) => {
         if (data.perfilCompleto) {
             if (onAuthenticated) onAuthenticated();
             else router.replace('/eventos');
+        } else if (onAuthenticated) {
+            // Dentro del modal: pedimos el dato que falta sin navegar, para no
+            // perder la página (compra, selección, etc.) en la que estaba el usuario.
+            setFullName(data.user?.fullName ?? '');
+            setStep('perfil');
         } else {
-            // El perfil incompleto obliga a completar datos (no se puede continuar inline).
+            // Página de login independiente: sí tiene sentido navegar.
             router.replace('/auth/completar_perfil');
         }
+    };
+
+    const handleGuardarPerfil = async () => {
+        if (!canSubmitPerfil) return;
+        setSavingPerfil(true);
+        const data = await completarPerfilOTP(
+            perfilPideTelefono
+                ? { telefono: telefonoE164, fullName: fullName.trim() }
+                : { email: email.trim(), fullName: fullName.trim() },
+        );
+        setSavingPerfil(false);
+        if (data) onAuthenticated?.();
     };
 
     const handleCodeChange = (i: number, raw: string) => {
@@ -171,6 +196,71 @@ export const LoginForm = ({ onAuthenticated }: Props) => {
     const channelLabel =
         channelUsed === 'sms' ? 'SMS' : channelUsed === 'email' ? 'correo electrónico' : 'WhatsApp';
     const esEmailUsado = channelUsed === 'email';
+
+    if (step === 'perfil') {
+        return (
+            <>
+                <p className="text-2xl lg:text-3xl font-semibold text-gray-800">Completa tu perfil</p>
+                <p className="text-gray-400 text-lg mt-2">
+                    Necesitamos un par de datos antes de seguir. No podrás continuar hasta completarlos.
+                </p>
+                <div className="py-8">
+                    <div className="mb-4">
+                        <label className="block text-gray-700 text-base font-medium mb-2">Nombre completo:</label>
+                        <input
+                            type="text"
+                            value={fullName}
+                            onChange={(e) => setFullName(e.target.value)}
+                            placeholder="Nombre y apellidos"
+                            className="shadow-sm border border-gray-300 rounded-lg w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-accentBase"
+                            autoFocus
+                        />
+                    </div>
+                    {perfilPideTelefono ? (
+                        <div className="grid grid-cols-12 gap-3">
+                            <div className="col-span-4 sm:col-span-3">
+                                <label className="block text-gray-700 text-base font-medium mb-2">Código:</label>
+                                <CountryCodeSelect value={country} onChange={setCountry} />
+                            </div>
+                            <div className="col-span-8 sm:col-span-9">
+                                <label className="block text-gray-700 text-base font-medium mb-2">Número de teléfono:</label>
+                                <div className="relative">
+                                    <FiPhone className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                                    <input
+                                        type="tel"
+                                        inputMode="numeric"
+                                        value={formattedPhoneDisplay}
+                                        onChange={(e) => setPhone(onlyDigits(e.target.value).slice(0, 15))}
+                                        placeholder="123-123-1234"
+                                        className="shadow-sm border border-gray-300 rounded-lg w-full py-2 pl-10 pr-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-accentBase h-[42px]"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    ) : (
+                        <div>
+                            <label className="block text-gray-700 text-base font-medium mb-2">Correo electrónico:</label>
+                            <input
+                                type="email"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
+                                placeholder="tucorreo@ejemplo.com"
+                                className="shadow-sm border border-gray-300 rounded-lg w-full py-2 px-3 text-gray-700 focus:outline-none focus:ring-1 focus:ring-accentBase"
+                            />
+                        </div>
+                    )}
+                </div>
+                <button
+                    type="button"
+                    onClick={handleGuardarPerfil}
+                    disabled={!canSubmitPerfil}
+                    className="w-full bg-[#082348] text-white font-normal py-3 px-4 rounded focus:outline-none disabled:opacity-60"
+                >
+                    {savingPerfil ? 'Guardando…' : 'Guardar y continuar'}
+                </button>
+            </>
+        );
+    }
 
     if (step === 'otp') {
         return (
