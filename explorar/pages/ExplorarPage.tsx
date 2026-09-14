@@ -4,6 +4,7 @@ import Swal from "sweetalert2";
 import { useContenidoStore } from "../../hooks/useContenidoStore";
 import { useEventosStore } from "../../hooks/useEventosStore";
 import { useAuthStore } from "../../hooks/useAuthStore";
+import { useAuthModal } from "../../context/AuthModalContext";
 import { formatDate } from "../../utils/dateHelpers";
 import {
   Contadores,
@@ -53,6 +54,7 @@ export const ExplorarPage = () => {
   } = useContenidoStore();
   const { getDetalleEventos } = useEventosStore();
   const { user } = useAuthStore();
+  const { requestLogin } = useAuthModal();
   const searchParams = useSearchParams();
 
   const [reels, setReels] = useState<Reel[]>([]);
@@ -297,8 +299,10 @@ export const ExplorarPage = () => {
   // ---- Likes ----
   const onLike = async (reel: Reel) => {
     if (!user) {
-      router.push("/auth/login");
-      return;
+      // Abre el modal de login sin navegar: el feed de reels no se desmonta,
+      // así que el usuario se queda donde estaba al iniciar sesión.
+      const ok = await requestLogin();
+      if (!ok) return;
     }
     const { liked: prevLiked, likesCount: prevCount } = reel;
     const liked = !prevLiked;
@@ -319,7 +323,7 @@ export const ExplorarPage = () => {
       setReels((prev) =>
         prev.map((r) => (r.id === reel.id ? { ...r, liked: prevLiked, likesCount: prevCount } : r)),
       );
-      if (e?.response?.status === 401) router.push("/auth/login");
+      if (e?.response?.status === 401) requestLogin();
     }
   };
 
