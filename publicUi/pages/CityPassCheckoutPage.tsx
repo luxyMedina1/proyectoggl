@@ -287,7 +287,18 @@ const CityPassCheckoutPage = () => {
         }
     };
 
-    if (cargandoPaquete || !items.length) return <Loader />;
+    // `Loader` es position:fixed (0 de alto en el flujo). Devolverlo solo deja el
+    // footer pegado al header mientras carga, y al resolver el contenido real
+    // (min-h-screen mas abajo) lo empuja de golpe -> CLS grande (mismo bug que
+    // /eventos, commit 8f96427, y que CityPassPage/CityPassPaquetePage). Este
+    // spacer reserva el mismo min-h-screen para que el relevo no salte.
+    if (cargandoPaquete || !items.length) {
+        return (
+            <div className="min-h-screen bg-gray-50" aria-hidden="true">
+                <Loader />
+            </div>
+        );
+    }
 
     if (!paquete) {
         return (
