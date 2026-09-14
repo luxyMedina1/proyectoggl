@@ -106,7 +106,7 @@ Alias de imports: `@/*` apunta a la raíz del repo.
 | `app/api/revalidate/route.ts` | `POST` con header `x-revalidate-secret`, comparación en tiempo constante y **allowlist** de tags (`config:sitio`, `eventos:lista`, `evento:*`, `citypass:*`…) |
 | `utils/ogEvento.ts` | Resuelve slug → evento y arma los `og:*` de las páginas de evento. Si el backend no responde, caen los tags globales del layout |
 | `utils/eventoSlug.ts` | Los slugs de eventos multifecha llevan sufijo de día (`sky-fest-laguna-7-matutino`). Cambiar `NEXT_PUBLIC_TIMEZONE` cambia URLs y QR ya impresos |
-| `components/AppGate.tsx` | Puerta de sesión: fuerza `/auth/completar_perfil` y dispara el `PageView` del pixel en cada cambio de ruta |
+| `components/AppGate.tsx` | Puerta de sesión: fuerza `/auth/completar_perfil` (salvo mientras el modal de login lo está resolviendo inline — ver `AuthModalContext.estaAbierto`, si no las dos pantallas quedan encimadas) y dispara el `PageView` del pixel en cada cambio de ruta |
 
 ### Cómo fluyen los datos
 
