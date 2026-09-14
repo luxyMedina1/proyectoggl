@@ -111,7 +111,7 @@ describe("SiteLayout — disponibilidad de CityPass por ciudad", () => {
   });
 });
 
-describe("SiteLayout — pide iniciar sesión antes de entrar a CityPass", () => {
+describe("SiteLayout — CityPass navega directo, sin pedir login", () => {
   beforeEach(() => {
     authStatus = "unauthenticated";
     push.mockReset();
@@ -122,23 +122,7 @@ describe("SiteLayout — pide iniciar sesión antes de entrar a CityPass", () =>
     getLanding.mockResolvedValue({ configurada: true, ciudad: DURANGO });
   });
 
-  it("sin sesión: abre el modal de login y NO navega si el usuario lo cierra sin loguearse", async () => {
-    requestLogin.mockResolvedValue(false);
-
-    render(<SiteLayout>contenido</SiteLayout>);
-
-    const boton = (await screen.findAllByRole("button", { name: "Ir al CityPass" }))[0];
-    await waitFor(() => expect(boton).toBeEnabled());
-
-    await userEvent.click(boton);
-
-    await waitFor(() => expect(requestLogin).toHaveBeenCalledTimes(1));
-    expect(push).not.toHaveBeenCalled();
-  });
-
-  it("sin sesión: si el usuario inicia sesión en el modal, navega a CityPass", async () => {
-    requestLogin.mockResolvedValue(true);
-
+  it("sin sesión: navega directo a CityPass, sin abrir el modal de login", async () => {
     render(<SiteLayout>contenido</SiteLayout>);
 
     const boton = (await screen.findAllByRole("button", { name: "Ir al CityPass" }))[0];
@@ -147,6 +131,7 @@ describe("SiteLayout — pide iniciar sesión antes de entrar a CityPass", () =>
     await userEvent.click(boton);
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/citypass/durango"));
+    expect(requestLogin).not.toHaveBeenCalled();
   });
 
   it("ya autenticado: entra directo, sin pedir login", async () => {
