@@ -46,35 +46,37 @@ function buildEventJsonLd(evento: EventoAPI) {
 }
 ```
 
-- [ ] Eventos con `funciones[]` (ej. Sky Fest): cada función ya tiene su propia URL en el sitemap (`sky-fest-laguna-7-matutino`, `-vespertino`, etc.) — confirmar que cada una arma su `Event` JSON-LD leyendo `funciones[i].fecha`, no la fecha del evento raíz.
+- [x] Eventos con `funciones[]` (ej. Sky Fest): cada función ya tiene su propia URL en el sitemap (`sky-fest-laguna-7-matutino`, `-vespertino`, etc.) — confirmar que cada una arma su `Event` JSON-LD leyendo `funciones[i].fecha`, no la fecha del evento raíz. — resuelto en `construirEventosJsonLd` (`utils/jsonLdEvento.ts`): un `Event` por función con `fecha: funcion.fecha`, cubierto por `jsonLdEvento.property1/2/3.test.ts`.
 
 ## `/eventos` (listado)
 
-- [ ] `ItemList` schema apuntando a cada evento del listado
-- [ ] Decidir estrategia de filtros: rutas dedicadas (`/eventos/durango`) vs query params + `canonical` a la versión sin filtrar
-- [ ] Paginación indexable si aplica (`rel=next/prev` o rutas por página, no solo "cargar más" client-side)
-- [ ] `priority` en la imagen del primer evento (LCP)
-- [ ] Breadcrumb schema
+- [x] `ItemList` schema apuntando a cada evento del listado — resuelto en `construirItemListEventosJsonLd`, wireado en `app/(site)/eventos/page.tsx`.
+- [x] Decidir estrategia de filtros: rutas dedicadas (`/eventos/durango`) vs query params + `canonical` a la versión sin filtrar — decidido por query params (`?ciudad=`, `?buscar=`, filtrado client-side en `EventosView`); `generateMetadata` de `/eventos` fija `canonical` siempre a la URL sin filtrar.
+- [ ] Paginación indexable si aplica (`rel=next/prev` o rutas por página, no solo "cargar más" client-side) — sigue sin implementar: `EventosView` trae el listado completo de una sola vez, sin paginar. Falta decidir si hace falta según el volumen real de eventos antes de construirla.
+- [x] `priority` en la imagen del primer evento (LCP) — resuelto: el primer slide del hero usa `next/image` con `preload={index === 0}` (equivalente a `priority` en Next 16), ver `EventosView.tsx`.
+- [x] Breadcrumb schema — resuelto en `construirBreadcrumbEventosJsonLd` (Inicio → Eventos), wireado en `app/(site)/eventos/page.tsx`.
 
 ## `/eventos/[slug]` — mapa de asientos
 
-- [ ] Separar en Server Component (fetch, SVG estático, metadatos, JSON-LD) + Client Component chiquito (solo clicks/selección de asientos)
-- [ ] Localizar el `dynamic(..., { ssr: false })` responsable del `BAILOUT_TO_CLIENT_SIDE_RENDERING` y reducir su alcance al mínimo necesario
-- [ ] `/eventos/[slug]` (mapa, compra directa) vs `/eventos/informacion/[slug]` (ficha extendida, lista funciones si es multifunción): son páginas distintas a propósito, no duplicado. Diferenciar bien `title`/`description` entre las dos para evitar canibalización de keyword, e interlinkear (info → botón "comprar", cada función listada → su propia página de compra específica). No poner `canonical` de una hacia la otra.
+- [ ] Separar en Server Component (fetch, SVG estático, metadatos, JSON-LD) + Client Component chiquito (solo clicks/selección de asientos) — **sigue pendiente y es grande**: `EventoDetalleView.tsx` tiene ~2500 líneas, todo `"use client"`, y el SVG del recinto (`evento.recinto.svg`) llega en el mismo fetch de cliente que la disponibilidad de asientos (`getDetalleEventos` con `SIN_CACHE_DISPONIBILIDAD`, a propósito nunca cacheada — Req 26.3). Separar el SVG estático del Server Component sin tocar el flujo de disponibilidad/compra necesita su propia sesión dedicada, no un cambio de una sentada.
+- [ ] Localizar el `dynamic(..., { ssr: false })` responsable del `BAILOUT_TO_CLIENT_SIDE_RENDERING` y reducir su alcance al mínimo necesario — no encontré ningún `dynamic(..., { ssr: false })` en el árbol de `/eventos/[slug]` hoy (sí hay uno nuevo en CityPass, `MapaAtraccionesIsla.tsx`, sin relación). O ya se resolvió en un commit anterior sin actualizar este checklist, o el bailout viene de otro lado (p. ej. `useSearchParams` sin `Suspense`, como se resolvió en `EventosView`). Antes de tocar nada aquí, correr `next build` y revisar si el warning `BAILOUT_TO_CLIENT_SIDE_RENDERING` sigue apareciendo — no lo vi en el build que corrí hoy.
+- [x] `/eventos/[slug]` (mapa, compra directa) vs `/eventos/informacion/[slug]` (ficha extendida, lista funciones si es multifunción): son páginas distintas a propósito, no duplicado. Diferenciar bien `title`/`description` entre las dos para evitar canibalización de keyword, e interlinkear (info → botón "comprar", cada función listada → su propia página de compra específica). No poner `canonical` de una hacia la otra. — resuelto en `buildMetadataEvento(slug, "detalle" | "informacion")` (`utils/ogEvento.ts`); interlink verificado en `InfoEventoView.tsx` (botón "Comprar boletos" y un `href={rutaEvento(evento, funcion)}` por función).
 
 ## `/citypass/[ciudad]` y `/citypass/[ciudad]/paquete/[slug]`
 
-- [ ] Convertir ambas a Server Component completo
+- [x] `/citypass/[ciudad]` (landing): Server Component completo — resuelve `getLandingCityPass`/`getPaquetesCityPass` en el servidor y le pasa el landing ya armado a `CityPassPage` como prop, ya no es `"use client"` pidiendo sus propios datos.
+- [ ] `/citypass/[ciudad]/paquete/[slug]` (detalle): sigue como cascarón — `generateMetadata` y el `Product` JSON-LD ya corren en servidor, pero `CityPassPaquetePage` sigue siendo `"use client"` y vuelve a pedir el detalle por su cuenta (fetch duplicado). Falta pasarle el paquete ya resuelto como prop para terminar la conversión.
 - [x] `canonical` dinámico — ya resuelto
-- [ ] Corregir `cache-control` (`no-store` → `s-maxage`/`stale-while-revalidate`)
-- [ ] Listado: un `Product` JSON-LD por cada paquete mostrado (hoy solo manda uno), o un `ItemList`
-- [ ] Detalle de paquete: implementar `generateMetadata` propio (título, description, canonical) y `Product` JSON-LD con los datos de ese paquete — hoy no tiene ninguno de los dos
+- [x] `/citypass/[ciudad]` (landing): `cache-control` corregido — tiene `export const revalidate = 3_600` + `generateStaticParams`, ya no responde `no-store`.
+- [ ] `/citypass/[ciudad]/paquete/[slug]` (detalle): sigue sin `revalidate`/`generateStaticParams` propios — falta corregir su `cache-control` igual que se hizo en la landing.
+- [x] Listado: un `Product` JSON-LD por cada paquete mostrado — resuelto en `citypass/[slug]/page.tsx` (`paquetes.map(construirProductJsonLd)`), ya no manda solo uno.
+- [x] Detalle de paquete: `generateMetadata` propio (título, description, canonical) y `Product` JSON-LD con los datos de ese paquete — resuelto en `citypass/[slug]/paquete/[paqueteSlug]/page.tsx`.
 
 ## General / sitio completo
 
-- [ ] `<lastmod>` en el sitemap (usar `updatedAt`, ya viene en la respuesta del evento)
-- [ ] Evaluar 307 → 308 en el redirect de `/` a `/eventos`
-- [ ] Exponer alias `/sitemap.xml` además de `/sitemap/0.xml`
+- [x] `<lastmod>` en el sitemap (usar `updatedAt`, ya viene en la respuesta del evento) — ya resuelto: `construirRutasEventos` en `app/sitemap.ts` fija `lastModified: new Date(evento.actualizadoEn)`.
+- [x] Evaluar 307 → 308 en el redirect de `/` a `/eventos` — decidido por 308: `/` nunca sirve contenido propio y no hay plan de que deje de redirigir, así que usa `permanentRedirect` en vez de `redirect` (`app/page.tsx`).
+- [x] Exponer alias `/sitemap.xml` además de `/sitemap/0.xml` — resuelto con un `rewrite` en `next.config.ts` (`/sitemap.xml` → `/sitemap/0.xml`); `robots.ts` ya apuntaba a la ruta real, esto es solo para quien visite el alias convencional a mano.
 
 ---
 

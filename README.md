@@ -49,7 +49,7 @@ que sea secreto va sin prefijo.
 | Comando | Qué hace |
 |---|---|
 | `npm run dev` | Servidor de desarrollo (Turbopack) |
-| `npm run build` | Build de producción — 39 rutas |
+| `npm run build` | Build de producción — 42 rutas |
 | `npm start` | Sirve el build |
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm test` | Vitest, una pasada |
@@ -163,19 +163,20 @@ bailan). Cifras de abajo son de PSI móvil salvo donde diga.
   oportunidades "next-gen formats" / "encode images" desaparecen. **Ojo:** ese bloque hoy sólo
   renderiza en cliente (`useSearchParams()` dentro del `<Suspense>` desactiva el SSR del subárbol).
 - **`/explorar` móvil**: mismo patrón que `/eventos` (footer empujado por data tardía); pendiente.
-- **CityPass (paquete, checkout) — CLS.** Mismo bug que `/eventos` (`8f96427`) pero sin portar: el
-  `Loader` de carga es `position:fixed` (0 de alto en el flujo), así que mientras cargan los datos el
-  `<footer>` nacía pegado al header y saltaba de golpe al llegar el contenido real (`min-h-screen`).
-  Fix en `CityPassPaquetePage` y `CityPassCheckoutPage`: el `if (loading) return <Loader/>` ahora
-  reserva ese mismo `min-h-screen` mientras carga. Medido en `/citypass/[slug]` antes de migrar esa
-  página a Server Component (build de producción): **CLS 0.318 → 0.087**. La landing (`CityPassPage`)
-  ya no tiene este workaround porque dejó de cargar datos en el cliente (ver Estado de la migración).
+- **CityPass (checkout) — CLS.** Mismo bug que `/eventos` (`8f96427`) pero sin portar: el `Loader` de
+  carga es `position:fixed` (0 de alto en el flujo), así que mientras cargan los datos el `<footer>`
+  nacía pegado al header y saltaba de golpe al llegar el contenido real (`min-h-screen`). Fix en
+  `CityPassCheckoutPage`: el `if (loading) return <Loader/>` ahora reserva ese mismo `min-h-screen`
+  mientras carga. Medido en `/citypass/[slug]` antes de migrar esa página a Server Component (build de
+  producción): **CLS 0.318 → 0.087**. La landing (`CityPassPage`) y el detalle de paquete
+  (`CityPassPaquetePage`) ya no tienen este workaround porque dejaron de cargar datos en el cliente
+  (ver Estado de la migración).
 - **Accesibilidad** (`/eventos`, PSI 84): `<select>` de filtro sin nombre → `aria-label`; enlace de
   ícono (ojo) sin texto → `aria-label` + `aria-hidden`; dos `<ul>` de "Legal" en el footer tenían
   `<a>` como hijos directos → envueltos en `<li>`. Pendiente: contraste de los botones de categoría
   (`text-neutral` sobre `bg-gray-400`) — es decisión de paleta.
 
-Pruebas: Vitest + jsdom + Testing Library. Hoy son **152 pruebas en 21 archivos**, la mayoría de
+Pruebas: Vitest + jsdom + Testing Library. Hoy son **169 pruebas en 25 archivos**, la mayoría de
 propiedad (`fast-check`) sobre los helpers puros de `utils/` (promociones, slugs, JSON-LD, fechas).
 Cualquier `*.test.ts(x)` o `*.spec.ts(x)` en cualquier carpeta se recoge solo.
 
@@ -188,20 +189,21 @@ Sharing Debugger de Facebook. Lo que falta es dejar de renderizar todo en el nav
 
 | | Hoy |
 |---|---|
-| Páginas que abren con `'use client'` | 23 de 34 (2 de las otras son `redirect()` de una línea) |
+| Páginas que abren con `'use client'` | 22 de 34 (2 de las otras son `redirect()` de una línea) |
 | Rutas con `generateMetadata` | 5 de contenido, más el layout raíz |
 | `<img>` nativos vs. `next/image` | 105 contra 2 archivos migrados (`/eventos` y el detalle de evento) |
 | Perfil y "mis compras" en el servidor | Bloqueado por la sesión en `localStorage` |
 
-De las 23 páginas cliente, **20 lo son con razón**: perfil, auth y checkout son privadas y están
+De las 22 páginas cliente, **21 lo son con razón**: perfil, auth y checkout son privadas y están
 excluidas en `robots.ts`, y la selección de asiento necesita disponibilidad en tiempo real, que no se
-debe cachear nunca. Quedan 2 públicas y compartibles por migrar: el detalle de paquete de CityPass
-(`/citypass/[slug]/paquete/[paqueteSlug]`) y `/explorar`. La landing de CityPass
-(`/citypass/[slug]`) ya se migró: antes tenía un cascarón de servidor solo para `generateMetadata`/
-JSON-LD, pero el contenido visible lo seguía pintando un `'use client'` que volvía a pedir los mismos
-datos; ahora ese Server Component recibe el landing ya resuelto como prop, y solo quedan como islas
-de cliente las 3 partes con interacción real (tabs, galería, botón de comprar). El listado `/eventos` ya es cáscara de servidor (`generateMetadata` con OG de marca
-—título e imagen— + `ItemList` JSON-LD), pero todavía trae la lista en el cliente: el SSR de los datos
+debe cachear nunca. Queda 1 pública y compartible por migrar: `/explorar`. La landing de CityPass
+(`/citypass/[slug]`) y el detalle de paquete (`/citypass/[slug]/paquete/[paqueteSlug]`) ya se
+migraron: antes tenían un cascarón de servidor solo para `generateMetadata`/JSON-LD, pero el
+contenido visible lo seguía pintando un `'use client'` que volvía a pedir los mismos datos; ahora ese
+Server Component recibe el landing/paquete ya resuelto como prop, y solo quedan como islas de cliente
+las partes con interacción real (tabs, galería, panel de boletos, mapa con leaflet). El listado
+`/eventos` ya es cáscara de servidor (`generateMetadata` con OG de marca —título e imagen— +
+`ItemList`/`BreadcrumbList` JSON-LD), pero todavía trae la lista en el cliente: el SSR de los datos
 para el LCP sigue pendiente (ver
 [`docs/commits-nuevos/05-rendimiento-lcp-next.md`](docs/commits-nuevos/05-rendimiento-lcp-next.md)).
 **"Todo SSR" no es la meta** — la meta es cáscara de servidor con islas de cliente.
@@ -273,6 +275,6 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 **Última revisión:** 2026-09-15, contra Next 16.3.4 y React 19.2.7.
 
-Los números de este archivo (34 páginas, 23 cliente, 105 `<img>`, 70 errores de lint, 158 pruebas,
-39 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
+Los números de este archivo (34 páginas, 22 cliente, 105 `<img>`, 70 errores de lint, 169 pruebas,
+42 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
 actualiza.

@@ -150,3 +150,22 @@ export const construirItemListEventosJsonLd = (
     name: evento.nombre ?? undefined,
   })),
 });
+
+// --- Breadcrumb de la home de eventos ---
+
+/**
+ * Construye el schema `BreadcrumbList` de schema.org para `/eventos`: Inicio -> Eventos.
+ * Es el índice del sitio (la home real hace `redirect` permanente hacia acá), así que
+ * la miga solo tiene estos dos niveles.
+ *
+ * Función pura (sin I/O), misma razón que el resto de este archivo: testeable sin
+ * arrastrar el Server Component de la ruta.
+ */
+export const construirBreadcrumbEventosJsonLd = (siteUrl: string): Record<string, unknown> => ({
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  itemListElement: [
+    { "@type": "ListItem", position: 1, name: "Inicio", item: siteUrl },
+    { "@type": "ListItem", position: 2, name: "Eventos", item: `${siteUrl}/eventos` },
+  ],
+});

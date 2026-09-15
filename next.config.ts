@@ -131,6 +131,15 @@ const nextConfig: NextConfig = {
 
     return headers;
   },
+
+  // `generateSitemaps` (app/sitemap.ts) sirve en `/sitemap/0.xml` (convención de
+  // Next, ver node_modules/next/dist/docs/.../generate-sitemaps.md) — pero
+  // Search Console, otros SEO tools y buscadores manuales asumen por defecto
+  // `/sitemap.xml`. `robots.ts` ya declara la ruta real; este rewrite es solo
+  // para no romper a quien visite el alias convencional a mano.
+  async rewrites() {
+    return [{ source: "/sitemap.xml", destination: "/sitemap/0.xml" }];
+  },
 };
 
 // `ANALYZE=true npm run build` abre el treemap del bundle en el navegador.

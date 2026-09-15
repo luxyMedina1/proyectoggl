@@ -3,7 +3,7 @@ import type { Metadata, ResolvingMetadata } from "next";
 import EventosView from "./EventosView";
 import { getListaEventos } from "@/utils/ogEvento";
 import type { EventoListaSlug } from "@/utils/eventoSlug";
-import { construirItemListEventosJsonLd } from "@/utils/jsonLdEvento";
+import { construirBreadcrumbEventosJsonLd, construirItemListEventosJsonLd } from "@/utils/jsonLdEvento";
 import { getSiteConfig } from "@/lib/config/getSiteConfig";
 
 // Mismo origen que el resto de <meta> del sitio, para que canonical y og:url
@@ -84,9 +84,14 @@ export default async function Page() {
   const eventos = await getEventosHome();
   const itemListJsonLd =
     eventos.length > 0 ? construirItemListEventosJsonLd(eventos, SITE_URL) : null;
+  const breadcrumbJsonLd = construirBreadcrumbEventosJsonLd(SITE_URL);
 
   return (
     <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
+      />
       {itemListJsonLd && (
         <script
           type="application/ld+json"
