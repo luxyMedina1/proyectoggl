@@ -2,7 +2,11 @@ import { cache } from "react";
 import { apiBase } from "@/lib/config/apiBase";
 import { slugify } from "@/utils/slugify";
 import type { Ciudad } from "@/types/Ciudad";
-import type { CityPassLanding, CityPassPaqueteLanding } from "@/types/CityPass";
+import type {
+  CityPassLanding,
+  CityPassPaqueteDetalle,
+  CityPassPaqueteLanding,
+} from "@/types/CityPass";
 
 // Fetch de servidor CACHEADO para ciudades y paquetes de CityPass (Req 25.1, 25.2).
 //
@@ -83,6 +87,34 @@ export const getPaquetesCityPass = cache(
     const landing = await getLandingCityPass(ciudad.id, ciudadSlug);
     if (!landing?.configurada) return [];
     return landing.paquetes.filter((paquete) => paquete.disponibleVenta);
+  },
+);
+
+// Detalle de un paquete (pantalla de compra): mismo TTL/tag que la landing de su
+// ciudad (`citypass:<ciudadSlug>`), así que una edición del paquete en el backend
+// invalida ambos con el mismo tag. El endpoint solo pide el slug del paquete
+// (acepta id numérico también, ver docs/mejoras-seo-server-components/checklist-frontend.md),
+// pero `ciudadSlug` se recibe aparte (ya viene en la ruta `[slug]/paquete/[paqueteSlug]`)
+// para poder taggear y para descartar un paquete que exista pero sea de otra ciudad.
+export const getPaqueteCityPassDetalle = cache(
+  async (paqueteSlug: string, ciudadSlug: string): Promise<CityPassPaqueteDetalle | null> => {
+    try {
+      const res = await fetch(`${apiBase()}/citypass/publico/paquete/slug/${paqueteSlug}`, {
+        headers: headers(),
+        cache: "force-cache",
+        next: {
+          revalidate: TTL_CITYPASS,
+          tags: [TAG_CIUDADES, tagCityPass(ciudadSlug)],
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+      if (!res.ok) return null;
+      const paquete = (await res.json()) as CityPassPaqueteDetalle;
+      if (paquete.ciudad && slugify(paquete.ciudad.nombre) !== ciudadSlug) return null;
+      return paquete;
+    } catch {
+      return null;
+    }
   },
 );
 

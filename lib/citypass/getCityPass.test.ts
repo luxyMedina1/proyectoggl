@@ -21,6 +21,7 @@ import {
   getCiudades,
   getLandingCityPass,
   getPaquetesCityPass,
+  getPaqueteCityPassDetalle,
   tagCityPass,
   TTL_CIUDADES,
   TTL_CITYPASS,
@@ -125,6 +126,31 @@ describe("getPaquetesCityPass — solo paquetes indexables/vendibles", () => {
     expect(await getPaquetesCityPass({ id: 5, nombre: "###" })).toEqual([]);
     // Sin slug válido no debe siquiera consultar la landing.
     expect(fetchSpy.mock.calls.length).toBe(0);
+  });
+});
+
+describe("getPaqueteCityPassDetalle — TTL 1 h, tag `citypass:<ciudadSlug>` (mismo tag que la landing)", () => {
+  it("usa force-cache con revalidate=3600 y tags [`ciudades`, `citypass:<ciudadSlug>`]", async () => {
+    const fetchSpy = mockFetchOnce({ nombre: "Básico", ciudad: { id: 7, nombre: "Torreón" } });
+
+    const paquete = await getPaqueteCityPassDetalle("basico", "torreon");
+
+    expect(paquete?.nombre).toBe("Básico");
+    const [url, opts] = fetchSpy.mock.calls[0] as [string, FetchOpts];
+    expect(url).toBe(`${BASE}/api/v1/citypass/publico/paquete/slug/basico`);
+    expect(opts.cache).toBe("force-cache");
+    expect(opts.next?.revalidate).toBe(TTL_CITYPASS);
+    expect(opts.next?.tags).toEqual([TAG_CIUDADES, "citypass:torreon"]);
+  });
+
+  it("devuelve null si el paquete existe pero es de otra ciudad (evita servirlo bajo esta URL)", async () => {
+    mockFetchOnce({ nombre: "Básico", ciudad: { id: 7, nombre: "Torreón" } });
+    expect(await getPaqueteCityPassDetalle("basico", "leon")).toBeNull();
+  });
+
+  it("devuelve null ante respuesta no-ok o red caída", async () => {
+    mockFetchOnce(null, false);
+    expect(await getPaqueteCityPassDetalle("basico", "torreon")).toBeNull();
   });
 });
 
