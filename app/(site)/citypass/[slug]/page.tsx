@@ -8,6 +8,22 @@ import CityPassPage from "@/publicUi/pages/CityPassPage";
 
 type Props = { params: Promise<{ slug: string }> };
 
+// Mismo TTL que `TTL_CITYPASS` en `lib/citypass/getCityPass.ts` (a mano: el config de
+// segmento de Next exige un literal estático, no puede importarse). Sin esto, y sin
+// `generateStaticParams` abajo, cada request se serviría 100% dinámico y el HTML
+// respondería `Cache-Control: no-store` aunque el `fetch` de abajo ya esté cacheado —
+// verificado con `next start` real: sin las dos cosas juntas el header no cambia.
+export const revalidate = 3_600;
+
+// Prerenderiza en build las ciudades conocidas (mismo patrón que `/eventos/[slug]`,
+// ver `eventosAStaticParams`). `dynamicParams` es `true` por defecto: una ciudad nueva
+// que no estuviera en este listado al momento del build igual se sirve bien, solo que
+// su primera visita es on-demand y de ahí en adelante queda cacheada como las demás.
+export async function generateStaticParams(): Promise<{ slug: string }[]> {
+  const ciudades = await getCiudades();
+  return ciudades.map((ciudad) => ({ slug: slugify(ciudad.nombre) }));
+}
+
 // Mismo origen que las <meta> Open Graph, para que el JSON-LD declare la misma URL absoluta.
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://taquillavip.com";
 const SITE_NAME_FALLBACK = process.env.NEXT_PUBLIC_TITLE_APP || "TaquillaVip";
@@ -107,18 +123,23 @@ export async function generateMetadata(
   };
 }
 
-// Cascarón de servidor de la landing de CityPass de una ciudad. Resuelve los paquetes
-// vendibles con los helpers CACHEADOS (`getPaquetesCityPass`, TTL 1 h + tag
-// `citypass:<slug>`) y siembra un `Product` de schema.org por paquete indexable en el
-// HTML inicial (Req 1.6). La UI la sigue renderizando `CityPassPage` ("use client"),
-// que vuelve a pedir el landing para pintar; aquí solo se emite el dato estructurado.
+// Server Component completo: resuelve el landing con los helpers CACHEADOS
+// (`getLandingCityPass`/`getPaquetesCityPass`, TTL 1 h + tag `citypass:<slug>`), siembra
+// un `Product` de schema.org por paquete indexable en el HTML inicial (Req 1.6), y le
+// pasa el landing ya resuelto a `CityPassPage` como prop — ya no es "use client" y no
+// vuelve a pedir los mismos datos por su cuenta.
 export default async function Page({ params }: Props) {
   const { slug } = await params;
 
-  // Resolver la ciudad por slug con la misma regla que la UI (`slugify(nombre)`) y traer
-  // solo los paquetes `disponibleVenta: true` de una landing `configurada: true`.
+  // Resolver la ciudad por slug con la misma regla que la UI (`slugify(nombre)`).
   const ciudades = await getCiudades();
   const ciudad = ciudades.find((c) => slugify(c.nombre) === slug);
+  // `getLandingCityPass` está memoizado con React `cache()`: llamarlo de nuevo aquí con
+  // los mismos argumentos que `generateMetadata` no dispara un segundo fetch al backend.
+  const landing = ciudad ? await getLandingCityPass(ciudad.id, slug) : null;
+  // Solo los paquetes `disponibleVenta: true` de una landing `configurada: true` son
+  // indexables (mismo filtro que `getPaquetesCityPass`, reutilizado en vez de derivarlo
+  // de `landing` a mano para no duplicar la regla).
   const paquetes = ciudad ? await getPaquetesCityPass(ciudad) : [];
 
   // Un `Product` por paquete vendible. La URL apunta al detalle del paquete
@@ -140,7 +161,7 @@ export default async function Page({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       ))}
-      <CityPassPage />
+      <CityPassPage landing={landing} slug={slug} />
     </>
   );
 }
