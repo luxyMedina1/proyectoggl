@@ -170,12 +170,21 @@ export const buildMetadataEvento = async (
           )
         : undefined;
 
+    // `/eventos/[slug]` (compra) y `/eventos/informacion/[slug]` (ficha extendida) son
+    // páginas distintas a propósito (ver checklist SEO), pero sin esto salían con el
+    // MISMO <title> y la MISMA <meta description> para un evento de fecha única —
+    // riesgo real de canibalización de keyword. El sufijo "Información y fechas" en el
+    // título de `informacion` y el prefijo en su descripción son los únicos puntos
+    // donde `variante` entra a esta función; el resto del contenido (la reseña real del
+    // evento) se comparte a propósito, no hay razón para inventar dos textos distintos.
     const titulo =
       variante === "detalle" && funcion?.nombre
         ? `${evento.nombre} - ${funcion.nombre}`
-        : evento.nombre;
+        : variante === "informacion"
+          ? `${evento.nombre} - Información y fechas`
+          : evento.nombre;
 
-    const descripcion =
+    const descripcionBase =
       textoPlano(evento.descripcion) ||
       [
         evento.fecha ? formatDate(evento.fecha, "d 'de' MMMM 'de' yyyy, hh:mm a") : "",
@@ -184,6 +193,11 @@ export const buildMetadataEvento = async (
       ]
         .filter(Boolean)
         .join(" · ");
+
+    const descripcion =
+      variante === "informacion"
+        ? `Información y fechas de ${evento.nombre}${evento.ciudad?.nombre ? ` en ${evento.ciudad.nombre}` : ""}. ${descripcionBase}`
+        : descripcionBase;
 
     // Sin imagen propia: undefined => hereda app/opengraph-image.tsx.
     const imagen: string | undefined = evento.imagenPromocion || undefined;
