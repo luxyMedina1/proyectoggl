@@ -1,15 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import dynamic from 'next/dynamic';
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { IoArrowBack } from 'react-icons/io5';
 import { LuCalendarClock } from 'react-icons/lu';
 import { HiOutlineTicket } from 'react-icons/hi2';
 import { BsInstagram } from 'react-icons/bs';
 import Swal from 'sweetalert2';
-import Loader from '../components/Loader';
 import { GaleriaModal } from '../components/GaleriaModal';
 import { PaqueteBoletos, type ResumenCompra } from '../components/citypass/PaqueteBoletos';
 // leaflet toca `window` al importarse: sin ssr:false, el primer render en el servidor truena.
@@ -17,75 +16,32 @@ const MapaAtracciones = dynamic(
     () => import('../components/citypass/MapaAtracciones').then((m) => m.MapaAtracciones),
     { ssr: false },
 );
-import { useCityPassStore } from '../../hooks/useCityPassStore';
-import { useCiudadesStore } from '../../hooks/useCiudadesStore';
 import { useAuthStore } from '../../hooks/useAuthStore';
 import { useAuthModal } from '../../context/AuthModalContext';
-import { slugify } from '../../utils/slugify';
 import { sanitizeRichText } from '../../utils/sanitizeHtml';
 import type { CityPassPaqueteDetalle } from '../../types/CityPass';
 
-const CityPassPaquetePage = () => {
-    const { slug: ciudadSlug, paqueteSlug } = useParams<{ slug: string; paqueteSlug: string }>();
+interface Props {
+    // Ya resuelto por el Server Component de la ruta (`app/(site)/citypass/[slug]/
+    // paquete/[paqueteSlug]/page.tsx`) con el mismo fetch cacheado que usa
+    // `generateMetadata` — antes este componente lo volvía a pedir con una cascada de
+    // 3 fetches en cliente (ciudades -> landing -> paquete) solo para resolver el slug
+    // a un id; ya no hace falta, Next re-ejecuta el Server Component en cada
+    // navegación a un paquete distinto.
+    paquete: CityPassPaqueteDetalle | null;
+}
+
+const CityPassPaquetePage = ({ paquete }: Props) => {
     const router = useRouter();
-    const { getPaquete, getLanding } = useCityPassStore();
-    const { getAllCiudades } = useCiudadesStore();
     const { status, isVerified } = useAuthStore();
     const { requestLogin } = useAuthModal();
 
-    const [loading, setLoading] = useState(true);
-    const [paquete, setPaquete] = useState<CityPassPaqueteDetalle | null>(null);
     const [modal, setModal] = useState<{ imagenes: string[]; titulo: string; indice: number } | null>(null);
-
-    useEffect(() => {
-        let activo = true;
-        (async () => {
-            setLoading(true);
-            setPaquete(null);
-            try {
-                // El API pide id numérico; la ruta viene por slug: resolvemos slug de
-                // ciudad + paquete contra el landing.
-                let paqueteId: number | undefined;
-                const ciudades = await getAllCiudades();
-                const ciudadId = ciudades.find((c) => slugify(c.nombre) === ciudadSlug)?.id;
-                if (ciudadId) {
-                    const landing = await getLanding(ciudadId);
-                    if (landing && landing.configurada) {
-                        paqueteId = landing.paquetes.find(
-                            (p) => slugify(p.nombre) === paqueteSlug,
-                        )?.id;
-                    }
-                }
-                if (!paqueteId) return;
-                const data = await getPaquete(paqueteId);
-                if (activo) setPaquete(data);
-            } catch (error) {
-                console.error('Error cargando paquete:', error);
-            } finally {
-                if (activo) setLoading(false);
-            }
-        })();
-        return () => { activo = false; };
-        // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [ciudadSlug, paqueteSlug]);
 
     const galeriaUrls = useMemo(
         () => (paquete?.galeria ?? []).map((g) => g.url),
         [paquete],
     );
-
-    // `Loader` es position:fixed (0 de alto en el flujo). Devolverlo solo deja el
-    // footer pegado al header mientras carga, y al resolver el contenido real
-    // (min-h-screen mas abajo) lo empuja de golpe -> CLS grande (mismo bug que
-    // /eventos, commit 8f96427, y que CityPassPage). Este spacer reserva el mismo
-    // min-h-screen para que el relevo no salte.
-    if (loading) {
-        return (
-            <div className="min-h-screen bg-gray-50" aria-hidden="true">
-                <Loader />
-            </div>
-        );
-    }
 
     if (!paquete) {
         return (

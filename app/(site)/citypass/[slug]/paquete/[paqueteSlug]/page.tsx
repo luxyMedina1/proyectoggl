@@ -1,6 +1,11 @@
 import type { Metadata, ResolvingMetadata } from "next";
-import { getPaqueteCityPassDetalle } from "@/lib/citypass/getCityPass";
+import {
+  getCiudades,
+  getPaquetesCityPass,
+  getPaqueteCityPassDetalle,
+} from "@/lib/citypass/getCityPass";
 import { construirProductJsonLd } from "@/utils/jsonLdCityPass";
+import { slugify } from "@/utils/slugify";
 import { textoPlano } from "@/utils/sanitizeHtml";
 import { getSiteConfig } from "@/lib/config/getSiteConfig";
 import CityPassPaquetePage from "@/publicUi/pages/CityPassPaquetePage";
@@ -10,6 +15,29 @@ type Props = { params: Promise<{ slug: string; paqueteSlug: string }> };
 // Mismo origen que las <meta> Open Graph, para que el JSON-LD declare la misma URL absoluta.
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://taquillavip.com";
 const SITE_NAME_FALLBACK = process.env.NEXT_PUBLIC_TITLE_APP || "TaquillaVip";
+
+// Mismo TTL que `TTL_CITYPASS` en `lib/citypass/getCityPass.ts` (a mano: el config de
+// segmento de Next exige un literal estático, no puede importarse). Sin esto, y sin
+// `generateStaticParams` abajo, cada request se serviría 100% dinámico con
+// `Cache-Control: no-store` aunque el fetch de abajo ya esté cacheado — mismo fix
+// verificado con `next start` real en `citypass/[slug]/page.tsx`.
+export const revalidate = 3_600;
+
+// Prerenderiza en build los paquetes vendibles de cada ciudad conocida (mismo patrón
+// que `citypass/[slug]/page.tsx` y `/eventos/[slug]`). `dynamicParams` es `true` por
+// defecto: un paquete nuevo que no estuviera aquí al momento del build se sirve bien
+// igual, solo que su primera visita es on-demand.
+export async function generateStaticParams(): Promise<{ slug: string; paqueteSlug: string }[]> {
+  const ciudades = await getCiudades();
+  const params: { slug: string; paqueteSlug: string }[] = [];
+  for (const ciudad of ciudades) {
+    const paquetes = await getPaquetesCityPass(ciudad);
+    for (const paquete of paquetes) {
+      params.push({ slug: slugify(ciudad.nombre), paqueteSlug: slugify(paquete.nombre) });
+    }
+  }
+  return params;
+}
 
 // Mismo patrón que `citypass/[slug]/page.tsx`: reutiliza el fetch CACHEADO
 // (`getPaqueteCityPassDetalle`, TTL 1 h + tag `citypass:<slug>`) también para
@@ -61,10 +89,11 @@ export async function generateMetadata(
   };
 }
 
-// Cascarón de servidor del detalle de un paquete de CityPass. Resuelve el paquete
-// con el fetch CACHEADO y siembra su `Product` de schema.org en el HTML inicial.
-// La UI la sigue renderizando `CityPassPaquetePage` ("use client"), que vuelve a
-// pedir el detalle para pintar; aquí solo se emite metadata + dato estructurado.
+// Server Component completo: resuelve el paquete con el fetch CACHEADO, siembra su
+// `Product` de schema.org en el HTML inicial, y se lo pasa ya resuelto a
+// `CityPassPaquetePage` como prop — ya no vuelve a pedirlo por su cuenta. El resto de
+// la página (auth, carrito de boletos, mapa, galería) se queda en cliente a propósito:
+// es la pantalla de compra, no solo contenido para indexar.
 export default async function Page({ params }: Props) {
   const { slug, paqueteSlug } = await params;
   const paquete = await getPaqueteCityPassDetalle(paqueteSlug, slug);
@@ -82,7 +111,7 @@ export default async function Page({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
       )}
-      <CityPassPaquetePage />
+      <CityPassPaquetePage paquete={paquete} />
     </>
   );
 }
