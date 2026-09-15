@@ -106,7 +106,7 @@ Alias de imports: `@/*` apunta a la raíz del repo.
 | `app/api/revalidate/route.ts` | `POST` con header `x-revalidate-secret`, comparación en tiempo constante y **allowlist** de tags (`config:sitio`, `eventos:lista`, `evento:*`, `citypass:*`…) |
 | `utils/ogEvento.ts` | Resuelve slug → evento y arma los `og:*` de las páginas de evento. Si el backend no responde, caen los tags globales del layout |
 | `utils/eventoSlug.ts` | Los slugs de eventos multifecha llevan sufijo de día (`sky-fest-laguna-7-matutino`). Cambiar `NEXT_PUBLIC_TIMEZONE` cambia URLs y QR ya impresos |
-| `components/AppGate.tsx` | Puerta de sesión: fuerza `/auth/completar_perfil` y dispara el `PageView` del pixel en cada cambio de ruta |
+| `components/AppGate.tsx` | Puerta de sesión: fuerza `/auth/completar_perfil` (salvo mientras el modal de login lo está resolviendo inline — ver `AuthModalContext.estaAbierto`, si no las dos pantallas quedan encimadas) y dispara el `PageView` del pixel en cada cambio de ruta |
 
 ### Cómo fluyen los datos
 
@@ -163,6 +163,12 @@ bailan). Cifras de abajo son de PSI móvil salvo donde diga.
   oportunidades "next-gen formats" / "encode images" desaparecen. **Ojo:** ese bloque hoy sólo
   renderiza en cliente (`useSearchParams()` dentro del `<Suspense>` desactiva el SSR del subárbol).
 - **`/explorar` móvil**: mismo patrón que `/eventos` (footer empujado por data tardía); pendiente.
+- **CityPass (landing, paquete, checkout) — CLS.** Mismo bug que `/eventos` (`8f96427`) pero sin
+  portar: el `Loader` de carga es `position:fixed` (0 de alto en el flujo), así que mientras cargan
+  los datos el `<footer>` nacía pegado al header y saltaba de golpe al llegar el contenido real
+  (`min-h-screen`). Fix en las tres páginas (`CityPassPage`, `CityPassPaquetePage`,
+  `CityPassCheckoutPage`): el `if (loading) return <Loader/>` ahora reserva ese mismo `min-h-screen`
+  mientras carga. Medido en `/citypass/[slug]` (build de producción): **CLS 0.318 → 0.087**.
 - **Accesibilidad** (`/eventos`, PSI 84): `<select>` de filtro sin nombre → `aria-label`; enlace de
   ícono (ojo) sin texto → `aria-label` + `aria-hidden`; dos `<ul>` de "Legal" en el footer tenían
   `<a>` como hijos directos → envueltos en `<li>`. Pendiente: contraste de los botones de categoría
@@ -260,7 +266,7 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 ---
 
-**Última revisión:** 2026-09-11, contra Next 16.3.4 y React 19.2.7.
+**Última revisión:** 2026-09-14, contra Next 16.3.4 y React 19.2.7.
 
 Los números de este archivo (34 páginas, 23 cliente, 105 `<img>`, 70 errores de lint, 152 pruebas,
 39 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y

@@ -7,6 +7,10 @@ import { LoginForm } from "../auth/components/LoginForm";
 interface AuthModalContextType {
   // Abre el modal de login y resuelve true si el usuario inició sesión, false si lo cerró.
   requestLogin: () => Promise<boolean>;
+  // true mientras el modal esta abierto, incluido el paso de completar perfil. AppGate lo usa
+  // para no navegar a /auth/completar_perfil por su cuenta mientras el modal ya lo esta
+  // resolviendo inline (si no, quedan las dos pantallas encimadas).
+  estaAbierto: boolean;
 }
 
 const AuthModalContext = createContext<AuthModalContextType | undefined>(undefined);
@@ -28,7 +32,7 @@ export const AuthModalProvider = ({ children }: { children: ReactNode }) => {
   };
 
   return (
-    <AuthModalContext.Provider value={{ requestLogin }}>
+    <AuthModalContext.Provider value={{ requestLogin, estaAbierto: abierto }}>
       {children}
       {abierto && (
         <div

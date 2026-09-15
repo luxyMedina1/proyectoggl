@@ -49,7 +49,18 @@ const CityPassPage = () => {
 
     const nombreCiudad = landing?.ciudad?.nombre ?? deslugify(slug);
 
-    if (loading) return <Loader />;
+    // `Loader` es position:fixed (0 de alto en el flujo). Devolverlo solo dejaba el
+    // body en header+footer pegados mientras carga; al resolver, el contenido real
+    // (min-h-screen aqui abajo) empujaba el footer de golpe -> CLS grande (mismo bug
+    // que /eventos, ver commit 8f96427). Este spacer reserva el mismo min-h-screen
+    // para que el relevo loading -> contenido no salte.
+    if (loading) {
+        return (
+            <div className="min-h-screen bg-gray-50" aria-hidden="true">
+                <Loader />
+            </div>
+        );
+    }
 
     // Ciudad inexistente (404/sin match) o CityPass sin configurar → estado vacío.
     if (!landing || landing.configurada === false) {
