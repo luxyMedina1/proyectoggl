@@ -1,14 +1,22 @@
+'use client';
+
 import { Fragment } from 'react';
+import { useRouter } from 'next/navigation';
 import { formatearDinero } from '../../../eventos/helpers/formatearDinero';
+import { slugify } from '../../../utils/slugify';
 import type { CityPassPaqueteLanding } from '../../../types/CityPass';
 
 interface Props {
     paquetes: CityPassPaqueteLanding[];
-    onComprar: (paquete: CityPassPaqueteLanding) => void;
+    ciudadSlug: string;
 }
 
 // Sección "Elige tu paquete perfecto": una card por paquete con sus precios.
-export const PaquetesCityPass = ({ paquetes, onComprar }: Props) => {
+// Navega por su cuenta (useRouter) porque es la única parte interactiva de la
+// landing de CityPass; el resto de la página (CityPassPage) es Server Component.
+export const PaquetesCityPass = ({ paquetes, ciudadSlug }: Props) => {
+    const router = useRouter();
+
     if (!paquetes?.length) return null;
 
     return (
@@ -46,7 +54,9 @@ export const PaquetesCityPass = ({ paquetes, onComprar }: Props) => {
 
                         <button
                             type="button"
-                            onClick={() => onComprar(paquete)}
+                            onClick={() =>
+                                router.push(`/citypass/${ciudadSlug}/paquete/${slugify(paquete.nombre)}`)
+                            }
                             disabled={!paquete.disponibleVenta}
                             className="mt-auto rounded-lg bg-accentBase py-3 text-center font-semibold text-neutral transition-colors hover:bg-accentLight disabled:cursor-not-allowed disabled:opacity-50"
                         >

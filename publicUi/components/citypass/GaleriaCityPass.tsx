@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import { BsInstagram } from 'react-icons/bs';
 import { GaleriaModal } from '../GaleriaModal';
