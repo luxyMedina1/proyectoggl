@@ -20,7 +20,7 @@ import { useAuthModal } from "../../../../../../context/AuthModalContext";
 import { MdKeyboardBackspace } from "react-icons/md";
 import { TbTicket } from "react-icons/tb";
 import { LuBadgeCheck } from "react-icons/lu";
-import Swal from "sweetalert2";
+import { fireSwal, precalentarSwal } from "../../../../../../utils/swal";
 import apiApplication from "../../../../../../api/apiApplication";
 import ListaPreciosCategorias from "../../../../../../eventos/components/ListaPreciosCategorias";
 import { formatearDinero } from "../../../../../../eventos/helpers/formatearDinero";
@@ -220,6 +220,13 @@ function SeccionAsientoContent() {
   // Mesa
   const [isMesa, setEsMesa] = useState(false);
 
+  // Esta pantalla dispara un diálogo (error, confirmación, warning) casi seguro en algún
+  // punto del flujo de reserva/pago: precargar el chunk de sweetalert2 apenas se monta evita
+  // que el primer fireSwal() real tenga que esperar la descarga.
+  useEffect(() => {
+    precalentarSwal();
+  }, []);
+
   useEffect(() => {
     const getCredenciales = async () => {
       const res = await apiApplication.get("/pagos/get/credenciales");
@@ -416,7 +423,7 @@ function SeccionAsientoContent() {
       } catch (error) {
         setCargando(false);
         console.error("Error al completar la compra gratuita:", error);
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: mensajeDeErrorApi(
             error,
@@ -435,7 +442,7 @@ function SeccionAsientoContent() {
           await apiApplication.post(`/correos/sold-tickets-email/${user?.email}/${resdata.id}`);
         } */
         setCargando(false);
-        Swal.fire({
+        fireSwal({
           title: "¡Éxito!",
           text: "Tu reserva gratuita se ha completado con éxito.  Tus boletos estan disponibles en la app movil.",
           icon: "success",
@@ -458,7 +465,7 @@ function SeccionAsientoContent() {
     const idsAsientos = asientosSeleccionados.map((asiento) => asiento.id);
 
     if (evento && evento?.limiteDeAsientos && idsAsientos.length > evento?.limiteDeAsientos) {
-      Swal.fire({
+      fireSwal({
         title: "Mensaje",
         text: `El límite de asientos por compra es de ${evento?.limiteDeAsientos} boletos.`,
         icon: "warning",
@@ -479,15 +486,15 @@ function SeccionAsientoContent() {
         // 📌 [INVITADO DESHABILITADO] Validaciones de nombre/correo del invitado
         // if (usuarioInvitado) {
         //   if (!formValuesInvitado.nombre_invitado) {
-        //     Swal.fire({ title: "Mensaje", text: "Ingresa tú nombre", icon: "warning", confirmButtonText: "OK" });
+        //     fireSwal({ title: "Mensaje", text: "Ingresa tú nombre", icon: "warning", confirmButtonText: "OK" });
         //     return;
         //   }
         //   if (!formValuesInvitado.correo_invitado) {
-        //     Swal.fire({ title: "Mensaje", text: "Es necesario un correo electrónico valído", icon: "warning", confirmButtonText: "OK" });
+        //     fireSwal({ title: "Mensaje", text: "Es necesario un correo electrónico valído", icon: "warning", confirmButtonText: "OK" });
         //     return;
         //   }
         //   if (!esCorreoValido(formValuesInvitado.correo_invitado)) {
-        //     Swal.fire({ title: "Mensaje", text: "Ingresa un correo electrónico válido", icon: "warning", confirmButtonText: "OK" });
+        //     fireSwal({ title: "Mensaje", text: "Ingresa un correo electrónico válido", icon: "warning", confirmButtonText: "OK" });
         //     return;
         //   }
         // }
@@ -529,7 +536,7 @@ function SeccionAsientoContent() {
                   setOpenId(resp.data.idOpenpay);
                 } catch (registroError) {
                   console.error("No se pudo registrar el cliente de pago:", registroError);
-                  Swal.fire({
+                  fireSwal({
                     title: "Atención",
                     text: "Tu asiento ya está reservado, pero no pudimos preparar tu método de pago. Intenta de nuevo en unos segundos.",
                     icon: "warning",
@@ -555,7 +562,7 @@ function SeccionAsientoContent() {
               setTiempoRestante((prev) => {
                 if (prev === null || prev <= 0) {
                   clearInterval(intervalId);
-                  Swal.fire({
+                  fireSwal({
                     title: "¡Atención!",
                     text: "El tiempo de tu reserva ha expirado. La página se recargará.",
                     icon: "warning",
@@ -569,7 +576,7 @@ function SeccionAsientoContent() {
             }, 1000);
           } else {
             setReservaExitosa(false);
-            Swal.fire({
+            fireSwal({
               title: "¡Atención!",
               text: "Uno o más asientos ya no están disponibles. Por favor, actualiza la página.",
               icon: "warning",
@@ -610,7 +617,7 @@ function SeccionAsientoContent() {
               setTiempoRestante(prev => {
                 if (prev === null || prev <= 0) {
                   clearInterval(intervalId);
-                  Swal.fire({
+                  fireSwal({
                     title: '¡Atención!',
                     text: 'El tiempo de tu reserva ha expirado. La página se recargará.',
                     icon: 'warning',
@@ -625,7 +632,7 @@ function SeccionAsientoContent() {
 
           } else {
             setReservaExitosa(false);
-            Swal.fire({
+            fireSwal({
               title: '¡Atención!',
               text: 'Uno o más asientos ya no están disponibles. Por favor, actualiza la página.',
               icon: 'warning',
@@ -638,7 +645,7 @@ function SeccionAsientoContent() {
       }
 
       // if (!user) {
-      //   Swal.fire({
+      //   fireSwal({
       //     title: 'Atención!',
       //     text: 'Por favor, inicia sesión para realizar la reserva.',
       //     icon: 'warning',
@@ -655,7 +662,7 @@ function SeccionAsientoContent() {
         (error instanceof Error ? error.message : undefined) ||
         "Ocurrió un error al reservar. Por favor, intenta nuevamente.";
 
-      Swal.fire({
+      fireSwal({
         title: "Atención!",
         text: mensaje,
         icon: "error",
@@ -688,7 +695,7 @@ function SeccionAsientoContent() {
       setCargando(true);
 
       // 🛑 CONFIRMACIÓN ANTES DE PROCESAR EL PAGO
-      const confirmacionPago = await Swal.fire({
+      const confirmacionPago = await fireSwal({
         title: "¿Confirmar compra?",
         text: `Estás a punto de pagar ${formatearDinero(calcularTotal())} por tus boletos. ¿Deseas continuar?`,
         icon: "warning",
@@ -733,7 +740,7 @@ function SeccionAsientoContent() {
 
       // 🛑 PREGUNTAR SI DESEA GUARDAR LA TARJETA (SOLO SI ES NUEVA)
       if (!tarjetaSeleccionada && !usuarioInvitado) {
-        const { isConfirmed } = await Swal.fire({
+        const { isConfirmed } = await fireSwal({
           title: "¿Quieres guardar tu tarjeta?",
           text: "Podrás usarla en futuras compras sin necesidad de ingresarla nuevamente.",
           icon: "question",
@@ -757,7 +764,7 @@ function SeccionAsientoContent() {
             console.log("Tarjeta guardada exitosamente:", data);
           } catch (error) {
             console.error("Error al guardar la tarjeta:", error);
-            Swal.fire({
+            fireSwal({
               title: "Error",
               text: "No se pudo guardar la tarjeta, pero puedes continuar con el pago.",
               icon: "error",
@@ -826,7 +833,7 @@ function SeccionAsientoContent() {
     } catch (error) {
       console.error("Error procesando pago", error);
       setCargando(false);
-      Swal.fire({
+      fireSwal({
         title: "Error",
         text: mensajeDeErrorApi(error, "Ocurrió un error al procesar el pago."),
         icon: "error",
@@ -858,7 +865,7 @@ function SeccionAsientoContent() {
           setResuelto(encontrado);
         } else {
           setCargando(false);
-          Swal.fire({
+          fireSwal({
             title: "Evento no encontrado",
             text: "El enlace no corresponde a un evento disponible.",
             icon: "error",
@@ -903,7 +910,7 @@ function SeccionAsientoContent() {
           } else if (error instanceof Error) {
             mensajeError = error.message;
           }
-          Swal.fire({ title: "Error", text: mensajeError, icon: "error", confirmButtonText: "OK" });
+          fireSwal({ title: "Error", text: mensajeError, icon: "error", confirmButtonText: "OK" });
         } finally {
           setCargando(false);
         }
@@ -1154,7 +1161,7 @@ function SeccionAsientoContent() {
 
   const handleCheckDiscount = async () => {
     if (!discountCode.trim()) {
-      Swal.fire("Mensaje", "Ingresa un código valido", "warning");
+      fireSwal("Mensaje", "Ingresa un código valido", "warning");
       return;
     }
 
@@ -1371,7 +1378,7 @@ function SeccionAsientoContent() {
 
     // 📌 Validaciones de evento
     if (!asientosSeleccionados || asientosSeleccionados.length === 0) {
-      Swal.fire({
+      fireSwal({
         title: "Error",
         text: "Debes seleccionar al menos un asiento.",
         icon: "warning",
@@ -1380,7 +1387,7 @@ function SeccionAsientoContent() {
       return;
     }
     if (!eventoId || isNaN(Number(eventoId))) {
-      Swal.fire({
+      fireSwal({
         title: "Error",
         text: "El evento no es válido.",
         icon: "error",
@@ -1389,7 +1396,7 @@ function SeccionAsientoContent() {
       return;
     }
     if (!reservaId) {
-      Swal.fire({
+      fireSwal({
         title: "Error",
         text: "La reserva no es válida.",
         icon: "error",
@@ -1402,7 +1409,7 @@ function SeccionAsientoContent() {
     if (!tarjetaSeleccionada) {
       // 📌 Validaciones de pago solo si NO hay una tarjeta guardada seleccionada
       if (!formValues.nombre || !/^[a-zA-Z\s]+$/.test(formValues.nombre)) {
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: "El nombre del titular no es válido o no puede ir vacío.",
           icon: "error",
@@ -1411,7 +1418,7 @@ function SeccionAsientoContent() {
         return;
       }
       if (!validarNumeroTarjeta(formValues.tarjeta)) {
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: "El número de tarjeta no es válido. Verifica que esté completo y sea correcto (de 14 a 19 dígitos).",
           icon: "error",
@@ -1420,7 +1427,7 @@ function SeccionAsientoContent() {
         return;
       }
       if (!expiracion || !/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiracion)) {
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: "La fecha de vencimiento debe estar en formato MM/YY.",
           icon: "error",
@@ -1435,7 +1442,7 @@ function SeccionAsientoContent() {
       const mesActual = new Date().getMonth() + 1; // Enero = 0, sumamos 1
 
       if (año < añoActual || (año === añoActual && mes < mesActual)) {
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: "La tarjeta está vencida.",
           icon: "error",
@@ -1445,7 +1452,7 @@ function SeccionAsientoContent() {
       }
 
       if (!validarCVC(formValues.cvv, formValues.tarjeta)) {
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: "El código de seguridad (CVV) no es válido.",
           icon: "error",
@@ -1460,7 +1467,7 @@ function SeccionAsientoContent() {
       await procesarPago();
     } catch (error) {
       console.error("Error al procesar la compra:", error);
-      Swal.fire({
+      fireSwal({
         title: "Error",
         text: error instanceof Error ? error.message : "Ocurrió un error al comprar.",
         icon: "error",
@@ -1471,7 +1478,7 @@ function SeccionAsientoContent() {
 
   const handleEliminarTarjeta = async (tarjetaId: string) => {
     try {
-      const { isConfirmed } = await Swal.fire({
+      const { isConfirmed } = await fireSwal({
         title: "¿Estás seguro?",
         text: "Esta acción eliminará tu método de pago de forma permanente.",
         icon: "warning",
@@ -1486,7 +1493,7 @@ function SeccionAsientoContent() {
       const has_user = await apiApplication.get("/pagos/get/mi_perfil");
       const clienteId = has_user.data.idOpenpay;
       if (!has_user.data.idOpenpay) {
-        Swal.fire({
+        fireSwal({
           icon: "error",
           title: "Error",
           text: "No puedes eliminar la tarjeta porque no tiene un usuario Openpay.",
@@ -1494,11 +1501,11 @@ function SeccionAsientoContent() {
         return;
       }
       const res = await apiApplication.delete(`/pagos/tarjeta/${clienteId}/${tarjetaId}`);
-      Swal.fire({ icon: "success", title: "Tarjeta eliminada", text: res.data.message });
+      fireSwal({ icon: "success", title: "Tarjeta eliminada", text: res.data.message });
       setTarjetas((tarjetas) => tarjetas.filter((tarjeta) => tarjeta.idtarjeta !== tarjetaId));
     } catch (error) {
       console.error("Error al eliminar la tarjeta:", error);
-      Swal.fire({
+      fireSwal({
         icon: "error",
         title: "Error",
         text: "Ocurrió un error al eliminar la tarjeta. Por favor, inténtalo de nuevo.",
@@ -1511,7 +1518,7 @@ function SeccionAsientoContent() {
       if (eventoId && reservaId) {
         const response = await cancelar(reservaId.toString(), eventoId.toString());
         if (response && response.success) {
-          Swal.fire({
+          fireSwal({
             title: "¡Atención!",
             text: "La reserva se ha cancelado.",
             icon: "warning",
@@ -1521,7 +1528,7 @@ function SeccionAsientoContent() {
             window.location.reload();
           });
         } else {
-          Swal.fire({
+          fireSwal({
             title: "Error",
             text: "No se pudo cancelar la reserva. Inténtalo de nuevo.",
             icon: "error",
@@ -1530,7 +1537,7 @@ function SeccionAsientoContent() {
         }
       }
     } catch (error) {
-      Swal.fire({
+      fireSwal({
         title: "Error",
         text: "Ocurrió un error al cancelar la reserva.",
         icon: "error",
@@ -1582,7 +1589,7 @@ function SeccionAsientoContent() {
     } else {
       if (asiento.estado === "disponible") {
         if (evento?.limiteDeAsientos && asientosSeleccionados.length >= evento.limiteDeAsientos) {
-          Swal.fire({
+          fireSwal({
             title: "Límite alcanzado",
             text: `Solo puedes seleccionar hasta ${evento.limiteDeAsientos} asientos para este evento.`,
             icon: "warning",
@@ -1652,6 +1659,19 @@ function SeccionAsientoContent() {
   // _________________________________________________
 
   const renderFilas = () => {
+    // Mientras `filas` no ha llegado del fetch, este contenedor no ocupa altura -> al
+    // resolver, el mapa de asientos aparece de golpe y empuja el footer (CLS ~0.33,
+    // medido con Lighthouse). Se reserva un alto mínimo mientras carga, mismo patrón
+    // que el fix de CLS de CityPass (commit b530353): reservar el espacio del contenido
+    // que todavía no llegó, en vez de dejar que el layout salte al resolverse.
+    if (filas.length === 0) {
+      return (
+        <div className="bg-[#e6e6e8] container-seats min-h-[320px] rounded-lg grid place-items-center">
+          <SpinnerComponent />
+        </div>
+      );
+    }
+
     return (
       <>
         <div className="bg-[#e6e6e8] overflow-auto container-seats rounded-lg">
@@ -2361,9 +2381,18 @@ function SeccionAsientoContent() {
         {/* Calculadora */}
         <div
           ref={resumenRef}
-          className={`w-${reservaExitosa ? "2/6" : "full"} bg-white shadow lg:min-w-80 rounded-lg p-2 lg:p-4 flex flex-col ${asientosSeleccionados.length > 0 ? "justify-start" : "justify-center"}`}
+          className={`w-${reservaExitosa ? "2/6" : "full"} bg-white shadow lg:min-w-80 rounded-lg p-2 lg:p-4 flex flex-col ${filas.length === 0 || asientosSeleccionados.length > 0 ? "justify-start" : "justify-center"}`}
         >
-          {asientosSeleccionados.length > 0 ? (
+          {filas.length === 0 ? (
+            // Mientras `filas` no ha llegado, en eventos tipo "mesa" el fetch auto-selecciona
+            // todos los asientos apenas resuelve (sin click del usuario que exente el shift de
+            // CLS) y este panel salta del estado vacío al resumen lleno de golpe (CLS ~0.15,
+            // medido con Lighthouse). Reservar el mismo alto que el placeholder de "cargando"
+            // de la sección de asientos evita que el salto ocurra dos veces en cascada.
+            <div className="min-h-[320px] grid place-items-center">
+              <SpinnerComponent />
+            </div>
+          ) : asientosSeleccionados.length > 0 ? (
             <>{renderCalculadora()}</>
           ) : (
             <div className="text-center text-gray-500">
