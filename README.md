@@ -51,7 +51,7 @@ que sea secreto va sin prefijo.
 | `npm run dev` | Servidor de desarrollo (Turbopack) |
 | `npm run build` | Build de producción — 42 rutas |
 | `npm start` | Sirve el build |
-| `npm run typecheck` | `tsc --noEmit` |
+| `npm run typecheck` | `next typegen` + `tsc --noEmit`. El typegen genera los tipos globales de rutas (`LayoutProps`, `PageProps`) que `app/layout.tsx` usa; sin él, en un checkout limpio (CI) `tsc` falla con TS2304 |
 | `npm test` | Vitest, una pasada |
 | `npm run test:watch` | Vitest en watch |
 | `npm run verify` | `typecheck` + `test` + `build`. Lo que corre CI, en local |
@@ -128,7 +128,8 @@ compras" todavía no se pueden renderizar en el servidor.
 ## Calidad y CI
 
 Hay dos configuraciones equivalentes: `.github/workflows/ci.yml` y `.gitlab-ci.yml`. `origin` es
-GitLab; la de GitHub existe por el espejo del repo. **Si cambias una, cambia la otra.**
+GitLab; la de GitHub existe por el espejo del repo. **Si cambias una, cambia la otra.** Corren en
+push a `main` y `migracion-v2-v3`, y en PR hacia `main`.
 
 | Job | ¿Gatea? |
 |---|---|

@@ -34,7 +34,7 @@ variables:
 .reglas: &reglas
   rules:
     - if: $CI_PIPELINE_SOURCE == "merge_request_event"
-    - if: $CI_COMMIT_BRANCH == "main"
+    - if: $CI_COMMIT_BRANCH == "main" || $CI_COMMIT_BRANCH == "migracion-v2-v3"
 
 build-y-tests:
   stage: verificar

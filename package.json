@@ -9,7 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "analyze": "node scripts/analyze.mjs",
     "audit:images": "node scripts/audit-images.mjs",
     "verify": "npm run typecheck && npm test && npm run build",
