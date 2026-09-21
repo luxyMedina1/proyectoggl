@@ -212,7 +212,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 </Link>
               </div>
               <button
-                className="md:hidden ml-auto text-neutral"
+                className="md:hidden ml-auto -mr-1.5 p-1.5 text-neutral"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Abrir menú"
               >
@@ -306,7 +306,7 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                 )}
               </div>
               <button
-                className="relative md:hidden ml-auto text-neutral"
+                className="relative md:hidden ml-auto -mr-1.5 p-1.5 text-neutral"
                 onClick={() => setMobileMenuOpen(true)}
                 aria-label="Abrir menú"
               >
@@ -452,16 +452,16 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
             <p className="text-2xl mb-5 text-center">Legal</p>
             <ul className="grid grid-cols-2 gap-3 text-sm font-light">
               <li className="text-center">
-                <Link href="/legales/aviso_de_privacidad">Aviso de privacidad</Link>
+                <Link className="inline-block py-2.5" href="/legales/aviso_de_privacidad">Aviso de privacidad</Link>
               </li>
               <li className="text-center">
-                <Link href="/legales/nuestras_politicas">Nuestras políticas</Link>
+                <Link className="inline-block py-2.5" href="/legales/nuestras_politicas">Nuestras políticas</Link>
               </li>
               <li className="col-span-2 text-center">
-                <Link href="/legales/terminos_y_condiciones">Términos y condiciones</Link>
+                <Link className="inline-block py-2.5" href="/legales/terminos_y_condiciones">Términos y condiciones</Link>
               </li>
               <li className="col-span-2 text-center">
-                <Link href="/legales/eliminacion_de_cuenta">Eliminar cuenta app</Link>
+                <Link className="inline-block py-2.5" href="/legales/eliminacion_de_cuenta">Eliminar cuenta app</Link>
               </li>
             </ul>
           </div>
@@ -476,13 +476,13 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                   </li>
                 )}
                 {config?.emailContacto && (
-                  <li className="flex flex-col col-span-2 items-center gap-y-1">
+                  <li className="flex flex-col col-span-3 sm:col-span-2 items-center gap-y-1 min-w-0">
                     <MdOutlineEmail className="text-xl w-5 flex-none" />
-                    <span className="text-center">{config.emailContacto}</span>
+                    <span className="text-center break-words max-w-full">{config.emailContacto}</span>
                   </li>
                 )}
                 {config?.telefonoContacto && (
-                  <li className="flex flex-col items-center gap-y-1">
+                  <li className="flex flex-col col-span-3 sm:col-span-1 items-center gap-y-1 min-w-0">
                     <MdPhone className="text-xl w-5 flex-none" />
                     <span className="text-center">{config.telefonoContacto}</span>
                   </li>
@@ -569,11 +569,11 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
           </div>
           <div className="col-span-4 md:col-span-1">
             <p className="text-2xl 2xl:text-3xl mb-5">Legal</p>
-            <ul className="text-sm font-light grid gap-y-4">
-              <li><Link href="/legales/aviso_de_privacidad">Aviso de privacidad</Link></li>
-              <li><Link href="/legales/nuestras_politicas">Nuestras políticas</Link></li>
-              <li><Link href="/legales/terminos_y_condiciones">Términos y condiciones</Link></li>
-              <li><Link href="/legales/eliminacion_de_cuenta">Eliminar cuenta app</Link></li>
+            <ul className="text-sm font-light grid gap-y-1">
+              <li><Link className="inline-block py-2" href="/legales/aviso_de_privacidad">Aviso de privacidad</Link></li>
+              <li><Link className="inline-block py-2" href="/legales/nuestras_politicas">Nuestras políticas</Link></li>
+              <li><Link className="inline-block py-2" href="/legales/terminos_y_condiciones">Términos y condiciones</Link></li>
+              <li><Link className="inline-block py-2" href="/legales/eliminacion_de_cuenta">Eliminar cuenta app</Link></li>
             </ul>
           </div>
           <div className="col-span-4 md:col-span-1">
@@ -588,9 +588,9 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                     </li>
                   )}
                   {config?.emailContacto && (
-                    <li className="flex items-center gap-x-2">
+                    <li className="flex items-center gap-x-2 min-w-0">
                       <MdOutlineEmail className="text-xl w-5 flex-none" />
-                      {config.emailContacto}
+                      <span className="min-w-0 break-words">{config.emailContacto}</span>
                     </li>
                   )}
                   {config?.telefonoContacto && (

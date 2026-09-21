@@ -1,6 +1,6 @@
 function AsientosStatusComponent() {
   return (
-    <div className='flex items-center gap-x-3 text-xs my-4 justify-end'>
+    <div className='flex flex-wrap items-center gap-x-3 gap-y-2 text-xs my-4 justify-end'>
         <div className='flex items-center gap-x-2'>
             <svg width="20" height="18" viewBox="0 0 20 18" fill="none" xmlns="http://www.w3.org/2000/svg">
                 <path d="M3.5 18C4.33 18 5 17.33 5 16.5V15H15V16.5C15 17.33 15.67 18 16.5 18C17.33 18 18 17.33 18 16.5V14C18 12.9 17.1 12 16 12H4C2.9 12 2 12.9 2 14V16.5C2 17.33 2.67 18 3.5 18ZM18 7H19C19.55 7 20 7.45 20 8V9C20 9.55 19.55 10 19 10H18C17.45 10 17 9.55 17 9V8C17 7.45 17.45 7 18 7ZM1 7H2C2.55 7 3 7.45 3 8V9C3 9.55 2.55 10 2 10H1C0.45 10 0 9.55 0 9V8C0 7.45 0.45 7 1 7ZM15 10H5V2C5 0.9 5.9 0 7 0H13C14.1 0 15 0.9 15 2V10Z" fill="#71717A"/>

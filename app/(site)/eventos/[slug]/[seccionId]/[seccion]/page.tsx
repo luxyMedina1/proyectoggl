@@ -187,6 +187,7 @@ function SeccionAsientoContent() {
   const [orientacion, setOrientacion] = useState("");
   const [usuarioInvitado, setUsuarioInvitado] = useState<boolean>(false);
 
+  const mapaAsientosRef = useRef<HTMLDivElement | null>(null);
   const resumenRef = useRef<HTMLDivElement | null>(null);
   const pagoRef = useRef<HTMLDivElement | null>(null);
 
@@ -970,6 +971,16 @@ function SeccionAsientoContent() {
     fetchFilas();
   }, [eventoId, seccionId]);
 
+  // En pantallas angostas el mapa es más ancho que el viewport y arrancaba pegado a la
+  // izquierda: las filas cortas (centradas respecto a la más larga) quedaban fuera de vista.
+  // Se centra el desplazamiento inicial; el resto sigue accesible deslizando.
+  useEffect(() => {
+    const el = mapaAsientosRef.current;
+    if (el && el.scrollWidth > el.clientWidth) {
+      el.scrollLeft = (el.scrollWidth - el.clientWidth) / 2;
+    }
+  }, [filas]);
+
   useEffect(() => {
     if (promocion_id != 0) {
       // Sin asientos seleccionados no hay nada que validar: resetea en silencio
@@ -1677,7 +1688,7 @@ function SeccionAsientoContent() {
 
     return (
       <>
-        <div className="bg-[#e6e6e8] overflow-auto container-seats rounded-lg">
+        <div ref={mapaAsientosRef} className="bg-[#e6e6e8] overflow-auto container-seats rounded-lg">
           {filas.map((fila) => (
             <div key={fila.id} className="p-1">
               <div
@@ -1739,7 +1750,7 @@ function SeccionAsientoContent() {
                         asiento.estado !== "inaccesible" ? setHoveredAsiento(asiento) : null
                       }
                       onMouseLeave={() => setHoveredAsiento(null)} // Ocultar el tooltip al salir del hover
-                      className={`cursor-pointer text-center ${colorClase} relative square-full`}
+                      className={`cursor-pointer touch-manipulation text-center ${colorClase} relative square-full`}
                     >
                       {estaSeleccionado ? (
                         // ✅ Si el asiento está seleccionado, mostrar un check verde
@@ -2367,7 +2378,7 @@ function SeccionAsientoContent() {
                   {asientosSeleccionados.length > 0 && (
                     <button
                       onClick={handleVerResumen}
-                      className="px-2 py-1 border border-accentLight text-accentBase hover:cursor-pointer rounded-md ml-auto pulse-shadow"
+                      className="px-3 py-2.5 border border-accentLight text-accentBase hover:cursor-pointer rounded-md ml-auto pulse-shadow"
                     >
                       Ver resumen
                     </button>
