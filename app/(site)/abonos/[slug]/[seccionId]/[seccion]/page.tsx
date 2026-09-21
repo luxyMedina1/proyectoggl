@@ -1091,7 +1091,10 @@ const AbonoSeccionAsientoContent = () => {
       }
     }
     validarDescuento(asientosSeleccionados);
-  }, [subtotalesPorCategoria, asientosSeleccionados, totalBoletos]);
+    // `evento?.udsPorCategoria` y `cargosPorCategoria` llegan de requests distintos a los de los
+    // asientos (detalle vs filas_por_seccion). Sin ellos como dependencia, si las filas llegan
+    // primero el UDS se calcula con el valor viejo y ya no se recalcula: cargo por servicio en $0.
+  }, [subtotalesPorCategoria, asientosSeleccionados, totalBoletos, evento?.udsPorCategoria, cargosPorCategoria]);
 
   const handleExpiracionChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value.replace(/\D/g, "");
