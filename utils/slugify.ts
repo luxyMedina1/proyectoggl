@@ -4,6 +4,7 @@ export const slugify = (text: string): string =>
         .normalize("NFD")
         .replace(/[̀-ͯ]/g, "")
         .toLowerCase()
+        .replace(/&/g, " y ") // transliterar & a "y" (paridad con slugify del backend)
         .trim()
         .replace(/[^a-z0-9]+/g, "-")
         .replace(/^-+|-+$/g, "");

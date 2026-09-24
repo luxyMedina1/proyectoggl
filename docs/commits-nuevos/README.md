@@ -15,6 +15,7 @@ Cubre desde el commit `fecdc62823fc56b68f9dd627cd994547e52bd8da` (incluido) hast
 | `a2e80bb` | Feat: usar lat y lon recintos | Abrir Google Maps por coordenadas cuando el recinto las tiene |
 | `399c70c` | Permitir cambiar rapido entre fechas | Selector rápido de fechas en multifunción + tarjetas de información del evento |
 | `3cebdc5` | Ordenar por precio boletos | Tarjetas de boletos por precio ASC (DAYPASS al final) — anexo en doc 06 |
+| `40b2d79` | no eliminar & slugs | `&` → "y" en `slugify`, paridad con los slugs del backend |
 
 Cada tema tiene su propio documento:
 
@@ -25,6 +26,7 @@ Cada tema tiene su propio documento:
 - [`04-recintos-lat-lon-maps.md`](./04-recintos-lat-lon-maps.md) — ya portado a v3 (`DireccionMapsLink.tsx`)
 - [`05-rendimiento-lcp-next.md`](./05-rendimiento-lcp-next.md) — plan de trabajo para el LCP en v3; la acción principal (lista SSR en `/eventos`) quedó hecha el 2026-09-24
 - [`06-selector-rapido-fechas.md`](./06-selector-rapido-fechas.md) — portado y commiteado (`ef9656b`)
+- [`07-slugs-ampersand.md`](./07-slugs-ampersand.md) — portado
 
 Temas 00, 02, 03 y 04 estaban marcados como pendientes en este índice pero ya estaban portados en el
 código (confirmado 2026-09-24 con grep sobre los archivos de v3); no estaba documentado. Falta
