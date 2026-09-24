@@ -1,6 +1,7 @@
 import { cache } from "react";
+import { connection } from "next/server";
 import type { Metadata, ResolvingMetadata } from "next";
-import EventosView from "./EventosView";
+import EventosView, { type Evento } from "./EventosView";
 import { getListaEventos } from "@/utils/ogEvento";
 import type { EventoListaSlug } from "@/utils/eventoSlug";
 import { construirBreadcrumbEventosJsonLd, construirItemListEventosJsonLd } from "@/utils/jsonLdEvento";
@@ -27,11 +28,10 @@ const getEventosHome = cache(async (): Promise<EventoListaSlug[]> => {
   }
 });
 
-// Cascarón de servidor de la home. La UI la sigue renderizando EventosView
-// ("use client") con su propio fetch; aquí SOLO se añaden las <meta> propias de
-// /eventos (antes heredaba las globales del layout) y el ItemList JSON-LD para
-// crawlers. No se pasa data al cliente: el render y el flujo de datos no cambian
-// (el SSR de la lista para el LCP sigue pendiente, ver doc 05).
+// Cascarón de servidor de la home: <meta> propias de /eventos, ItemList JSON-LD y la
+// lista de eventos YA resuelta para EventosView ("use client"), que la usa como estado
+// inicial (doc 05: el banner/LCP y el grid salen en el HTML, sin esperar al fetch de
+// cliente). EventosView sigue refrescando en cliente en segundo plano.
 export async function generateMetadata(
   _props: unknown,
   parent: ResolvingMetadata,
@@ -76,7 +76,35 @@ export async function generateMetadata(
   };
 }
 
+// Campos pesados del listado que EventosView no usa (descripciones HTML, datos del
+// cliente/promotor, imágenes del boleto, SEO). Se quitan antes de pasarlos al cliente
+// porque todo lo que va como prop viaja serializado en el payload RSC del HTML.
+const CAMPOS_SOLO_SERVIDOR = [
+  "descripcion",
+  "descripcionExtra",
+  "cliente",
+  "leyendaMapa",
+  "imagenBoleto",
+  "imagenBoletoDigital",
+  "seo",
+  "camposIncluidosEnBoleto",
+] as const;
+
+const paraCliente = (eventos: EventoListaSlug[]): Evento[] =>
+  eventos.map((evento) => {
+    const copia: Record<string, unknown> = { ...evento };
+    for (const campo of CAMPOS_SOLO_SERVIDOR) delete copia[campo];
+    return copia as unknown as Evento;
+  });
+
 export default async function Page() {
+  // Render por peticion: EventosView usa useSearchParams() (filtros ?ciudad= y ?buscar=
+  // del header). En una ruta estatica eso hace bailout de CSR y la lista no entra al
+  // HTML; con `connection()` la ruta es dinamica y useSearchParams tiene valor ya en el
+  // render del servidor (doc de use-search-params, "Dynamic Rendering"). La lista en si
+  // sigue cacheada por `eventos:lista` (getListaEventos -> apiGet), no se pide al back
+  // en cada visita.
+  await connection();
   // Listado leído en el servidor SOLO para el ItemList JSON-LD (los crawlers no
   // ejecutan el fetch en cliente de EventosView). Mismo endpoint y cache/tag
   // (`eventos:lista`) que el sitemap. Si el back no responde, la lista viene
@@ -98,7 +126,7 @@ export default async function Page() {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
         />
       )}
-      <EventosView />
+      <EventosView eventosIniciales={paraCliente(eventos)} />
     </>
   );
 }

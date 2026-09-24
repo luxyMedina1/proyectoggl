@@ -85,7 +85,7 @@ interface Recinto {
   longitud?: number | string | null;
 }
 
-interface Evento {
+export interface Evento {
   id: number;
   tipo: string;
   nombre: string;
@@ -107,16 +107,13 @@ interface Evento {
   finalEvento?: string | null;
 }
 
-export default function EventosView() {
+export default function EventosView({ eventosIniciales = [] }: { eventosIniciales?: Evento[] }) {
   return (
-    // El fallback es lo UNICO de esta vista que entra en el HTML prerenderizado:
-    // EventosContent usa useSearchParams() y hace bailout de CSR, asi que hasta
-    // que hidrata no hay contenido. Con LocalLoader suelto (position:fixed, 0 de
-    // alto) el footer nacia pegado al header y saltaba ~2000px al montar el grid
-    // (era el 100% del CLS de /eventos). Este spacer reserva un alto parecido al
-    // de una home poblada para que el footer nazca cerca de su sitio; el mismo
-    // `min-h-[200vh] lg:min-h-[130vh]` que EventosContent mantiene mientras
-    // `eventos` esta vacio, para que no haya salto en el relevo fallback -> contenido.
+    // page.tsx llama `connection()`, asi que la ruta se renderiza por peticion y
+    // useSearchParams() ya no hace bailout de CSR: EventosContent entra al HTML con la
+    // lista que trae el servidor (`eventosIniciales`). El fallback solo se ve en
+    // navegaciones de cliente mientras llega el RSC. Reserva el mismo alto que
+    // EventosContent mantiene mientras `eventos` esta vacio (anti-CLS del footer).
     <Suspense
       fallback={
         <div
@@ -127,18 +124,22 @@ export default function EventosView() {
         </div>
       }
     >
-      <EventosContent />
+      <EventosContent eventosIniciales={eventosIniciales} />
     </Suspense>
   );
 }
 
 // useSearchParams() exige un boundary de Suspense para el prerender estatico de Next.js
 // (bailout de CSR) — el resto de la logica de HomePage.tsx (v2) queda igual dentro.
-function EventosContent() {
-  const [eventos, setEventos] = useState<Evento[]>([]);
-  const [eventosOriginales, setEventosOriginales] = useState<Evento[]>([]);
+function EventosContent({ eventosIniciales }: { eventosIniciales: Evento[] }) {
+  // Sembrado con la lista del servidor (doc 05): el banner y el grid salen en el HTML
+  // inicial y la imagen LCP se descubre sin esperar al JS. El fetch de cliente de abajo
+  // sigue corriendo para refrescar (disponibilidad al dia), pero ya sin loader.
+  const hayIniciales = eventosIniciales.length > 0;
+  const [eventos, setEventos] = useState<Evento[]>(eventosIniciales);
+  const [eventosOriginales, setEventosOriginales] = useState<Evento[]>(eventosIniciales);
   const { getListaEventos } = useEventosStore();
-  const [activeEvent, setActiveEvent] = useState<Evento | null>(null);
+  const [activeEvent, setActiveEvent] = useState<Evento | null>(eventosIniciales[0] ?? null);
   interface Categoria {
     id: number;
     nombre: string;
@@ -153,7 +154,7 @@ function EventosContent() {
   // Para la reserva de alto anti-CLS: sólo mientras esperamos la primera carga.
   // Si termina sin eventos (catálogo vacío o back caído) NO se reserva, para no
   // dejar dos pantallas en blanco sobre el mensaje de "sin eventos".
-  const [cargaFinalizada, setCargaFinalizada] = useState(false);
+  const [cargaFinalizada, setCargaFinalizada] = useState(hayIniciales);
 
   const { status, isVerified } = useAuthStore();
   const searchParams = useSearchParams();
@@ -206,7 +207,9 @@ function EventosContent() {
 
   const fetchEventos = useMemo(() => {
     return async () => {
-      setCargando(true);
+      // Con datos del servidor el refresco es silencioso: nada de loader encima de una
+      // pagina que ya esta pintada.
+      if (!hayIniciales) setCargando(true);
       try {
         const response = await getListaEventos();
         const eventos = response.eventosFiltrados;
@@ -215,7 +218,9 @@ function EventosContent() {
 
           setEventosOriginales(eventos);
           setEventos(eventos);
-          setActiveEvent(eventos[0]);
+          // Conservar el slide activo si sigue en la lista (el refresco no debe
+          // regresar el hero al primero si el usuario ya se movio).
+          setActiveEvent((actual) => eventos.find((e: Evento) => e.id === actual?.id) ?? eventos[0]);
 
         } else {
 
@@ -225,6 +230,8 @@ function EventosContent() {
         }
       } catch (error: any) {
         console.error('Error al obtener los eventos:', error);
+        // Si el servidor ya pinto la lista, un refresco fallido no amerita un modal.
+        if (hayIniciales) return;
         let mensajeError = 'Error al obtener los eventos.';
         if (error.response && error.response.data && error.response.data.message) {
           mensajeError = error.response.data.message;
@@ -504,12 +511,11 @@ function EventosContent() {
                     className="relative flex justify-center items-center h-48 lg:h-80 rounded-b-2xl lg:rounded-r-2xl lg:rounded-b-none"
                   >
                     {/* Elemento LCP de la home. Lleva `preload` Y `fetchPriority="high"`:
-                        esta lista se pinta en el cliente, asi que sin el <link rel="preload"> que
-                        genera `preload` la imagen no aparece en el HTML inicial (Lighthouse:
-                        "request discoverable"), y Next le pasa `fetchPriority` a ese mismo link
-                        (image-component.js, ImagePreload) para que baje con prioridad alta
-                        ("fetchpriority=high should be applied"). `fill` + alto fijo del slide
-                        reserva la caja (0 CLS) y activa AVIF/WebP + TTL de 31 días. */}
+                        `preload` pone un <link rel="preload"> en el <head> (la imagen empieza a
+                        bajar antes de parsear el <body>) y Next le pasa `fetchPriority` a ese
+                        mismo link (image-component.js, ImagePreload), que es lo que pide
+                        Lighthouse ("fetchpriority=high should be applied"). `fill` + alto fijo
+                        del slide reserva la caja (0 CLS) y activa AVIF/WebP + TTL de 31 días. */}
                     <Image
                       src={slide.imagenBanner || slide.imagenPromocion || IMAGEN_EVENTO_FALLBACK}
                       alt={slide.nombre}
