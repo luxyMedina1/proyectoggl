@@ -177,7 +177,7 @@ bailan). Cifras de abajo son de PSI móvil salvo donde diga.
   `<a>` como hijos directos → envueltos en `<li>`. Pendiente: contraste de los botones de categoría
   (`text-neutral` sobre `bg-gray-400`) — es decisión de paleta.
 
-Pruebas: Vitest + jsdom + Testing Library. Hoy son **174 pruebas en 26 archivos**, la mayoría de
+Pruebas: Vitest + jsdom + Testing Library. Hoy son **175 pruebas en 26 archivos**, la mayoría de
 propiedad (`fast-check`) sobre los helpers puros de `utils/` (promociones, slugs, JSON-LD, fechas).
 Cualquier `*.test.ts(x)` o `*.spec.ts(x)` en cualquier carpeta se recoge solo.
 
@@ -277,8 +277,8 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 ---
 
-**Última revisión:** 2026-09-23, contra Next 16.3.4 y React 19.2.7.
+**Última revisión:** 2026-09-24, contra Next 16.3.4 y React 19.2.7.
 
-Los números de este archivo (34 páginas, 22 cliente, 105 `<img>`, 70 errores de lint, 174 pruebas,
+Los números de este archivo (34 páginas, 22 cliente, 105 `<img>`, 70 errores de lint, 175 pruebas,
 42 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
 actualiza.

@@ -10,6 +10,11 @@ describe('slugify', () => {
     expect(slugify('  Playa   del  Carmen!! ')).toBe('playa-del-carmen')
   })
 
+  it('transcribe & como "y" para coincidir con el slug del backend', () => {
+    expect(slugify('Rock & Roll')).toBe('rock-y-roll')
+    expect(slugify('Tom&Jerry')).toBe('tom-y-jerry')
+  })
+
   it('deslugify reconstruye un nombre legible', () => {
     expect(deslugify('ciudad-de-mexico')).toBe('Ciudad De Mexico')
   })
