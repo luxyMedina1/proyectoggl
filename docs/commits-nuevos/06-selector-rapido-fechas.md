@@ -73,3 +73,11 @@ funciones) — cambiar de pastilla navega, refresca precios/horario y no reviert
 
 **Pendiente:** commitear estos cambios (no se ha hecho todavía, a la espera de que el usuario lo
 pida, mismo criterio que los temas 01-05).
+
+## Anexo: `3cebdc5` — Ordenar por precio boletos
+
+Commit v2 del 2026-09-24, posterior a este port. Mismo archivo (`EventoDetalleView.tsx`, en el
+fetch de secciones): las categorías de `preciosCategorias` se ordenan por su **precio más bajo, de
+menor a mayor** (antes por nombre), y dentro de cada categoría `precios` va ascendente (antes
+descendente). Las DAYPASS siguen al final. Ningún otro componente dependía del orden anterior de
+`precios`.

@@ -544,12 +544,12 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           );
           setSeccionesAdicionales(adicionalesConNombreEspecial);
 
-          // Ordenar las categorías por nombre ASC, pero dejando siempre al final las que
-          // sean DAYPASS (sin importar el nombre).
+          // Ordenar las categorías por precio de menor a mayor, pero dejando siempre al
+          // final las que sean DAYPASS (sin importar el precio).
           const categoriasOrdenadas = ((response.preciosCategorias ?? []) as Categorias[])
             .map((categoria) => ({
               ...categoria,
-              precios: (categoria.precios ?? []).filter((p) => p > 0).sort((a, b) => b - a),
+              precios: (categoria.precios ?? []).filter((p) => p > 0).sort((a, b) => a - b),
             }))
             .sort((a, b) => {
               const nombreA = (a.categoria ?? "").toLowerCase();
@@ -563,8 +563,11 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
               if (esDaypassA && !esDaypassB) return 1;
               if (!esDaypassA && esDaypassB) return -1;
 
-              // El resto se ordena por nombre en orden ascendente.
-              return nombreA.localeCompare(nombreB);
+              // El resto se ordena por precio en orden ascendente (menor a mayor),
+              // tomando el precio más bajo de cada categoría como referencia.
+              const precioMinA = a.precios[0] ?? Number.POSITIVE_INFINITY;
+              const precioMinB = b.precios[0] ?? Number.POSITIVE_INFINITY;
+              return precioMinA - precioMinB;
             });
           setPreciosCategorias(categoriasOrdenadas);
         } catch (error) {

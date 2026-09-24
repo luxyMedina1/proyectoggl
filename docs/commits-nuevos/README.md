@@ -14,6 +14,7 @@ Cubre desde el commit `fecdc62823fc56b68f9dd627cd994547e52bd8da` (incluido) hast
 | `a4da7ba` | Fix: sale selección de abonos sin abonos | UX: saltar paso intermedio cuando no hay abonos |
 | `a2e80bb` | Feat: usar lat y lon recintos | Abrir Google Maps por coordenadas cuando el recinto las tiene |
 | `399c70c` | Permitir cambiar rapido entre fechas | Selector rápido de fechas en multifunción + tarjetas de información del evento |
+| `3cebdc5` | Ordenar por precio boletos | Tarjetas de boletos por precio ASC (DAYPASS al final) — anexo en doc 06 |
 
 Cada tema tiene su propio documento:
 

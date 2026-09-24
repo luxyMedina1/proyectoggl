@@ -1,3 +1,5 @@
+"use client";
+
 // Selector rapido de fechas para eventos multifecha (parte de arriba de la pagina de compra)
 // y tarjeta de informacion con icono. Se separan aqui para no engordar EventoDetalleView.
 import { useEffect, useRef, type ReactNode } from "react";
