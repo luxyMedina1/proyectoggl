@@ -1,7 +1,8 @@
 # Migración a v3 (Next.js) — Cambios desde `fecdc62`
 
 Este documento describe **qué cambió, por qué se hizo y cómo migrarlo** al proyecto v3 (Next.js).
-Cubre desde el commit `fecdc62823fc56b68f9dd627cd994547e52bd8da` (incluido) hasta `HEAD`.
+Cubre desde el commit `fecdc62823fc56b68f9dd627cd994547e52bd8da` (incluido) hasta `HEAD` de
+`main_v2` en el repo GitLab `taquillavipfrontend-v2`.
 
 ## Rango de cambios
 
@@ -12,6 +13,7 @@ Cubre desde el commit `fecdc62823fc56b68f9dd627cd994547e52bd8da` (incluido) hast
 | `e36ede7` | Mostrar promoción aplicada compra | UI: mostrar promo y precio original tachado en perfil/pedidos |
 | `a4da7ba` | Fix: sale selección de abonos sin abonos | UX: saltar paso intermedio cuando no hay abonos |
 | `a2e80bb` | Feat: usar lat y lon recintos | Abrir Google Maps por coordenadas cuando el recinto las tiene |
+| `399c70c` | Permitir cambiar rapido entre fechas | Selector rápido de fechas en multifunción + tarjetas de información del evento |
 
 Cada tema tiene su propio documento:
 
@@ -21,6 +23,7 @@ Cada tema tiene su propio documento:
 - [`03-fix-abonos-sin-abonos.md`](./03-fix-abonos-sin-abonos.md)
 - [`04-recintos-lat-lon-maps.md`](./04-recintos-lat-lon-maps.md)
 - [`05-rendimiento-lcp-next.md`](./05-rendimiento-lcp-next.md) — plan de trabajo para el LCP en v3
+- [`06-selector-rapido-fechas.md`](./06-selector-rapido-fechas.md) — ya portado a v3, sin commitear
 
 ## Contexto del proyecto v3
 

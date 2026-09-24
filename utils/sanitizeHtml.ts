@@ -75,6 +75,18 @@ const instalarHooks = () => {
 // Devuelve HTML seguro para dangerouslySetInnerHTML. Cadena vacia si no hay contenido.
 export const sanitizeRichText = (html?: string | null): string => {
     if (!html) return "";
+
+    // DOMPurify necesita el DOM del navegador (ver el comentario de sanitizeLegalHtml). Los
+    // componentes que llaman esto son "use client" pero igual se renderizan en el servidor
+    // para el HTML inicial; sin `window`, DOMPurify.addHook revienta y tira toda la pagina a
+    // client-side rendering (visto en logs: "Switched to client rendering because the server
+    // rendering errored"). En servidor se usa el mismo saneado por string que sanitizeLegalHtml
+    // (quita scripts, manejadores on* y protocolos peligrosos) hasta que React hidrata y este
+    // mismo componente vuelve a pintar en cliente con el DOMPurify completo (hooks incluidos).
+    if (typeof window === "undefined") {
+        return sanitizeLegalHtml(html);
+    }
+
     instalarHooks();
     return DOMPurify.sanitize(html, {
         ALLOWED_TAGS: ETIQUETAS_PERMITIDAS,

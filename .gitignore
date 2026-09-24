@@ -45,3 +45,11 @@ yarn-error.log*
 next-env.d.ts
 /.kiro
 *.txt
+
+# clon local de v2 (solo referencia para portar docs/commits-nuevos/, no es parte de la app)
+/taquillavipfrontend-v2/
+
+# archivos personales de la usuaria (proyecto de estadia), no son parte de la app
+/garzaLimon_v6.docx
+/mestadia.pdf
+/portada-memoria-estadia.docx

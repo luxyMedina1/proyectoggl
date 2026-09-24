@@ -20,6 +20,7 @@ export default defineConfig({
       'GGL_taquilla_next/**', // copia antigua del proyecto, no se testea
       'src/**',               // excluida tambien en tsconfig.json
       'e2e/**',
+      'taquillavipfrontend-v2/**', // clon local de v2, solo referencia, excluida tambien en tsconfig.json
     ],
     // No procesar Sass/CSS en los tests: no aporta y solo hace lento el arranque.
     css: false,

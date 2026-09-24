@@ -23,7 +23,7 @@ function ListaPreciosCategorias({ preciosCategorias }: { preciosCategorias: Cate
                                 <TbTicket className="text-2xl text-white" />
                             </span>
                             {categoria.categoria}
-                        </p>
+                        </p>  
                         <div className="text-gray-800 pl-2">
                             <span className="font-semibold text-sm">Precios:</span>
                             <ul className="list-inside mt-1 text-sm">
@@ -34,7 +34,7 @@ function ListaPreciosCategorias({ preciosCategorias }: { preciosCategorias: Cate
                         </div>
                     </div>
                 );
-            })}
+            })}  
         </>
     );
 };

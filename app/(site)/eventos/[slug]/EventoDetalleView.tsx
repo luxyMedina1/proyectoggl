@@ -16,11 +16,11 @@ import { IoTrashOutline } from "react-icons/io5";
 import { FiMinus, FiPlus } from "react-icons/fi";
 import Swal from "sweetalert2";
 import apiApplication from "../../../../api/apiApplication";
-import { formatDate, formatFechaConRango, formatHoraRelativa } from "../../../../utils/dateHelpers";
+import { formatDate, formatRangoHora, formatHoraRelativa } from "../../../../utils/dateHelpers";
 import { validarNumeroTarjeta, validarCVC } from "../../../../utils/cardHelpers";
 import { cuerpoDeErrorApi, mensajeDeErrorApi, statusDeErrorApi } from "../../../../utils/apiError";
 import { sanitizeRichText } from "../../../../utils/sanitizeHtml";
-import { buildEventoSlug, type EventoResuelto } from "../../../../utils/eventoSlug";
+import { buildEventoSlug, rutaEvento, type EventoResuelto } from "../../../../utils/eventoSlug";
 import type { SeleccionAsientoFuncion } from "../../../../types/Abono";
 import {
   filtrarPromocionesAplicablesPorCategoria,
@@ -32,6 +32,8 @@ import {
 import LocalLoader from "../../../../components/LocalLoader";
 import { LuBadgeCheck } from "react-icons/lu";
 import ListaPreciosCategorias from "../../../../eventos/components/ListaPreciosCategorias";
+import { SelectorFechas, InfoEvento } from "../../../../eventos/components/SelectorFechasEvento";
+import { IconoFecha, IconoHorario, IconoApertura, IconoLimite } from "../../../../eventos/components/iconosEvento";
 import { formatearDinero } from "../../../../eventos/helpers/formatearDinero";
 import { Swiper, SwiperSlide } from "swiper/react";
 import "swiper/css";
@@ -171,6 +173,9 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
   // La URL solo lleva el slug (`tuff-riders`, `sky-fest-laguna-7-matutino`). El back lo
   // traduce a ids con resolverSlugEvento; hasta que responde no hay nada que pedir.
   const [resuelto, setResuelto] = useState<EventoResuelto | null>(null);
+  // Slug del que salio `resuelto`. Sirve para no canonicalizar la URL mientras se resuelve
+  // un slug nuevo (multifecha: cambiar de funcion no cambia el eventoId).
+  const [slugResuelto, setSlugResuelto] = useState<string | null>(null);
   const id = resuelto?.eventoId;
   const { checkAuthToken, user, status } = useAuthStore();
   const { requestLogin } = useAuthModal();
@@ -293,6 +298,10 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
         if (!activo) return;
         if (encontrado) {
           setResuelto(encontrado);
+          // Recordar de que slug salio este resuelto: la canonicalizacion de la URL solo
+          // debe correr cuando lo resuelto ya corresponde al slug de la URL actual, no
+          // mientras se esta resolviendo el nuevo (si no, revierte al slug anterior).
+          setSlugResuelto(slug);
         } else if (!resuelto) {
           setCargando(false);
           Swal.fire({
@@ -448,13 +457,34 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       }
     };
     fetchEvento();
+    // Tambien depende de funcionId: en multifecha se cambia de funcion sin cambiar de evento
+    // (mismo eventoId), asi que hay que volver a pedir el detalle para aplicar la fecha,
+    // apertura y horario de la funcion elegida. Sin esto esos campos quedaban pegados a la
+    // primera funcion que se cargo.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+  }, [id, funcionId]);
 
   // Funcion activa: su nombre y su dia entran al slug para que cada fecha de un evento
   // multifecha tenga su propia URL al compartirla.
   const funcionActiva =
     (funcionId && evento?.funciones?.find((f: Funcion) => String(f.id) === funcionId)) || null;
+
+  // ---- Multifecha: selector rapido de fechas en la parte de arriba ----
+  // Funciones ordenadas por fecha (la respuesta puede venir desordenada).
+  const funcionesOrdenadas: Funcion[] = [...(evento?.funciones ?? [])].sort(
+    (a, b) => new Date(a.fecha).getTime() - new Date(b.fecha).getTime(),
+  );
+  // Dias distintos: varias funciones el mismo dia cuentan una sola vez.
+  const diasDistintosFunciones = new Set(
+    funcionesOrdenadas.map((f) => formatDate(f.fecha, "yyyy-MM-dd")),
+  ).size;
+  // "Multifecha" = esMultiFuncion, mas de un dia distinto y (fuera de abonos) con una funcion
+  // ya elegida: aqui siempre se llega a una funcion concreta porque el multifecha sin elegir
+  // se redirige a /informacion.
+  const esMultiFechaSelector =
+    !isAbono && !!evento?.esMultiFuncion && diasDistintosFunciones > 1 && funcionesOrdenadas.length > 1;
+  // Funcion que se esta viendo ahora mismo dentro del selector.
+  const funcionSeleccionada = funcionActiva ?? funcionesOrdenadas.find((f) => String(f.id) === funcionId) ?? null;
 
   const funcionSecciones: string | number | null = isAbono
     ? ((
@@ -472,6 +502,9 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     // En modo abono el `evento` viene mezclado con la respuesta del abono (el id puede ser
     // el del abono), asi que ahi se deja la URL tal cual: no es la URL que se comparte.
     if (isAbono || !evento?.id || !slug) return;
+    // Aun resolviendo el slug de la URL: `funcionActiva` todavia apunta a la funcion vieja,
+    // asi que canonicalizar aqui reescribiria la URL de vuelta al slug anterior. Se espera.
+    if (slugResuelto !== slug) return;
     const canonico = buildEventoSlug(evento, funcionActiva);
     if (!canonico) return;
     // La funcion ya viaja en el slug, asi que `?funcion=` sale de la URL; el resto de los
@@ -484,7 +517,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       return;
     router.replace(destino);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [evento, funcionActiva, slug, searchParams]);
+  }, [evento, funcionActiva, slug, slugResuelto, searchParams]);
 
   // El <title>, la description y los og:* de esta ruta los genera el servidor en
   // app/(site)/eventos/[slug]/page.tsx -> generateMetadata (utils/ogEvento.ts).
@@ -1607,7 +1640,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
                 src={cabecera.imagenPromocion || "/event_default.webp"}
                 alt={cabecera.nombre}
                 fill
-                priority
+                preload
                 sizes="(max-width: 768px) 100vw, (max-width: 1280px) 66vw, 900px"
               />
             </div>
@@ -1644,6 +1677,15 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
             </p>
           </div>
           <div className="mb-3">
+            {/* Selector rapido de fechas: solo cuando el evento es multifecha. Cada pastilla
+                enlaza a la URL de su funcion; la que se ve ahora queda resaltada. */}
+            {esMultiFechaSelector && (
+              <SelectorFechas
+                funciones={funcionesOrdenadas}
+                seleccionadaId={funcionSeleccionada?.id}
+                rutaDe={(f) => rutaEvento(evento, f)}
+              />
+            )}
             <h2 className="text-2xl font-semibold text-gray-800 flex items-center gap-x-5">
               <div className="border border-gray-400 grow rounded-full"></div>
               <p className="whitespace-nowrap text-center">
@@ -1656,44 +1698,41 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
               </p>
               <div className="border border-gray-400 grow rounded-full"></div>
             </h2>
-            <div className="border-y border-gray-300 py-3 mt-5 flex flex-wrap items-center gap-3">
-              <p className="font-semibold text-gray-700">
-                Información importante del evento:{" "}
+            {/* Informacion importante del evento: tarjetas con icono. */}
+            <div className="mt-5 rounded-xl border border-gray-200 bg-white shadow-sm p-4 sm:p-5">
+              <p className="font-semibold text-gray-700 mb-4">
+                Información importante del evento:
                 <span className="font-normal text-gray-500">
+                  {" "}
                   Venta máxima de boletos por usuario {evento?.limiteDeAsientos}.
                 </span>
               </p>
-              {(preciosCategorias?.length ?? 0) > 0 && (
-                <p className="font-semibold text-gray-700">
-                  Disponibles:{" "}
-                  <span className="font-normal text-gray-500">
-                    {preciosCategorias?.length} tipos de boletos.
-                  </span>
-                </p>
-              )}
-              <p className="font-semibold text-gray-700">
-                Evento: <span className="font-normal text-gray-500">{evento?.nombre}.</span>
-              </p>
-              <div className="flex flex-col">
-                <p className="font-semibold text-gray-700">
-                  Fecha:{" "}
-                  <span className="font-normal text-gray-500">
-                    {evento?.fecha
-                      ? evento?.finalEvento
-                        ? formatFechaConRango(evento.fecha, evento.finalEvento)
-                        : formatDate(evento.fecha, "d 'de' MMMM 'de' yyyy")
-                      : ""}
-                    .
-                  </span>
-                </p>
-                {evento?.aperturaPuertas && (
-                  <p className="font-semibold text-gray-700">
-                    Apertura de puertas:{" "}
-                    <span className="font-normal text-gray-500">
-                      {formatHoraRelativa(evento.aperturaPuertas, evento.fecha)}.
-                    </span>
-                  </p>
-                )}
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-x-4 gap-y-5">
+                <InfoEvento
+                  icono={<IconoFecha className="w-5 h-5" />}
+                  etiqueta="Fecha"
+                  valor={evento?.fecha ? formatDate(evento.fecha, "EEEE d 'de' MMMM 'de' yyyy") : "—"}
+                />
+                <InfoEvento
+                  icono={<IconoHorario className="w-5 h-5" />}
+                  etiqueta="Horario"
+                  valor={evento?.fecha ? formatRangoHora(evento.fecha, evento?.finalEvento) : "—"}
+                  detalle={funcionSeleccionada?.nombre ?? undefined}
+                />
+                <InfoEvento
+                  icono={<IconoApertura className="w-5 h-5" />}
+                  etiqueta="Apertura de puertas"
+                  valor={
+                    evento?.aperturaPuertas
+                      ? formatHoraRelativa(evento.aperturaPuertas, evento.fecha)
+                      : "Por confirmar"
+                  }
+                />
+                <InfoEvento
+                  icono={<IconoLimite className="w-5 h-5" />}
+                  etiqueta="Límite por persona"
+                  valor={`${evento?.limiteDeAsientos ?? 0} boletos`}
+                />
               </div>
             </div>
             {/* Secciones adicionales para comprar si son con nombre especial */}
@@ -2367,7 +2406,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
                               <small className="block text-gray-500 text-xs mb-1">
                                 Transacciones realizadas vía:
                               </small>
-                              <Image width={100} height={60} src="/openpay.webp" alt="" />
+                              <Image width={100} height={60} className="w-[100px] h-[60px]" src="/openpay.webp" alt="" />
                             </figure>
                             <figure className="flex items-center w-full">
                               <LuBadgeCheck className="text-green-500 text-3xl w-10 flex-none" />
@@ -2418,7 +2457,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
                             ))}
                           </div>
                           <figure className="flex justify-end">
-                            <Image width={100} height={60} src="/openpay.webp" alt="" />
+                            <Image width={100} height={60} className="w-[100px] h-[60px]" src="/openpay.webp" alt="" />
                           </figure>
                         </div>
                       )}

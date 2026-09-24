@@ -5,22 +5,22 @@ import { formatearDinero } from "../helpers/formatearDinero";
 // `Secciones` de EventoDetalleView (id, nombre, precio, disponibilidad, tipo, color). Se mantiene
 // laxo (`Partial`-style) para no acoplarse a todo el DTO y facilitar el test de propiedad.
 export interface SeccionAccesible {
-  id: number;
-  nombre: string;
-  precioSeccion: string;
+  id: number; 
+  nombre: string;   
+  precioSeccion: string;    
   asientosDisponibles: number;
   tipo_seccion: "general" | "numerada" | "suite" | "mesas";
   colorGeneral?: string;
   color?: string;
   nombreEspecial?: string;
 }
-
+  
 interface SeccionesAccesiblesProps<T extends SeccionAccesible> {
   secciones: T[] | null | undefined;
   // MISMO callback que dispara el clic sobre el mapa. La equivalencia lista/mapa (Req 16.3,
   // Property 10) se sostiene porque ambos caminos invocan esta función con la misma sección.
   onSeleccionarSeccion: (seccion: T) => void;
-}
+}  
 
 // Alternativa accesible al mapa de asientos (Req 16): una lista navegable por teclado donde cada
 // sección es un `<button>` real (enfocable, activable con Enter/Espacio). Al activar una sección
@@ -84,7 +84,7 @@ function SeccionesAccesibles<T extends SeccionAccesible>({
             </li>
           );
         })}
-      </ul>
+      </ul> 
     </nav>
   );
 }

@@ -401,8 +401,8 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                   declaraban 100x90 → salían aplastados y Lighthouse marcaba
                   `image-aspect-ratio`. `next/image`: sirve WebP/AVIF y el tamaño
                   real de 120x40/120x36 en vez de la fuente completa de 192px. */}
-              <Image width={120} height={40} src="/app_store.png" alt="App Store" />
-              <Image width={120} height={36} src="/google_play.png" alt="Google Play" />
+              <Image width={120} height={40} className="w-[120px] h-[40px]" src="/app_store.png" alt="App Store" />
+              <Image width={120} height={36} className="w-[120px] h-[36px]" src="/google_play.png" alt="Google Play" />
             </div>
           </div>
           {(config?.urlTwitter || config?.urlFacebook || config?.urlInstagram) && (
@@ -518,8 +518,8 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
                   declaraban 100x90 → salían aplastados y Lighthouse marcaba
                   `image-aspect-ratio`. `next/image`: sirve WebP/AVIF y el tamaño
                   real de 120x40/120x36 en vez de la fuente completa de 192px. */}
-              <Image width={120} height={40} src="/app_store.png" alt="App Store" />
-              <Image width={120} height={36} src="/google_play.png" alt="Google Play" />
+              <Image width={120} height={40} className="w-[120px] h-[40px]" src="/app_store.png" alt="App Store" />
+              <Image width={120} height={36} className="w-[120px] h-[36px]" src="/google_play.png" alt="Google Play" />
             </div>
           </div>
           <div className="col-span-4 md:col-span-1">

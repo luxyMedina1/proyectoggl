@@ -518,11 +518,15 @@ function EventosContent() {
                 ))
               ) : (
                 <SwiperSlide className="relative flex justify-center items-center h-48 lg:h-80 rounded-b-2xl lg:rounded-r-2xl lg:rounded-b-none">
+                  {/* Mismo motivo que el slide real: sin eventos (lista vacia o backend
+                      caido/lento) esta imagen es el unico candidato a LCP del hero, asi que
+                      igual necesita preload. */}
                   <Image
                     src={IMAGEN_EVENTO_FALLBACK}
                     alt="Eventos próximamente"
                     fill
                     sizes="(max-width: 1024px) 100vw, 50vw"
+                    preload
                     className="block object-cover rounded-b-2xl lg:rounded-l-none lg:rounded-r-2xl polygon-shape"
                   />
                 </SwiperSlide>

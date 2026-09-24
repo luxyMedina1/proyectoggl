@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Clon local de v2 (referencia para docs/commits-nuevos/, no es parte de la app):
+    "taquillavipfrontend-v2/**",
   ]),
 ]);
 
