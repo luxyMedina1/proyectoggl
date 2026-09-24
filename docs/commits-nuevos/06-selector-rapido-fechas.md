@@ -3,7 +3,7 @@
 Commit: `399c70c` — *Permitir cambiar rapido entre fechas*
 Archivos v2: `src/eventos/components/SelectorFechasEvento.tsx` (nuevo), `src/eventos/components/iconosEvento.tsx` (nuevo), `src/eventos/pages/detalleEventoPage.tsx`
 
-**Estado: portado a v3 (sin commitear).** Ver «Qué se portó a v3» abajo.
+**Estado: portado a v3 y commiteado (`ef9656b`).** Ver «Qué se portó a v3» abajo.
 
 ## Por qué se hizo
 
@@ -71,5 +71,4 @@ Verificado: `npm run typecheck`, `npm run build` y `npx vitest run` (174/174) en
 en navegador contra el backend real (`sky-fest-laguna`, evento multifunción con 2 días × 2
 funciones) — cambiar de pastilla navega, refresca precios/horario y no revierte la URL.
 
-**Pendiente:** commitear estos cambios (no se ha hecho todavía, a la espera de que el usuario lo
-pida, mismo criterio que los temas 01-05).
+Ya commiteado en `ef9656b` (2026-09-24).
