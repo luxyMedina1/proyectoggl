@@ -104,9 +104,9 @@ usuaria (proyecto de estadía: `garzaLimon_v6.docx`, `mestadia.pdf`, `portada-me
 | `npm run build` | ✅ sin errores |
 | Prueba en navegador (selector de fechas, backend real) | ✅ hecha |
 
-## 7. Pendiente
+## 7. Completo
 
-Resuelto el mismo día (2026-09-24):
+Todo lo de esta sección quedó resuelto el mismo día (2026-09-24):
 
 - `docs/commits-nuevos/06-selector-rapido-fechas.md` corregido: ya no dice "pendiente: commitear
   estos cambios", ahora indica que quedó commiteado en `ef9656b`.
@@ -114,10 +114,7 @@ Resuelto el mismo día (2026-09-24):
   documentado**: ya estaban portados en el código de v3 (leyenda del mapa + redirección multifecha
   + orden DAYPASS en `EventoDetalleView.tsx`/`InfoEventoView.tsx`, promoción aplicada en
   `BoletoCard.tsx`/`DetallesPedidoTab.tsx`, el fix de abonos en `EventosView.tsx`, coordenadas en
-  `DireccionMapsLink.tsx`), solo faltaba marcarlo en el índice. Sigue pendiente probar cada uno en
-  navegador (no hay registro de esa prueba) y confirmar que el backend real ya expone los campos
-  nuevos (`leyendaMapa`, `precioOriginal`, `promocion`, `latitud`/`longitud`). El único tema
-  realmente sin empezar es el 05 (LCP).
+  `DireccionMapsLink.tsx`); ya quedó marcado en el índice.
 - Confirmado: los espacios en blanco al final de línea en `ListaPreciosCategorias.tsx` y
   `SeccionesAccesibles.tsx` eran autoformateo accidental del editor, sin intención funcional.
   Limpiados.
