@@ -182,6 +182,15 @@ const AbonoSeccionAsientoContent = () => {
     seccionId: string;
     seccion: string;
   }>();
+  // useParams de Next devuelve el segmento tal cual viene en la URL (`VIP%20CENTRAL`); en v2
+  // react-router ya lo entregaba decodificado. Solo se usa para mostrarlo en el titulo.
+  const seccionNombre = (() => {
+    try {
+      return decodeURIComponent(seccion ?? "");
+    } catch {
+      return seccion;
+    }
+  })();
   const [resuelto, setResuelto] = useState<EventoResuelto | null>(null);
   const eventoId = resuelto?.eventoId;
 
@@ -2694,7 +2703,7 @@ const AbonoSeccionAsientoContent = () => {
         <h2 className="text-2xl lg:text-4xl text-gray-800 font-bold uppercase">
           Sección:{" "}
           <span className="font-bold">
-            {seccion} - {evento?.nombre} -{" "}
+            {seccionNombre} - {evento?.nombre} -{" "}
             {funciones &&
             funciones.length > 0 &&
             currentFuncionIndex >= 0 &&
