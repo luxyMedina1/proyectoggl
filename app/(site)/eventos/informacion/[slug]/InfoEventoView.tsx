@@ -5,6 +5,7 @@ import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useEventosStore } from '../../../../../hooks/useEventosStore';
 import { useAuthStore } from '../../../../../hooks/useAuthStore';
+import { usePixelsDeEvento } from '../../../../../hooks/useMetaPixel';
 import { TbCalendarTime } from "react-icons/tb";
 import { HiLocationMarker } from "react-icons/hi";
 import { HiOutlineTicket } from "react-icons/hi2";
@@ -47,6 +48,8 @@ interface Evento {
   ciudad: Ciudad;
   imagenPromocion: string;
   artista: Artista;
+  // Pixels de Meta del promotor de este evento (ademas de los de la marca).
+  metaPixels?: string[];
 }
 
 // Puerto simplificado de infoEventoPage.tsx (v2). En v2 el mapa SVG (`renderSVG()`) esta
@@ -64,6 +67,9 @@ export default function InfoEventoPage() {
   const id = resuelto?.eventoId;
 
   const [evento, setEvento] = useState<Evento | null>(null);
+  // Suma el pixel del promotor de este evento a los de la marca mientras la pagina
+  // este montada. El ViewContent se dispara en el detalle, no aqui.
+  usePixelsDeEvento(evento?.metaPixels);
   const [cargando, setCargando] = useState(false);
 
   // Multifecha: abonos disponibles para el evento (mismo endpoint que usa el home).
