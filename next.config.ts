@@ -62,6 +62,13 @@ const nextConfig: NextConfig = {
   },
 
   experimental: {
+    // Mete el CSS en un <style> dentro del HTML en vez de <link> a archivos aparte.
+    // Lighthouse marcaba los 4 CSS de /eventos (~25 KB, el grande de 22 KB) como
+    // "solicitudes de bloqueo de renderización": el navegador no pinta nada hasta
+    // bajarlos. Con Tailwind el CSS es chico y no crece con las páginas, que es el caso
+    // que la doc (.../05-config/01-next-config-js/inlineCss.md) recomienda. Costo: el CSS
+    // ya no se cachea aparte, viaja con cada HTML (comprimido son pocos KB).
+    inlineCss: true,
     // Convierte los imports de barril (`import { X } from "paquete"`) en imports
     // directos al módulo real, para que el bundler solo incluya lo que se usa.
     // `date-fns` y `react-icons/*` ya vienen optimizados por defecto; aquí se
