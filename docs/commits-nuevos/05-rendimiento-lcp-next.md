@@ -1,5 +1,11 @@
 # 5. Rendimiento y LCP — plan para v3 (Next.js)
 
+> **Actualización 2026-09-24:** la acción principal de este plan (LCP punto 1: lista de eventos
+> resuelta en el servidor y pintada en el HTML inicial) ya está hecha, junto con `preload` +
+> `fetchPriority="high"` en la imagen del banner. Ver
+> [`docs/reportes/2026-09-24-rendimiento-eventos-ssr.md`](../reportes/2026-09-24-rendimiento-eventos-ssr.md).
+> El diagnóstico de abajo es el de origen (PSI antes de la migración) y se deja como referencia.
+
 Este documento **no corresponde a un commit**: es el plan de trabajo para atacar el rendimiento en v3, motivado por el reporte de PageSpeed Insights de la home (`/eventos`).
 
 > Este plan está aterrizado sobre el código real del repo. Antes de asumir "Next lo resuelve solo", revisa qué ya está hecho (§ Estado actual del código) y ataca lo que **de verdad falta** (§ Acciones concretas). El elemento LCP de la home es el **banner grande (Swiper) de la parte superior**, hoy renderizado en cliente con `<img>` crudos.

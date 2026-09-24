@@ -153,12 +153,17 @@ bailan). Cifras de abajo son de PSI móvil salvo donde diga.
   (~230 KB de JS de terceros, ~0.5 s de hilo) — nada en v3 consume `window.google` / `AppleID`, el
   login es sólo OTP. Pendiente aparte: borrar el hook `useGoogleAuth` y los métodos oauth muertos de
   `useAuthStore`.
-- **`/eventos` — CLS.** PSI señaló el `<footer>` como el 100 % del CLS (0.83 móvil / 0.34 escritorio):
-  la página `"use client"` mide ~media pantalla hasta que llega el fetch de cliente y luego el grid la
-  empuja. Mitigación interim: `EventosView` reserva `min-h-[200vh] lg:min-h-[130vh]` mientras
-  `eventos` está vacío, para que el footer arranque cerca de su sitio. El fix de raíz es el SSR de la
-  lista (doc 05). Lo que queda ahí: el `<img>` del carrusel es el LCP y no pinta hasta hidratar; el
-  bundle de `EventosView` (redux + `swiper` + `sweetalert2` en 33 archivos) mantiene el TBT alto.
+- **`/eventos` — lista en el HTML (SSR, 2026-09-24).** `page.tsx` llama `connection()` (ruta dinámica,
+  así `useSearchParams()` ya no hace bailout de CSR) y le pasa a `EventosView` la lista que ya leía para
+  el JSON-LD (cacheada 5 min por el tag `eventos:lista`), sin los campos pesados que la vista no usa. El
+  banner, el grid y los filtros `?ciudad=`/`?buscar=` salen en el HTML inicial; el fetch de cliente
+  sigue, pero como refresco silencioso. La imagen del banner lleva `preload` + `fetchPriority="high"`.
+  Lighthouse local móvil: el "retraso de carga" del LCP bajó de ~1,000 ms a ~40 ms, CLS 0, HTML ~15 KB
+  comprimido. El `min-h-[200vh]` anti-CLS sigue, pero ahora solo aplica si la lista del servidor viene
+  vacía. Lo que queda: el bundle de `EventosView` (redux + `swiper` + `sweetalert2`) mantiene el TBT alto.
+- **`experimental.inlineCss` — probado y descartado.** Quita el aviso de CSS que bloquea el render, pero
+  el CSS pesa ~134 KB sin comprimir y Next lo mete dos veces (`<style>` + payload RSC) en cada respuesta
+  y navegación: HTML de `/eventos` 10 → 88 KB comprimido. Detalle en `next.config.ts`.
 - **`/eventos/[slug]` (detalle)**: la imagen sembrada era un `<img>` crudo a 1920×1080 (~1.8 MB JPEG).
   Pasada a `next/image` con caja `aspect-video` → AVIF al ancho real, **CLS ~0.63 → ~0.00**, las
   oportunidades "next-gen formats" / "encode images" desaparecen. **Ojo:** ese bloque hoy sólo
@@ -204,8 +209,8 @@ contenido visible lo seguía pintando un `'use client'` que volvía a pedir los 
 Server Component recibe el landing/paquete ya resuelto como prop, y solo quedan como islas de cliente
 las partes con interacción real (tabs, galería, panel de boletos, mapa con leaflet). El listado
 `/eventos` ya es cáscara de servidor (`generateMetadata` con OG de marca —título e imagen— +
-`ItemList`/`BreadcrumbList` JSON-LD), pero todavía trae la lista en el cliente: el SSR de los datos
-para el LCP sigue pendiente (ver
+`ItemList`/`BreadcrumbList` JSON-LD) y desde el 2026-09-24 también entrega la lista ya resuelta a
+`EventosView`, que la pinta en el HTML inicial (ver
 [`docs/commits-nuevos/05-rendimiento-lcp-next.md`](docs/commits-nuevos/05-rendimiento-lcp-next.md)).
 **"Todo SSR" no es la meta** — la meta es cáscara de servidor con islas de cliente.
 
@@ -277,7 +282,7 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 ---
 
-**Última revisión:** 2026-09-23, contra Next 16.3.4 y React 19.2.7.
+**Última revisión:** 2026-09-24, contra Next 16.3.4 y React 19.2.7.
 
 Los números de este archivo (34 páginas, 22 cliente, 105 `<img>`, 70 errores de lint, 174 pruebas,
 42 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y

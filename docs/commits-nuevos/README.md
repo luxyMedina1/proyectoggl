@@ -23,14 +23,14 @@ Cada tema tiene su propio documento:
 - [`02-mostrar-promocion-aplicada.md`](./02-mostrar-promocion-aplicada.md) — ya portado a v3 (`BoletoCard.tsx`, `DetallesPedidoTab.tsx`)
 - [`03-fix-abonos-sin-abonos.md`](./03-fix-abonos-sin-abonos.md) — ya portado a v3 (`EventosView.tsx`)
 - [`04-recintos-lat-lon-maps.md`](./04-recintos-lat-lon-maps.md) — ya portado a v3 (`DireccionMapsLink.tsx`)
-- [`05-rendimiento-lcp-next.md`](./05-rendimiento-lcp-next.md) — plan de trabajo para el LCP en v3, sin empezar
+- [`05-rendimiento-lcp-next.md`](./05-rendimiento-lcp-next.md) — plan de trabajo para el LCP en v3; la acción principal (lista SSR en `/eventos`) quedó hecha el 2026-09-24
 - [`06-selector-rapido-fechas.md`](./06-selector-rapido-fechas.md) — portado y commiteado (`ef9656b`)
 
 Temas 00, 02, 03 y 04 estaban marcados como pendientes en este índice pero ya estaban portados en el
 código (confirmado 2026-09-24 con grep sobre los archivos de v3); no estaba documentado. Falta
 verificar en navegador cada uno (no hay registro de esa prueba) y, si el backend real ya expone
 `leyendaMapa`/`precioOriginal`/`promocion`/`latitud`/`longitud`, no queda nada más por portar de este
-rango salvo el tema 05 (LCP), que sigue siendo trabajo pendiente real.
+rango. Del tema 05 (LCP) ya se hizo la acción principal; lo que queda está en el reporte del 2026-09-24.
 
 ## Contexto del proyecto v3
 
