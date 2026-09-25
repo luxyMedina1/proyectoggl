@@ -14,7 +14,7 @@ import { MdKeyboardBackspace } from "react-icons/md";
 import { IoIosClose } from "react-icons/io";
 import { IoTrashOutline } from "react-icons/io5";
 import { FiMinus, FiPlus } from "react-icons/fi";
-import Swal from "sweetalert2";
+import { fireSwal } from "../../../../utils/swal";
 import apiApplication from "../../../../api/apiApplication";
 import { formatDate, formatRangoHora, formatHoraRelativa } from "../../../../utils/dateHelpers";
 import { validarNumeroTarjeta, validarCVC } from "../../../../utils/cardHelpers";
@@ -159,10 +159,64 @@ interface DetalleEventoProps {
 }
 
 export default function DetalleEventoPage({ cabecera }: DetalleEventoProps = {}) {
+  // useSearchParams() en DetalleEventoContent hace que, en las rutas prerenderizadas, el
+  // servidor solo emita el fallback de este Suspense. Por eso el fallback ES la cabecera:
+  // si fuera el loader, la imagen del LCP no estaria en el HTML y el footer se pintaria
+  // arriba para luego saltar (CLS 0.78 medido con Lighthouse en /eventos/ronda-y-jazz).
   return (
-    <Suspense fallback={<LocalLoader />}>
+    <Suspense fallback={cabecera ? <CabeceraSembrada cabecera={cabecera} /> : <LocalLoader />}>
       <DetalleEventoContent cabecera={cabecera} />
     </Suspense>
+  );
+}
+
+// Cabecera sembrada por el servidor (Req 26.1): entra en el HTML inicial para ganar LCP
+// mientras el fetch de cliente resuelve el detalle. Se muestra solo hasta que `evento` (con
+// su disponibilidad fresca) llega y el bloque completo la reemplaza. `cabecera` no contiene
+// disponibilidad, así que no puede vender de más. No usa hooks de URL para poder ser el
+// fallback del Suspense de arriba.
+function CabeceraSembrada({ cabecera }: { cabecera: CabeceraEvento }) {
+  return (
+    // min-h de una pantalla: mientras llega el detalle el footer queda fuera de la vista, y
+    // el cambio al bloque completo no lo mueve dentro del viewport.
+    <div className="container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 min-h-[100svh]">
+      <div className="flex items-center gap-x-3 my-4">
+        <p className="text-gray-900 text-2xl font-medium">
+          {cabecera.nombre} -{" "}
+          {cabecera.fecha ? formatDate(cabecera.fecha, "d 'de' MMMM 'de' yyyy") : ""}
+        </p>
+      </div>
+      <div className="mb-3">
+        {/* Imagen sembrada por el servidor: es el LCP de esta ruta. `next/image` dentro de
+            una caja 16/9 reservada (`aspect-video`) sirve AVIF/WebP al ancho real —el promo
+            original es 1920x1080 y ~1.8 MB en JPEG—. `fetchPriority` va al <link rel=preload>
+            que genera `preload`. */}
+        <div className="relative w-full aspect-video overflow-hidden rounded-md">
+          <Image
+            className="object-cover"
+            src={cabecera.imagenPromocion || "/event_default.webp"}
+            alt={cabecera.nombre}
+            fill
+            preload
+            fetchPriority="high"
+            sizes="(max-width: 768px) 100vw, (max-width: 1280px) 66vw, 900px"
+          />
+        </div>
+        <p className="font-semibold text-gray-700 mt-3">
+          Recinto:{" "}
+          <span className="font-normal text-gray-500">
+            {cabecera.recinto?.nombre}
+            {cabecera.ciudad?.nombre ? `, ${cabecera.ciudad.nombre}` : ""}
+          </span>
+        </p>
+        {cabecera.descripcion && (
+          <div
+            className="text-gray-600 mt-2"
+            dangerouslySetInnerHTML={{ __html: sanitizeRichText(cabecera.descripcion) }}
+          />
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -304,7 +358,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           setSlugResuelto(slug);
         } else if (!resuelto) {
           setCargando(false);
-          Swal.fire({
+          fireSwal({
             title: "Evento no encontrado",
             text: "El enlace no corresponde a un evento disponible.",
             icon: "error",
@@ -450,7 +504,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           } else if (error instanceof Error) {
             mensajeError = error.message;
           }
-          Swal.fire({ title: "Error", text: mensajeError, icon: "error", confirmButtonText: "OK" });
+          fireSwal({ title: "Error", text: mensajeError, icon: "error", confirmButtonText: "OK" });
         } finally {
           setCargando(false);
         }
@@ -579,7 +633,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           } else if (error instanceof Error) {
             mensajeError = error.message;
           }
-          const result = await Swal.fire({
+          const result = await fireSwal({
             title: "Error",
             text: mensajeError,
             icon: "error",
@@ -963,7 +1017,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       } catch (error) {
         setCargando(false);
         console.error("Error al completar la compra gratuita:", error);
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: mensajeDeErrorApi(
             error,
@@ -977,7 +1031,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
 
       if (resdata) {
         setCargando(false);
-        Swal.fire({
+        fireSwal({
           title: "¡Éxito!",
           text: "Tu reserva gratuita se ha completado con éxito.  Tus boletos estan disponibles en la app movil.",
           icon: "success",
@@ -1034,7 +1088,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
                   setOpenId(resp.data.idOpenpay);
                 } catch (registroError) {
                   console.error("No se pudo registrar el cliente de pago:", registroError);
-                  Swal.fire({
+                  fireSwal({
                     title: "Atención",
                     text: "Tu asiento ya está reservado, pero no pudimos preparar tu método de pago. Intenta de nuevo en unos segundos.",
                     icon: "warning",
@@ -1078,7 +1132,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
             setTiempoRestante((prev) => {
               if (prev === null || prev <= 0) {
                 clearInterval(intervalId);
-                Swal.fire({
+                fireSwal({
                   title: "¡Atención!",
                   text: "El tiempo de tu reserva ha expirado. La página se recargará.",
                   icon: "warning",
@@ -1092,7 +1146,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           }, 1000);
         } else {
           setReservaExitosa(false);
-          Swal.fire({
+          fireSwal({
             title: "¡Atención!",
             text: "Uno o más asientos ya no están disponibles. Por favor, actualiza la página.",
             icon: "warning",
@@ -1106,7 +1160,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       setCargando(false);
       setIsModalOpen(false);
       console.error("Error en la reserva:", error);
-      Swal.fire({
+      fireSwal({
         title: "Atención!",
         text:
           error instanceof Error
@@ -1139,7 +1193,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
 
   const handleEliminarTarjeta = async (tarjetaId: string) => {
     try {
-      const { isConfirmed } = await Swal.fire({
+      const { isConfirmed } = await fireSwal({
         title: "¿Estás seguro?",
         text: "Esta acción eliminará tu método de pago de forma permanente.",
         icon: "warning",
@@ -1154,7 +1208,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       const has_user = await apiApplication.get("/pagos/get/mi_perfil");
       const clienteId = has_user.data.idOpenpay;
       if (!has_user.data.idOpenpay) {
-        Swal.fire({
+        fireSwal({
           icon: "error",
           title: "Error",
           text: "No puedes eliminar la tarjeta porque no tiene un usuario Openpay.",
@@ -1162,11 +1216,11 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
         return;
       }
       const res = await apiApplication.delete(`/pagos/tarjeta/${clienteId}/${tarjetaId}`);
-      Swal.fire({ icon: "success", title: "Tarjeta eliminada", text: res.data.message });
+      fireSwal({ icon: "success", title: "Tarjeta eliminada", text: res.data.message });
       setTarjetas((tarjetas) => tarjetas.filter((tarjeta) => tarjeta.idtarjeta !== tarjetaId));
     } catch (error) {
       console.error("Error al eliminar la tarjeta:", error);
-      Swal.fire({
+      fireSwal({
         icon: "error",
         title: "Error",
         text: "Ocurrió un error al eliminar la tarjeta. Por favor, inténtalo de nuevo.",
@@ -1180,7 +1234,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       if (evento?.id && reservaId) {
         const response = await cancelar(reservaId.toString(), evento?.id.toString(), true);
         if (response) {
-          Swal.fire({
+          fireSwal({
             title: "¡Atención!",
             text: "La reserva se ha cancelado.",
             icon: "warning",
@@ -1190,7 +1244,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
             window.location.reload();
           });
         } else {
-          Swal.fire({
+          fireSwal({
             title: "Error",
             text: "No se pudo cancelar la reserva. Inténtalo de nuevo.",
             icon: "error",
@@ -1199,7 +1253,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
         }
       }
     } catch (error) {
-      Swal.fire({
+      fireSwal({
         title: "Error",
         text: "Ocurrió un error al cancelar la reserva.",
         icon: "error",
@@ -1213,7 +1267,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       setCargando(true);
 
       // 🛑 CONFIRMAR PAGO ANTES DE PROCESARLO
-      const confirmacionPago = await Swal.fire({
+      const confirmacionPago = await fireSwal({
         title: "¿Confirmar compra?",
         text: `Vas a pagar $${calcularTotal()} por tus boletos. ¿Quieres continuar?`,
         icon: "warning",
@@ -1258,7 +1312,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
 
       // 🛑 PREGUNTAR SI DESEA GUARDAR LA TARJETA (SOLO SI ES NUEVA)
       if (!tarjetaSeleccionada && !usuarioInvitado) {
-        const { isConfirmed } = await Swal.fire({
+        const { isConfirmed } = await fireSwal({
           title: "¿Quieres guardar tu tarjeta?",
           text: "Podrás usarla en futuras compras sin necesidad de ingresarla nuevamente.",
           icon: "question",
@@ -1282,7 +1336,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
             console.log("Tarjeta guardada exitosamente:", data);
           } catch (error) {
             console.error("Error al guardar la tarjeta:", error);
-            Swal.fire({
+            fireSwal({
               title: "Error",
               text: "No se pudo guardar la tarjeta, pero puedes continuar con el pago.",
               icon: "error",
@@ -1329,7 +1383,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     } catch (error) {
       console.error("Error procesando pago", error);
       setCargando(false);
-      Swal.fire({
+      fireSwal({
         title: "Error",
         text: mensajeDeErrorApi(error, "Ocurrió un error al procesar el pago."),
         icon: "error",
@@ -1355,7 +1409,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
     if (!tarjetaSeleccionada) {
       // 📌 Validaciones de pago solo si NO hay una tarjeta guardada seleccionada
       if (!formValues.nombre || !/^[a-zA-Z\s]+$/.test(formValues.nombre)) {
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: "El nombre del titular no es válido o no puede ir vacío.",
           icon: "error",
@@ -1364,7 +1418,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
         return;
       }
       if (!validarNumeroTarjeta(formValues.tarjeta)) {
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: "El número de tarjeta no es válido. Verifica que esté completo y sea correcto (de 14 a 19 dígitos).",
           icon: "error",
@@ -1373,7 +1427,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
         return;
       }
       if (!expiracion || !/^(0[1-9]|1[0-2])\/\d{2}$/.test(expiracion)) {
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: "La fecha de vencimiento debe estar en formato MM/YY.",
           icon: "error",
@@ -1388,7 +1442,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       const mesActual = new Date().getMonth() + 1; // Enero = 0, sumamos 1
 
       if (año < añoActual || (año === añoActual && mes < mesActual)) {
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: "La tarjeta está vencida.",
           icon: "error",
@@ -1398,7 +1452,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       }
 
       if (!validarCVC(formValues.cvv, formValues.tarjeta)) {
-        Swal.fire({
+        fireSwal({
           title: "Error",
           text: "El código de seguridad (CVV) no es válido.",
           icon: "error",
@@ -1413,7 +1467,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
       await procesarPago();
     } catch (error) {
       console.error("Error al procesar la compra:", error);
-      Swal.fire({
+      fireSwal({
         title: "Error",
         text: error instanceof Error ? error.message : "Ocurrió un error al comprar.",
         icon: "error",
@@ -1529,7 +1583,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
 
   const handleCheckDiscount = async () => {
     if (!discountCode.trim()) {
-      Swal.fire("Mensaje", "Ingresa un código valido", "warning");
+      fireSwal("Mensaje", "Ingresa un código valido", "warning");
       return;
     }
 
@@ -1620,49 +1674,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
         />
       )}
 
-      {/* Cabecera sembrada por el servidor (Req 26.1): entra en el HTML inicial para ganar
-          LCP mientras el fetch de cliente resuelve el detalle. Se muestra solo hasta que
-          `evento` (con su disponibilidad fresca) llega y el bloque completo de abajo la
-          reemplaza. `cabecera` no contiene disponibilidad, así que no puede vender de más. */}
-      {cabecera && !evento && (
-        <div className="container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20">
-          <div className="flex items-center gap-x-3 my-4">
-            <p className="text-gray-900 text-2xl font-medium">
-              {cabecera.nombre} -{" "}
-              {cabecera.fecha ? formatDate(cabecera.fecha, "d 'de' MMMM 'de' yyyy") : ""}
-            </p>
-          </div>
-          <div className="mb-3">
-            {/* Imagen sembrada por el servidor: es el LCP de esta ruta. `next/image`
-                dentro de una caja 16/9 reservada (`aspect-video`) sirve AVIF/WebP al
-                ancho real —el promo original es 1920x1080 y ~1.8 MB en JPEG— y quita
-                el salto de layout que empujaba el footer (era el CLS de la página). */}
-            <div className="relative w-full aspect-video overflow-hidden rounded-md">
-              <Image
-                className="object-cover"
-                src={cabecera.imagenPromocion || "/event_default.webp"}
-                alt={cabecera.nombre}
-                fill
-                preload
-                sizes="(max-width: 768px) 100vw, (max-width: 1280px) 66vw, 900px"
-              />
-            </div>
-            <p className="font-semibold text-gray-700 mt-3">
-              Recinto:{" "}
-              <span className="font-normal text-gray-500">
-                {cabecera.recinto?.nombre}
-                {cabecera.ciudad?.nombre ? `, ${cabecera.ciudad.nombre}` : ""}
-              </span>
-            </p>
-            {cabecera.descripcion && (
-              <div
-                className="text-gray-600 mt-2"
-                dangerouslySetInnerHTML={{ __html: sanitizeRichText(cabecera.descripcion) }}
-              />
-            )}
-          </div>
-        </div>
-      )}
+      {cabecera && !evento && <CabeceraSembrada cabecera={cabecera} />}
 
       {evento && (
         <div className="container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20">
@@ -1670,6 +1682,7 @@ function DetalleEventoContent({ cabecera }: DetalleEventoProps) {
           <div className="flex items-center gap-x-3 my-4">
             <Link
               href={`/`}
+              aria-label="Regresar al inicio"
               className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-2 rounded-md flex items-center gap-x-1"
             >
               <MdKeyboardBackspace className="text-2xl" />

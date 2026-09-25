@@ -131,7 +131,7 @@ export const InfoEvento = ({ icono, etiqueta, valor, detalle }: InfoEventoProps)
             {icono}
         </span>
         <div className="min-w-0">
-            <p className="text-xs text-gray-400">{etiqueta}</p>
+            <p className="text-xs text-gray-500">{etiqueta}</p>
             <p className="text-sm font-semibold text-gray-800 leading-snug">{valor}</p>
             {detalle && <p className="text-xs text-gray-500">{detalle}</p>}
         </div>
