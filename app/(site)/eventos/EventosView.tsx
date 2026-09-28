@@ -18,13 +18,9 @@ import { FaRegEye } from "react-icons/fa";
 import { BsFillClockFill } from "react-icons/bs";
 import { FaLocationArrow } from "react-icons/fa";
 import apiApplication from "../../../api/apiApplication";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { Navigation, Pagination, Autoplay } from "swiper/modules";
-import "swiper/css";
-import "swiper/css/navigation";
-import "swiper/css/pagination";
 import Swal from "sweetalert2";
 import LocalLoader from "../../../components/LocalLoader";
+import HeroHome from "../../../publicUi/components/HeroHome";
 import {
   formatDate,
   formatFechaConRango,
@@ -268,8 +264,6 @@ function EventosContent({ eventosIniciales }: { eventosIniciales: Evento[] }) {
     fetchCategorias();
   }, []);
 
-  const fechaFormateada = (date: string) => formatDate(date, "MMM - dd").toUpperCase();
-
   const filtrarPorFecha = (evento: any) =>
     eventoPasaFiltroFecha(evento.fecha, filtroFecha);
 
@@ -371,21 +365,6 @@ function EventosContent({ eventosIniciales }: { eventosIniciales: Evento[] }) {
     return evento.esMultiFuncion && primera ? primera : evento;
   };
 
-  // Badge: una fecha -> "OCT - 12"; varias -> rango "OCT - 12 AL 15" / "OCT - 12 AL NOV - 03".
-  const badgeFechaEvento = (evento: Evento) => {
-    if (!esMultiFecha(evento)) return fechaFormateada(horarioEvento(evento).fecha);
-
-    const funciones = gruposFechasEvento(evento).flat();
-    const primera = funciones[0].fecha;
-    const ultima = funciones[funciones.length - 1].fecha;
-
-    if (formatDate(primera, "yyyy-MM") === formatDate(ultima, "yyyy-MM")) {
-      return `${fechaFormateada(primera)} AL ${formatDate(ultima, "dd")}`;
-    }
-
-    return `${fechaFormateada(primera)} AL ${fechaFormateada(ultima)}`;
-  };
-
   // Dias distintos de un grupo (varias funciones el mismo dia cuentan una vez).
   const diasUnicosGrupo = (grupo: FuncionEvento[]) => [
     ...new Set(grupo.map((f) => formatDate(f.fecha, "d"))),
@@ -451,102 +430,12 @@ function EventosContent({ eventosIniciales }: { eventosIniciales: Evento[] }) {
       {cargando && <LocalLoader />}
 
       {/* Slider principal */}
-      <div className='container mx-auto px-4 md:px-5 lg:px-8 2xl:px-20 inherit-mob'>
-        <div className="w-full flex flex-col lg:flex-row h-80 md:h-80 mt-8 bg-emphasis rounded-2xl">
-          <div className="w-full lg:w-1/2 flex flex-col justify-center p-4 lg:p-8 min-h-0">
-            <h2 className="text-2xl md:text-3xl lg:text-5xl text-neutral font-bold mb-2 md:mb-4 line-clamp-none">
-              {eventos.length > 0 ? activeEvent?.artista?.nombre || activeEvent?.nombre : "Próximamente"}
-            </h2>
-            <h3 className="text-lg md:text-xl lg:text-3xl text-neutral font-semibold mb-2 md:mb-4 line-clamp-none">
-              {eventos.length > 0 ? activeEvent?.recinto?.nombre : "Eventos en breve"}
-            </h3>
-            {eventos.length > 0 ? (
-              <Link
-                href={activeEvent ? rutaEvento(activeEvent) : "/eventos"}
-                onClick={(e) => {
-                  if (activeEvent) handleVerClick(e, activeEvent);
-                }}
-                className="mt-1 md:mt-4 text-gray-50 border border-gray-200 inline-block w-fit px-3 py-2 md:px-4 md:py-3 rounded-lg text-sm md:text-lg hover:bg-neutral hover:text-accentBase transition-colors"
-              >
-                Ver entradas
-              </Link>
-            ) : (
-              <p className="mt-1 md:mt-4 text-gray-200 text-sm md:text-lg">
-                Mantente atento para nuevos eventos.
-              </p>
-            )}
-          </div>
-
-          <div className="w-full lg:w-1/2 h-48 lg:h-full rounded-b-2xl lg:rounded-r-2xl lg:rounded-b-none custom-swiper">
-            <Swiper
-              modules={[Navigation, Pagination, Autoplay]}
-              direction="horizontal"
-              spaceBetween={30}
-              slidesPerView={1}
-              pagination={{
-                clickable: true,
-                dynamicBullets: true
-              }}
-              autoplay={{
-                delay: 5000,
-                disableOnInteraction: false
-              }}
-              touchRatio={1}
-              grabCursor={true}
-              onSlideChange={(swiper) =>
-                setActiveEvent(eventos[swiper.activeIndex])
-              }
-              className="h-full rounded-b-2xl lg:rounded-r-2xl lg:rounded-b-none"
-              breakpoints={{
-                1024: {
-                  direction: "vertical",
-                  spaceBetween: 50
-                }
-              }}
-            >
-              {eventos.length > 0 ? (
-                eventos.slice(0, 3).map((slide, index) => (
-                  <SwiperSlide
-                    key={index}
-                    className="relative flex justify-center items-center h-48 lg:h-80 rounded-b-2xl lg:rounded-r-2xl lg:rounded-b-none"
-                  >
-                    {/* Elemento LCP de la home. Lleva `preload` Y `fetchPriority="high"`:
-                        `preload` pone un <link rel="preload"> en el <head> (la imagen empieza a
-                        bajar antes de parsear el <body>) y Next le pasa `fetchPriority` a ese
-                        mismo link (image-component.js, ImagePreload), que es lo que pide
-                        Lighthouse ("fetchpriority=high should be applied"). `fill` + alto fijo
-                        del slide reserva la caja (0 CLS) y activa AVIF/WebP + TTL de 31 días. */}
-                    <Image
-                      src={slide.imagenBanner || slide.imagenPromocion || IMAGEN_EVENTO_FALLBACK}
-                      alt={slide.nombre}
-                      fill
-                      sizes="(max-width: 1024px) 100vw, 50vw"
-                      preload={index === 0}
-                      fetchPriority={index === 0 ? "high" : undefined}
-                      className="block object-cover rounded-b-2xl lg:rounded-l-none lg:rounded-r-2xl polygon-shape"
-                    />
-                  </SwiperSlide>
-                ))
-              ) : (
-                <SwiperSlide className="relative flex justify-center items-center h-48 lg:h-80 rounded-b-2xl lg:rounded-r-2xl lg:rounded-b-none">
-                  {/* Mismo motivo que el slide real: sin eventos (lista vacia o backend
-                      caido/lento) esta imagen es el unico candidato a LCP del hero, asi que
-                      igual necesita preload + prioridad alta. */}
-                  <Image
-                    src={IMAGEN_EVENTO_FALLBACK}
-                    alt="Eventos próximamente"
-                    fill
-                    sizes="(max-width: 1024px) 100vw, 50vw"
-                    preload
-                    fetchPriority="high"
-                    className="block object-cover rounded-b-2xl lg:rounded-l-none lg:rounded-r-2xl polygon-shape"
-                  />
-                </SwiperSlide>
-              )}
-            </Swiper>
-          </div>
-        </div>
-      </div>
+      <HeroHome
+        eventos={eventos}
+        activeEvent={activeEvent}
+        onActiveEventChange={setActiveEvent}
+        onVerClick={handleVerClick}
+      />
       {/* Fin slider principal */}
 
       {/* Filtros */}
@@ -636,10 +525,6 @@ function EventosContent({ eventosIniciales }: { eventosIniciales: Evento[] }) {
                       className="relative card-effect-hover flex flex-col hover:shadow-lg hover:rounded-lg pb-3"
                       key={evento.id}
                     >
-                      <div className="bg-accentBase text-neutral z-10 absolute top-0 left-0 px-2 py-1 font-medium">
-                        {badgeFechaEvento(evento)}
-                      </div>
-
                       <figure className="relative bg-emphasis">
                         {/* `custom-pic` (aspect-ratio 16/9 + width:100%) en el <a> reserva
                             la caja; el <a> `relative` es el ancestro posicionado que pide

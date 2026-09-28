@@ -160,14 +160,22 @@ bailan). Cifras de abajo son de PSI móvil salvo donde diga.
   sigue, pero como refresco silencioso. La imagen del banner lleva `preload` + `fetchPriority="high"`.
   Lighthouse local móvil: el "retraso de carga" del LCP bajó de ~1,000 ms a ~40 ms, CLS 0, HTML ~15 KB
   comprimido. El `min-h-[200vh]` anti-CLS sigue, pero ahora solo aplica si la lista del servidor viene
-  vacía. Lo que queda: el bundle de `EventosView` (redux + `swiper` + `sweetalert2`) mantiene el TBT alto.
+  vacía. Lo que queda: el bundle de `EventosView` (redux + `sweetalert2`) mantiene el TBT alto.
+- **Hero de la home sin Swiper (2026-09-28, port de v2 `549f804` + `aec7044`).** El carrusel de
+  `EventosView` ahora es `publicUi/components/HeroHome.tsx`: flechas fuera del banner en escritorio,
+  autoplay de 5 s, y en móvil el banner va debajo del texto en 16:9. El alto lo fija el contenedor, no la
+  imagen, así que rotar entre banners de proporciones distintas no mueve nada. El slide visible se deriva
+  de `activeEvent` (no de un índice propio) para que texto y banner no se desfasen al refrescar la lista.
+  Swiper sigue en el proyecto (galería y reels), solo salió del bundle de `/eventos`. También se quitó la
+  etiqueta de fecha de las tarjetas, igual que en v2.
 - **`experimental.inlineCss` — probado y descartado.** Quita el aviso de CSS que bloquea el render, pero
   el CSS pesa ~134 KB sin comprimir y Next lo mete dos veces (`<style>` + payload RSC) en cada respuesta
   y navegación: HTML de `/eventos` 10 → 88 KB comprimido. Detalle en `next.config.ts`.
 - **`/eventos/[slug]` (detalle)**: la imagen sembrada era un `<img>` crudo a 1920×1080 (~1.8 MB JPEG).
   Pasada a `next/image` con caja `aspect-video` → AVIF al ancho real, **CLS ~0.63 → ~0.00**, las
-  oportunidades "next-gen formats" / "encode images" desaparecen. **Ojo:** ese bloque hoy sólo
-  renderiza en cliente (`useSearchParams()` dentro del `<Suspense>` desactiva el SSR del subárbol).
+  oportunidades "next-gen formats" / "encode images" desaparecen. `useSearchParams()` dentro del
+  `<Suspense>` sigue haciendo bailout a CSR, pero desde `f5b3cc2` la cabecera sembrada es el *fallback*
+  del Suspense, así que sí sale en el HTML con `fetchPriority="high"` (móvil: perf 24 → 59, CLS 0.78 → 0.04).
 - **`/explorar` móvil**: mismo patrón que `/eventos` (footer empujado por data tardía); pendiente.
 - **CityPass (checkout) — CLS.** Mismo bug que `/eventos` (`8f96427`) pero sin portar: el `Loader` de
   carga es `position:fixed` (0 de alto en el flujo), así que mientras cargan los datos el `<footer>`
@@ -282,7 +290,7 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 ---
 
-**Última revisión:** 2026-09-24, contra Next 16.3.4 y React 19.2.7.
+**Última revisión:** 2026-09-28, contra Next 16.3.4 y React 19.2.7.
 
 Los números de este archivo (34 páginas, 22 cliente, 105 `<img>`, 70 errores de lint, 175 pruebas,
 42 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
