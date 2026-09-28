@@ -46,6 +46,13 @@ describe('planPerdidas', () => {
         expect(plan.resumen).toBe('Y 2 notificaciones más mientras estabas sin conexión');
     });
 
+    it('al reconectar no avisa de las que ya se leyeron en otro dispositivo', () => {
+        const leida = { ...notif(8), leida: true };
+        const plan = planPerdidas({ notificaciones: [notif(7), leida, notif(9)], hayMas: false, noLeidas: 2 }, true);
+        expect(plan.individuales.map((n) => n.id)).toEqual([7, 9]);
+        expect(plan.resumen).toBeNull();
+    });
+
     it('al reconectar con pocas no agrega resumen', () => {
         const plan = planPerdidas({ notificaciones: [notif(7)], hayMas: false, noLeidas: 1 }, true);
         expect(plan.individuales.map((n) => n.id)).toEqual([7]);

@@ -43,6 +43,10 @@ export const useNotificacionesSocket = () => {
 
         let ultimoId = leerUltimoId(email);
         let cursorEnHandshake: number | undefined;
+        // Tras el primer lote ya sabemos qué había: lo que llegue en lotes
+        // siguientes es de un corte, aunque el usuario no tuviera cursor (cuenta
+        // sin notificaciones previas).
+        let yaSincronizo = false;
         let perdioConexion = false;
         let timerSinConexion: number | undefined;
         const vistos = new Set<number>();
@@ -104,8 +108,9 @@ export const useNotificacionesSocket = () => {
             const nuevas = lote.notificaciones.filter(registrar);
             const { individuales, resumen } = planPerdidas(
                 { ...lote, notificaciones: nuevas },
-                cursorEnHandshake !== undefined,
+                cursorEnHandshake !== undefined || yaSincronizo,
             );
+            yaSincronizo = true;
             individuales.forEach(mostrar);
             if (resumen) toast.info(resumen, { toastId: 'notif-resumen' });
 

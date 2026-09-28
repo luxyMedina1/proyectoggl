@@ -68,14 +68,15 @@ export const guardarUltimoId = (email: string, id: number) => {
  * Qué mostrar al recibir un lote de `notificaciones_perdidas`.
  * - Sin cursor previo (primera vez en este navegador): solo un resumen de no
  *   leídas, para no inundar de toasts con historial viejo.
- * - Con cursor (reconexión): hasta MAX_TOASTS_POR_LOTE toasts individuales y un
- *   resumen con el resto.
+ * - Con cursor o ya sincronizado en esta sesión (reconexión): hasta
+ *   MAX_TOASTS_POR_LOTE toasts individuales y un resumen con el resto. Las que
+ *   ya vienen leídas (se abrieron en otro dispositivo durante el corte) no avisan.
  */
 export const planPerdidas = (
     lote: NotificacionesPerdidas,
-    teniaCursor: boolean,
+    esReconexion: boolean,
 ): { individuales: Notificacion[]; resumen: string | null } => {
-    if (!teniaCursor) {
+    if (!esReconexion) {
         return {
             individuales: [],
             resumen:
@@ -85,8 +86,9 @@ export const planPerdidas = (
         };
     }
 
-    const individuales = lote.notificaciones.slice(-MAX_TOASTS_POR_LOTE);
-    const resto = lote.notificaciones.length - individuales.length;
+    const sinLeer = lote.notificaciones.filter((n) => !n.leida);
+    const individuales = sinLeer.slice(-MAX_TOASTS_POR_LOTE);
+    const resto = sinLeer.length - individuales.length;
     return {
         individuales,
         resumen:
