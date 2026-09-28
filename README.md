@@ -106,7 +106,8 @@ Alias de imports: `@/*` apunta a la raíz del repo.
 | `app/api/revalidate/route.ts` | `POST` con header `x-revalidate-secret`, comparación en tiempo constante y **allowlist** de tags (`config:sitio`, `eventos:lista`, `evento:*`, `citypass:*`…) |
 | `utils/ogEvento.ts` | Resuelve slug → evento y arma los `og:*` de las páginas de evento. Si el backend no responde, caen los tags globales del layout |
 | `utils/eventoSlug.ts` | Los slugs de eventos multifecha llevan sufijo de día (`sky-fest-laguna-7-matutino`). Cambiar `NEXT_PUBLIC_TIMEZONE` cambia URLs y QR ya impresos |
-| `components/AppGate.tsx` | Puerta de sesión: fuerza `/auth/completar_perfil` (salvo mientras el modal de login lo está resolviendo inline — ver `AuthModalContext.estaAbierto`, si no las dos pantallas quedan encimadas) y dispara el `PageView` del pixel en cada cambio de ruta |
+| `components/AppGate.tsx` | Puerta de sesión: fuerza `/auth/completar_perfil` (salvo mientras el modal de login lo está resolviendo inline — ver `AuthModalContext.estaAbierto`, si no las dos pantallas quedan encimadas) y dispara el `PageView` del pixel en cada cambio de ruta. También monta `useNotificacionesSocket` (ver abajo) |
+| `hooks/useNotificacionesSocket.ts` | Socket.io al namespace `/notificaciones` del backend mientras hay sesión: toasts en vivo de transferencias, amistades y boleto validado. Guarda el último id recibido (`notif:ultimoId:<email>` en `localStorage`) y lo manda en cada reconexión: el backend reenvía lo que pasó mientras no había internet. Si el backend corta por token vencido, fuerza el refresh con una llamada de axios y reconecta. Reglas puras en `utils/notificaciones.ts` |
 
 ### Cómo fluyen los datos
 
@@ -116,6 +117,8 @@ Servidor    layout.tsx ─────────> getSiteConfig() ──> back
 
 Navegador   componentes ─> hooks/use*Store ─> api/apiApplication.ts ─> backend
                                   └────────> Redux Toolkit (auth, app)
+            AppGate ─> useNotificacionesSocket <══ socket.io /notificaciones ══ backend
+                                  └─> toast + emitNotifRefresh() (badge del header)
 
 Backend ──> POST /api/revalidate  (x-revalidate-secret) ──> revalidateTag()
 ```
@@ -190,7 +193,7 @@ bailan). Cifras de abajo son de PSI móvil salvo donde diga.
   `<a>` como hijos directos → envueltos en `<li>`. Pendiente: contraste de los botones de categoría
   (`text-neutral` sobre `bg-gray-400`) — es decisión de paleta.
 
-Pruebas: Vitest + jsdom + Testing Library. Hoy son **182 pruebas en 27 archivos**, la mayoría de
+Pruebas: Vitest + jsdom + Testing Library. Hoy son **189 pruebas en 28 archivos**, la mayoría de
 propiedad (`fast-check`) sobre los helpers puros de `utils/` (promociones, slugs, JSON-LD, fechas).
 Cualquier `*.test.ts(x)` o `*.spec.ts(x)` en cualquier carpeta se recoge solo.
 
@@ -292,6 +295,6 @@ en el repo. Si te toca averiguarlo, escríbelo aquí.
 
 **Última revisión:** 2026-09-28, contra Next 16.3.4 y React 19.2.7.
 
-Los números de este archivo (34 páginas, 22 cliente, 105 `<img>`, 70 errores de lint, 182 pruebas,
+Los números de este archivo (34 páginas, 22 cliente, 105 `<img>`, 70 errores de lint, 189 pruebas,
 42 rutas) salen de contar el repo, no de estimar. Si no cuadran, el repo cambió: vuelve a contar y
 actualiza.
