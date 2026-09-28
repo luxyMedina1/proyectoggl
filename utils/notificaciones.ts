@@ -31,8 +31,6 @@ export interface NotificacionesPerdidas {
     noLeidas: number;
 }
 
-export const MAX_TOASTS_POR_LOTE = 3;
-
 export const rutaPorTipo = (tipo: string): string | null => {
     if (tipo.startsWith('transferencia_') || tipo === 'boleto_devuelto') {
         return '/perfil/mis_transferencias';
@@ -41,6 +39,21 @@ export const rutaPorTipo = (tipo: string): string | null => {
     if (tipo === 'boleto_validado') return '/perfil/mis_compras';
     return null;
 };
+
+// Qué pantalla debe recargarse al llegar una notificación. Sin `tipo` (lote de
+// perdidas o refresco manual) se recarga todo.
+export const afectaTransferencias = (tipo?: string) =>
+    !tipo || tipo.startsWith('transferencia_') || tipo === 'boleto_devuelto';
+
+export const afectaAmigos = (tipo?: string) => !tipo || tipo === 'solicitud_amistad';
+
+// Aceptar una transferencia o recibir una devolución cambia qué boletos tiene el
+// usuario; validar uno cambia su estado.
+export const afectaCompras = (tipo?: string) =>
+    !tipo ||
+    tipo === 'boleto_validado' ||
+    tipo === 'boleto_devuelto' ||
+    tipo === 'transferencia_completada';
 
 // Por email (el DTO de sesión no trae id): si otra cuenta entra en el mismo
 // navegador no hereda el cursor de la anterior.
@@ -64,13 +77,15 @@ export const guardarUltimoId = (email: string, id: number) => {
     }
 };
 
+const plural = (n: number) => (n === 1 ? 'notificación' : 'notificaciones');
+
 /**
- * Qué mostrar al recibir un lote de `notificaciones_perdidas`.
+ * Qué mostrar al recibir `notificaciones_perdidas` (ya juntados todos los lotes).
  * - Sin cursor previo (primera vez en este navegador): solo un resumen de no
  *   leídas, para no inundar de toasts con historial viejo.
- * - Con cursor o ya sincronizado en esta sesión (reconexión): hasta
- *   MAX_TOASTS_POR_LOTE toasts individuales y un resumen con el resto. Las que
- *   ya vienen leídas (se abrieron en otro dispositivo durante el corte) no avisan.
+ * - Con cursor o ya sincronizado en esta sesión (reconexión): un solo toast. Si
+ *   se perdió una, se muestra tal cual; si fueron varias, un resumen. Las que ya
+ *   vienen leídas (se abrieron en otro dispositivo durante el corte) no avisan.
  */
 export const planPerdidas = (
     lote: NotificacionesPerdidas,
@@ -81,19 +96,15 @@ export const planPerdidas = (
             individuales: [],
             resumen:
                 lote.noLeidas > 0
-                    ? `Tienes ${lote.noLeidas} ${lote.noLeidas === 1 ? 'notificación' : 'notificaciones'} sin leer`
+                    ? `Tienes ${lote.noLeidas} ${plural(lote.noLeidas)} sin leer`
                     : null,
         };
     }
 
     const sinLeer = lote.notificaciones.filter((n) => !n.leida);
-    const individuales = sinLeer.slice(-MAX_TOASTS_POR_LOTE);
-    const resto = sinLeer.length - individuales.length;
+    if (sinLeer.length <= 1) return { individuales: sinLeer, resumen: null };
     return {
-        individuales,
-        resumen:
-            resto > 0
-                ? `Y ${resto} ${resto === 1 ? 'notificación más' : 'notificaciones más'} mientras estabas sin conexión`
-                : null,
+        individuales: [],
+        resumen: `Mientras estabas sin conexión llegaron ${sinLeer.length} ${plural(sinLeer.length)}`,
     };
 };

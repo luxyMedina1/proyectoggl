@@ -4,7 +4,7 @@ import { io } from 'socket.io-client';
 import { toast } from 'react-toastify';
 import apiApplication from '../api/apiApplication';
 import { authStorage } from '../utils/authStorage';
-import { emitNotifRefresh } from '../utils/notifEvents';
+import { emitNotifRefresh, setSocketNotifConectado } from '../utils/notifEvents';
 import {
     Notificacion,
     NotificacionesPerdidas,
@@ -16,6 +16,7 @@ import {
 import { useAuthStore } from './useAuthStore';
 
 const TOAST_SIN_CONEXION = 'notif-sin-conexion';
+const TOAST_RESUMEN = 'notif-resumen';
 // Evita el aviso de "sin conexión" en cortes de un par de segundos que socket.io
 // recupera solo.
 const ESPERA_AVISO_SIN_CONEXION_MS = 3000;
@@ -50,9 +51,16 @@ export const useNotificacionesSocket = () => {
         let perdioConexion = false;
         let timerSinConexion: number | undefined;
         const vistos = new Set<number>();
+        // Con `hayMas` lo perdido llega en varios lotes: se juntan para mostrar un
+        // solo toast de resumen al final.
+        let perdidasAcumuladas: Notificacion[] = [];
 
         const socket = io(socketUrl(), {
             transports: ['websocket'],
+            // Reintentos a 1 s, 2 s, 4 s… hasta 30 s, sin aleatorizar.
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 30_000,
+            randomizationFactor: 0,
             // Función: socket.io la re-evalúa en cada reconexión, así viaja el
             // token refrescado y el último id recibido.
             auth: (cb) => {
@@ -91,10 +99,12 @@ export const useNotificacionesSocket = () => {
             return true;
         };
 
+        socket.on('connect', () => setSocketNotifConectado(true));
+
         socket.on('notificacion', (n: Notificacion) => {
             if (!registrar(n)) return;
             mostrar(n);
-            emitNotifRefresh();
+            emitNotifRefresh(n.tipo);
         });
 
         socket.on('notificaciones_perdidas', (lote: NotificacionesPerdidas) => {
@@ -105,22 +115,30 @@ export const useNotificacionesSocket = () => {
                 toast.success('Conexión restablecida', { autoClose: 2000 });
             }
 
-            const nuevas = lote.notificaciones.filter(registrar);
+            perdidasAcumuladas.push(...lote.notificaciones.filter(registrar));
+            if (lote.hayMas) {
+                socket.emit('sincronizar', { ultimoId });
+                return;
+            }
+
             const { individuales, resumen } = planPerdidas(
-                { ...lote, notificaciones: nuevas },
+                { ...lote, notificaciones: perdidasAcumuladas },
                 cursorEnHandshake !== undefined || yaSincronizo,
             );
+            perdidasAcumuladas = [];
             yaSincronizo = true;
-            individuales.forEach(mostrar);
-            if (resumen) toast.info(resumen, { toastId: 'notif-resumen' });
-
-            // Con cursor ya avanzado, el siguiente lote llega con toasts normales.
+            // Con cursor ya avanzado, el siguiente lote cuenta como reconexión.
             cursorEnHandshake = ultimoId;
-            if (lote.hayMas) socket.emit('sincronizar', { ultimoId });
+            individuales.forEach(mostrar);
+            if (resumen) {
+                if (toast.isActive(TOAST_RESUMEN)) toast.update(TOAST_RESUMEN, { render: resumen });
+                else toast.info(resumen, { toastId: TOAST_RESUMEN });
+            }
             emitNotifRefresh();
         });
 
         socket.on('disconnect', (reason) => {
+            setSocketNotifConectado(false);
             // El backend corta la conexión cuando el token es inválido o venció:
             // una llamada autenticada dispara el refresh del interceptor de axios
             // y luego se reconecta con el token nuevo.
@@ -144,16 +162,26 @@ export const useNotificacionesSocket = () => {
             }, ESPERA_AVISO_SIN_CONEXION_MS);
         });
 
-        const alVolverInternet = () => {
-            if (!socket.connected) socket.connect();
+        // En pleno backoff `connect()` no hace nada y esperaría el siguiente intento
+        // programado (hasta 30 s). Cerrar y abrir cancela esa espera y reintenta ya.
+        const reintentarYa = () => {
+            if (socket.connected) return;
+            socket.disconnect();
+            socket.connect();
         };
-        window.addEventListener('online', alVolverInternet);
+        const alVolverVisible = () => {
+            if (document.visibilityState === 'visible') reintentarYa();
+        };
+        window.addEventListener('online', reintentarYa);
+        document.addEventListener('visibilitychange', alVolverVisible);
 
         return () => {
-            window.removeEventListener('online', alVolverInternet);
+            window.removeEventListener('online', reintentarYa);
+            document.removeEventListener('visibilitychange', alVolverVisible);
             window.clearTimeout(timerSinConexion);
             toast.dismiss(TOAST_SIN_CONEXION);
             socket.disconnect();
+            setSocketNotifConectado(false);
         };
     }, [email, router]);
 };

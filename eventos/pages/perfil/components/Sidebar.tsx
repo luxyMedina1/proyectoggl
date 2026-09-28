@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 import { useAuthStore } from "../../../../hooks/useAuthStore";
 import { useTransferenciasStore } from "../../../../hooks/useTransferenciasStore";
 import { useAmigosStore } from "../../../../hooks/useAmigosStore";
-import { onNotifRefresh } from "../../../../utils/notifEvents";
+import { onNotifRefresh, pollingDeRespaldo } from "../../../../utils/notifEvents";
 
 const POLL_MS = 30_000;
 
@@ -34,11 +34,11 @@ const Sidebar = () => {
             if (amigos.status === 'fulfilled') setAmigosCount(amigos.value.length);
         };
         fetchCount();
-        const id = window.setInterval(fetchCount, POLL_MS);
+        const offPolling = pollingDeRespaldo(fetchCount, POLL_MS);
         const offNotif = onNotifRefresh(fetchCount);
         return () => {
             active = false;
-            window.clearInterval(id);
+            offPolling();
             offNotif();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps

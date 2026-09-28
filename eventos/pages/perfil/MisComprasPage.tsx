@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import Swal from "sweetalert2";
 import { formatDate } from "../../../utils/dateHelpers";
 import { rutaEvento } from "../../../utils/eventoSlug";
+import { onNotifRefresh } from "../../../utils/notifEvents";
+import { afectaCompras } from "../../../utils/notificaciones";
 import { TbTicket } from "react-icons/tb";
 import { FaRegStar } from "react-icons/fa";
 import { GoChevronRight } from "react-icons/go";
@@ -168,6 +170,28 @@ function MisComprasPage() {
       setCargando(false);
     }
   };
+
+  // Validar un boleto o recibir uno (transferencia aceptada, devolución) cambia lo
+  // que se muestra: se recarga en silencio, sin el loader de pantalla completa.
+  useEffect(() => {
+    return onNotifRefresh(async (tipo) => {
+      if (!afectaCompras(tipo)) return;
+      try {
+        setEventos(await getMisEventos());
+        if (!eventoIdActual) return;
+        const response = await getMisBoletos(eventoIdActual, funcionIdActual);
+        setBoletos(response.boletos ?? []);
+        setPasesGenerales(response.pasesGenerales ?? []);
+        setTransferidos({
+          asientos: response.transferidos?.asientos ?? [],
+          pases: response.transferidos?.pases ?? [],
+        });
+      } catch (error) {
+        console.log(error);
+      }
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [eventoIdActual, funcionIdActual]);
 
   const handleGetDetalleBoletos = async (eventoLista: Eventos) => {
     try {

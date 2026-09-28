@@ -9,7 +9,8 @@ import Loader from '@/publicUi/components/Loader';
 import { useTransferenciasStore } from '../../../hooks/useTransferenciasStore';
 import { useCityPassStore } from '../../../hooks/useCityPassStore';
 import { formatDate } from '../../../utils/dateHelpers';
-import { emitNotifRefresh } from '../../../utils/notifEvents';
+import { emitNotifRefresh, onNotifRefresh, pollingDeRespaldo } from '../../../utils/notifEvents';
+import { afectaTransferencias } from '../../../utils/notificaciones';
 import type { AccionTransferencia, TicketTransfer } from '../../../types/Transferencias';
 import type { CityPassTransferencia } from '../../../types/CityPass';
 
@@ -129,13 +130,22 @@ const MisTransferenciasPage = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
+    // Se recarga al llegar una notificación de transferencia y, mientras el socket
+    // esté caído, con polling cada 30 s.
     useEffect(() => {
-        const id = window.setInterval(() => {
+        const recargar = () => {
             cargar().catch(() => {
                 // silencioso
             });
-        }, POLL_MS);
-        return () => window.clearInterval(id);
+        };
+        const offPolling = pollingDeRespaldo(recargar, POLL_MS);
+        const offNotif = onNotifRefresh((tipo) => {
+            if (afectaTransferencias(tipo)) recargar();
+        });
+        return () => {
+            offPolling();
+            offNotif();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 

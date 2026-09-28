@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { Notificacion, planPerdidas, rutaPorTipo } from './notificaciones';
+import {
+    Notificacion,
+    afectaAmigos,
+    afectaCompras,
+    afectaTransferencias,
+    planPerdidas,
+    rutaPorTipo,
+} from './notificaciones';
 
 const notif = (id: number): Notificacion => ({
     id,
@@ -39,23 +46,54 @@ describe('planPerdidas', () => {
         expect(plan).toEqual({ individuales: [], resumen: null });
     });
 
-    it('al reconectar muestra las últimas 3 y resume el resto', () => {
+    it('al reconectar con varias perdidas muestra un solo resumen', () => {
         const lote = [1, 2, 3, 4, 5].map(notif);
         const plan = planPerdidas({ notificaciones: lote, hayMas: false, noLeidas: 5 }, true);
-        expect(plan.individuales.map((n) => n.id)).toEqual([3, 4, 5]);
-        expect(plan.resumen).toBe('Y 2 notificaciones más mientras estabas sin conexión');
+        expect(plan.individuales).toEqual([]);
+        expect(plan.resumen).toBe('Mientras estabas sin conexión llegaron 5 notificaciones');
     });
 
-    it('al reconectar no avisa de las que ya se leyeron en otro dispositivo', () => {
+    it('al reconectar no cuenta las que ya se leyeron en otro dispositivo', () => {
         const leida = { ...notif(8), leida: true };
         const plan = planPerdidas({ notificaciones: [notif(7), leida, notif(9)], hayMas: false, noLeidas: 2 }, true);
-        expect(plan.individuales.map((n) => n.id)).toEqual([7, 9]);
-        expect(plan.resumen).toBeNull();
+        expect(plan.individuales).toEqual([]);
+        expect(plan.resumen).toBe('Mientras estabas sin conexión llegaron 2 notificaciones');
     });
 
-    it('al reconectar con pocas no agrega resumen', () => {
+    it('al reconectar con una sola perdida la muestra tal cual', () => {
         const plan = planPerdidas({ notificaciones: [notif(7)], hayMas: false, noLeidas: 1 }, true);
         expect(plan.individuales.map((n) => n.id)).toEqual([7]);
         expect(plan.resumen).toBeNull();
+    });
+
+    it('al reconectar sin nada nuevo no muestra nada', () => {
+        const plan = planPerdidas({ notificaciones: [], hayMas: false, noLeidas: 0 }, true);
+        expect(plan).toEqual({ individuales: [], resumen: null });
+    });
+});
+
+describe('qué pantalla recarga cada tipo', () => {
+    it('sin tipo recarga todo', () => {
+        expect(afectaTransferencias()).toBe(true);
+        expect(afectaAmigos()).toBe(true);
+        expect(afectaCompras()).toBe(true);
+    });
+
+    it('transferencias y devoluciones recargan la bandeja de transferencias', () => {
+        expect(afectaTransferencias('transferencia_pendiente')).toBe(true);
+        expect(afectaTransferencias('boleto_devuelto')).toBe(true);
+        expect(afectaTransferencias('boleto_validado')).toBe(false);
+    });
+
+    it('boleto validado, devuelto o transferencia aceptada recargan mis compras', () => {
+        expect(afectaCompras('boleto_validado')).toBe(true);
+        expect(afectaCompras('boleto_devuelto')).toBe(true);
+        expect(afectaCompras('transferencia_completada')).toBe(true);
+        expect(afectaCompras('transferencia_pendiente')).toBe(false);
+    });
+
+    it('solo la solicitud de amistad recarga mis amigos', () => {
+        expect(afectaAmigos('solicitud_amistad')).toBe(true);
+        expect(afectaAmigos('comanda_estatus')).toBe(false);
     });
 });

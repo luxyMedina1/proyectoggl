@@ -8,7 +8,8 @@ import Loader from '@/publicUi/components/Loader';
 import { CountryCodeSelect } from '../../../auth/components/CountryCodeSelect';
 import { CountryCode, DEFAULT_COUNTRY } from '../../../data/countryCodes';
 import { useAmigosStore } from '../../../hooks/useAmigosStore';
-import { emitNotifRefresh } from '../../../utils/notifEvents';
+import { emitNotifRefresh, onNotifRefresh, pollingDeRespaldo } from '../../../utils/notifEvents';
+import { afectaAmigos } from '../../../utils/notificaciones';
 import type { Amigo, FriendRequest } from '../../../types/Amigos';
 
 const onlyDigits = (s: string) => s.replace(/\D+/g, '');
@@ -72,17 +73,25 @@ const MisAmigosPage = () => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
-    // Polling solicitudes recibidas (cada 30 s).
+    // Solicitudes recibidas: se recargan al llegar una notificación de amistad y,
+    // mientras el socket esté caído, con polling cada 30 s.
     useEffect(() => {
-        const id = window.setInterval(async () => {
+        const recargarRecibidas = async () => {
             try {
                 const r = await getSolicitudesRecibidas();
                 setRecibidas(r);
             } catch {
                 // silencioso
             }
-        }, POLL_MS);
-        return () => window.clearInterval(id);
+        };
+        const offPolling = pollingDeRespaldo(recargarRecibidas, POLL_MS);
+        const offNotif = onNotifRefresh((tipo) => {
+            if (afectaAmigos(tipo)) recargarRecibidas();
+        });
+        return () => {
+            offPolling();
+            offNotif();
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
