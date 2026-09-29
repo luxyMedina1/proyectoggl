@@ -35,6 +35,7 @@ interface Recinto {
   direccion: string;
   latitud?: number | string | null;
   longitud?: number | string | null;
+  urlMapa?: string | null;
 }
 interface Evento {
   id: number;
@@ -239,10 +240,10 @@ export default function InfoEventoPage() {
             <p className='text-lg text-gray-500 flex items-center gap-x-2'>
               <HiLocationMarker className='text-xl flex-none' />
               <DireccionMapsLink
+                url={evento?.recinto?.urlMapa}
                 consulta={consultaMaps(evento?.recinto?.nombre, evento?.recinto?.direccion, evento?.ciudad?.nombre)}
                 latitud={evento?.recinto?.latitud}
                 longitud={evento?.recinto?.longitud}
-                etiqueta={evento?.recinto?.nombre}
               >
                 {evento?.recinto?.nombre}, {evento?.recinto?.direccion}
               </DireccionMapsLink>

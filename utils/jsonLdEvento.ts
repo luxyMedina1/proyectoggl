@@ -9,7 +9,7 @@ export interface EventoParaJsonLd {
   imagenPromocion?: string | null;
   descripcion?: string | null;
   precioBase?: string | number | null;
-  recinto?: { nombre?: string | null; direccion?: string | null } | null;
+  recinto?: { nombre?: string | null; direccion?: string | null; urlMapa?: string | null } | null;
   ciudad?: { nombre?: string | null } | null;
   artista?: { nombre?: string | null } | null;
 }
@@ -59,6 +59,7 @@ export const construirEventJsonLd = (
     location: {
       "@type": "Place",
       name: evento.recinto?.nombre,
+      hasMap: evento.recinto?.urlMapa ?? undefined,
       address: {
         "@type": "PostalAddress",
         streetAddress: evento.recinto?.direccion,

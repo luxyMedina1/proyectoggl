@@ -17,7 +17,7 @@ import { MdOutlineEmail, MdPhone, MdLocationOn, MdExplore } from "react-icons/md
 import { HiMenu } from "react-icons/hi";
 import { useColorConfig } from "../../context/ColorContext";
 import { HeaderBuscador } from "../../components/HeaderBuscador";
-import { onNotifRefresh } from "../../utils/notifEvents";
+import { onNotifRefresh, pollingDeRespaldo } from "../../utils/notifEvents";
 import { slugify } from "../../utils/slugify";
 import type { Ciudad } from "../../types/Ciudad";
 
@@ -25,7 +25,8 @@ const NOTIF_POLL_MS = 60_000;
 
 // Version del HeaderLayout para App Router. El selector de ciudad/CityPass y el badge de
 // notificaciones (amigos/transferencias) ya usan sus stores reales (useCiudadesStore,
-// useAmigosStore, useTransferenciasStore) con polling de notificaciones cada NOTIF_POLL_MS.
+// useAmigosStore, useTransferenciasStore). Se refresca al llegar cada notificación por socket;
+// el polling cada NOTIF_POLL_MS solo corre como respaldo mientras el socket está caído.
 export default function SiteLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -136,11 +137,11 @@ export default function SiteLayout({ children }: { children: React.ReactNode }) 
     };
 
     fetchCount();
-    const id = window.setInterval(fetchCount, NOTIF_POLL_MS);
+    const offPolling = pollingDeRespaldo(fetchCount, NOTIF_POLL_MS);
     const offNotif = onNotifRefresh(fetchCount);
     return () => {
       active = false;
-      window.clearInterval(id);
+      offPolling();
       offNotif();
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps

@@ -19,6 +19,7 @@ export interface ReelRecinto {
   nombre: string;
   direccion: string;
   ciudad: string;
+  urlMapa?: string | null;
 }
 
 export interface ReelEvento {

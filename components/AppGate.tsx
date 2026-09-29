@@ -7,6 +7,7 @@ import "react-toastify/dist/ReactToastify.css";
 import { Loader } from "./Loader";
 import { useAuthStore } from "../hooks/useAuthStore";
 import { useMetaPixel } from "../hooks/useMetaPixel";
+import { useNotificacionesSocket } from "../hooks/useNotificacionesSocket";
 import { useAuthModal } from "../context/AuthModalContext";
 
 export const AppGate = ({ children }: { children: React.ReactNode }) => {
@@ -15,6 +16,7 @@ export const AppGate = ({ children }: { children: React.ReactNode }) => {
   const { user, status } = useAuthStore();
   const { vistaDePagina } = useMetaPixel();
   const { estaAbierto: modalAbierto } = useAuthModal();
+  useNotificacionesSocket();
 
   // Es una SPA: sin esto Meta solo veria la primera pantalla que abrio el usuario.
   // El PageView de un pixel que se inicializa despues lo dispara el propio metaPixel.ts.

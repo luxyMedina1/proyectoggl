@@ -43,6 +43,7 @@ vi.mock("../../context/ColorContext", () => ({
 
 vi.mock("../../utils/notifEvents", () => ({
   onNotifRefresh: () => () => {},
+  pollingDeRespaldo: () => () => {},
 }));
 
 const DURANGO = { id: 1, nombre: "Durango" };

@@ -32,7 +32,7 @@ interface Evento {
     fecha?: string;
     fechaCompra?: string;
     direccion?: string;
-    recinto?: { nombre?: string; direccion?: string } | null;
+    recinto?: { nombre?: string; direccion?: string; urlMapa?: string | null } | null;
     ciudad?: { nombre?: string } | null;
     metodoPago?: { tipo?: string; ultimosDigitos?: string } | null;
     numeroPedido?: string | number | null;
@@ -90,7 +90,7 @@ const DetallesPedidoTab = ({ evento, perfil, boletos }: Props) => {
                                 <MdLocationOn className="text-lg" /> Dirección:
                             </p>
                             <p className="font-semibold text-gray-800">
-                                <DireccionMapsLink consulta={consultaMaps(evento?.recinto?.nombre, direccion, evento?.ciudad?.nombre)}>
+                                <DireccionMapsLink url={evento?.recinto?.urlMapa} consulta={consultaMaps(evento?.recinto?.nombre, direccion, evento?.ciudad?.nombre)}>
                                     {direccion ?? lugar ?? '—'}
                                 </DireccionMapsLink>
                             </p>

@@ -24,8 +24,7 @@ import { ReelInfoPanel } from "../components/ReelInfoPanel";
 import { EstadoFeed, ReelSkeleton } from "../components/ReelStates";
 
 const LIMIT = 6;
-// Nombre de la marca. En código (.tsx) la sintaxis %VITE_TITLE_APP% NO se
-// interpola (eso solo aplica en index.html); hay que leer import.meta.env.
+// Nombre de la marca. Next inyecta las NEXT_PUBLIC_* en el bundle al compilar.
 const APP_NAME = process.env.NEXT_PUBLIC_TITLE_APP || "Taquilla VIP";
 
 const prefiereMenosMovimiento = () =>
@@ -408,8 +407,9 @@ export const ExplorarPage = () => {
   };
 
   const onVerMapa = (reel: Reel) => {
-    const dir = reel.evento?.recinto?.direccion;
-    if (dir) window.open(mapsUrl(dir), "_blank", "noopener,noreferrer");
+    const recinto = reel.evento?.recinto;
+    const url = recinto?.urlMapa || (recinto?.direccion ? mapsUrl(recinto.direccion) : null);
+    if (url) window.open(url, "_blank", "noopener,noreferrer");
   };
 
   // ---- Filtros ----
