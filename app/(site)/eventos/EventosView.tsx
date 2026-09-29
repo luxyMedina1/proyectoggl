@@ -79,6 +79,7 @@ interface Recinto {
   direccion: string;
   latitud?: number | string | null;
   longitud?: number | string | null;
+  urlMapa?: string | null;
 }
 
 export interface Evento {
@@ -615,6 +616,7 @@ function EventosContent({ eventosIniciales }: { eventosIniciales: Evento[] }) {
                           >
                             <DireccionMapsLink
                               className="block"
+                              url={evento.recinto?.urlMapa}
                               consulta={consultaMaps(
                                 evento.recinto?.nombre,
                                 evento.recinto?.direccion,
