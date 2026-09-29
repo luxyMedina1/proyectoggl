@@ -2,27 +2,28 @@ import { ReactNode } from 'react';
 import { mapsUrl, coordenadasMapsUrl } from '../utils/mapsHelpers';
 
 interface Props {
+    // Link de Google Maps que manda el back para el recinto. Si viene, gana.
+    url?: string | null;
     // Texto que se manda a Google Maps (recinto, direccion y ciudad si se tienen).
     consulta?: string | null;
-    // Coordenadas del recinto. Si vienen ambas se usan en lugar de la direccion.
+    // Coordenadas del recinto. Solo se usan si no hay url ni consulta.
     latitud?: number | string | null;
     longitud?: number | string | null;
-    // Nombre del recinto para etiquetar el pin cuando se abre por coordenadas.
-    etiqueta?: string | null;
     // Texto visible; si no se pasa se muestra la consulta.
     children?: ReactNode;
     className?: string;
 }
 
 // Direccion clickeable que abre Google Maps en otra pestaña.
-// Si el recinto trae latitud y longitud abre por coordenadas (etiquetando el pin
-// con el nombre del recinto); si no, usa la direccion.
-// Sin ninguno de los dos renderiza el texto plano, sin enlace.
-export const DireccionMapsLink = ({ consulta, latitud, longitud, etiqueta, children, className = '' }: Props) => {
+// Prioridad: url del back → busqueda por texto → coordenadas.
+// Sin ninguno de los tres renderiza el texto plano, sin enlace.
+export const DireccionMapsLink = ({ url, consulta, latitud, longitud, children, className = '' }: Props) => {
     const contenido = children ?? consulta;
 
-    // Priorizar coordenadas cuando el recinto las trae; si no, caer a la direccion.
-    const href = coordenadasMapsUrl(latitud, longitud, etiqueta) ?? (consulta?.trim() ? mapsUrl(consulta) : null);
+    const href =
+        url?.trim() ||
+        (consulta?.trim() ? mapsUrl(consulta) : null) ||
+        coordenadasMapsUrl(latitud, longitud);
 
     if (!href) return <>{contenido}</>;
 

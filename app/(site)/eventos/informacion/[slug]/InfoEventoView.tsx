@@ -242,7 +242,6 @@ export default function InfoEventoPage() {
                 consulta={consultaMaps(evento?.recinto?.nombre, evento?.recinto?.direccion, evento?.ciudad?.nombre)}
                 latitud={evento?.recinto?.latitud}
                 longitud={evento?.recinto?.longitud}
-                etiqueta={evento?.recinto?.nombre}
               >
                 {evento?.recinto?.nombre}, {evento?.recinto?.direccion}
               </DireccionMapsLink>

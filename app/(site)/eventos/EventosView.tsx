@@ -622,7 +622,6 @@ function EventosContent({ eventosIniciales }: { eventosIniciales: Evento[] }) {
                               )}
                               latitud={evento.recinto?.latitud}
                               longitud={evento.recinto?.longitud}
-                              etiqueta={evento.recinto?.nombre}
                             >
                               {/* Recinto en una linea y direccion hasta dos: recorta con ... sin descuadrar la card. */}
                               <span className="block truncate">{evento.recinto?.nombre}</span>
